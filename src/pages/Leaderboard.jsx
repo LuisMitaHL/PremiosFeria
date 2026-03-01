@@ -1,0 +1,83 @@
+import React from 'react';
+import { getLeaderboard, getParticipant } from '../lib/storage.js';
+
+export default function Leaderboard() {
+    const leaderboard = getLeaderboard();
+    const participant = getParticipant();
+
+    const top3 = leaderboard.slice(0, 3);
+    const rest = leaderboard.slice(3, 20);
+
+    // Reorder top3 for podium display: [2nd, 1st, 3rd]
+    const podiumOrder = top3.length >= 3
+        ? [top3[1], top3[0], top3[2]]
+        : top3;
+    const podiumClasses = top3.length >= 3
+        ? ['silver', 'gold', 'bronze']
+        : ['gold', 'silver', 'bronze'];
+
+    function getInitials(name) {
+        return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    }
+
+    return (
+        <div className="page">
+            <div className="container">
+                <div className="page-header" style={{ textAlign: 'center' }}>
+                    <h1>🏆 Leaderboard</h1>
+                    <p>Los participantes con más puntos</p>
+                </div>
+
+                {leaderboard.length === 0 ? (
+                    <div className="empty-state">
+                        <div className="empty-icon">🏆</div>
+                        <p>Aún no hay participantes registrados</p>
+                    </div>
+                ) : (
+                    <>
+                        {/* Podium */}
+                        {top3.length > 0 && (
+                            <div className="podium">
+                                {podiumOrder.map((p, i) => {
+                                    if (!p) return null;
+                                    const cls = podiumClasses[i];
+                                    return (
+                                        <div key={p.id} className={`podium-item ${cls}`}>
+                                            <div className="podium-avatar">{getInitials(p.name)}</div>
+                                            <div className="podium-name">{p.name}</div>
+                                            <div className="podium-bar">
+                                                {p.points}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Rest of list */}
+                        <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+                            <ul className="leaderboard-list">
+                                {leaderboard.map((p, i) => {
+                                    const isMe = participant && p.id === participant.id;
+                                    return (
+                                        <li key={p.id} className={`leaderboard-item ${isMe ? 'is-me' : ''}`}>
+                                            <div className="lb-rank">
+                                                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                                            </div>
+                                            <div className="lb-avatar">{getInitials(p.name)}</div>
+                                            <div className="lb-name">
+                                                {p.name}
+                                                {isMe && <span className="badge badge-purple" style={{ marginLeft: 8 }}>Tú</span>}
+                                            </div>
+                                            <div className="lb-points">⭐ {p.points}</div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
