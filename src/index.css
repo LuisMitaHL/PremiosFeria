@@ -796,6 +796,26 @@ input, select, textarea {
   margin-bottom: var(--space-lg);
 }
 
+#qr-reader {
+  width: 100% !important;
+  max-height: 400px;
+  overflow: hidden;
+}
+
+#qr-reader video {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 400px;
+  object-fit: cover;
+  display: block;
+}
+
+/* Override library-injected inline styles on internal wrapper divs */
+#qr-reader > div {
+  max-height: 400px !important;
+  overflow: hidden !important;
+}
+
 .scanner-container video {
   width: 100%;
   display: block;

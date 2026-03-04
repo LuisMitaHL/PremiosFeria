@@ -29,7 +29,7 @@ function AppLayout({ children }) {
                 <div className="header-content">
                     <div className="header-logo">
                         <div className="logo-icon">🎪</div>
-                        <span>FeriaPoints</span>
+                        <span>Community Quest</span>
                     </div>
                     {participant && (
                         <div className="header-points">
