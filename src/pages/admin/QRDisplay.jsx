@@ -1,33 +1,66 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { getGroups } from '../../lib/storage.js';
+import { useAuth } from '../../lib/AuthContext.jsx';
+import { getMyCommunity, getHmacSecret } from '../../lib/api.js';
 import { generateQRPayload, getTimeUntilRotation } from '../../lib/qrSecurity.js';
 
 export default function QRDisplay() {
     const { groupId } = useParams();
     const navigate = useNavigate();
-    const groups = getGroups();
-    const group = groups.find(g => g.id === groupId);
+    const { adminUser, adminLoading } = useAuth();
 
+    const [community, setCommunity] = useState(null);
+    const [secret, setSecret] = useState(null);
     const [qrType, setQrType] = useState('visit');
     const [qrData, setQrData] = useState('');
     const [timeLeft, setTimeLeft] = useState(30);
+    const [loading, setLoading] = useState(true);
+
+    // Redirect if not authenticated
+    useEffect(() => {
+        if (!adminLoading && !adminUser) {
+            navigate('/admin/login', { replace: true });
+        }
+    }, [adminUser, adminLoading, navigate]);
+
+    // Load community and HMAC secret
+    useEffect(() => {
+        if (!adminUser) return;
+
+        const load = async () => {
+            try {
+                const [comm, hmacSecret] = await Promise.all([
+                    getMyCommunity(adminUser.id),
+                    getHmacSecret(),
+                ]);
+                setCommunity(comm);
+                setSecret(hmacSecret);
+            } catch (err) {
+                console.error('QR load error:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, [adminUser]);
 
     const refreshQR = useCallback(() => {
-        if (!group) return;
-        const payload = generateQRPayload(group, qrType);
+        if (!community || !secret) return;
+        const payload = generateQRPayload(community, qrType, secret);
         setQrData(payload);
         setTimeLeft(getTimeUntilRotation());
-    }, [group, qrType]);
+    }, [community, qrType, secret]);
 
-    // Generate QR on mount and on type change
+    // Generate QR on mount and on type/community change
     useEffect(() => {
         refreshQR();
     }, [refreshQR]);
 
     // Countdown timer
     useEffect(() => {
+        if (!community || !secret) return;
+
         const interval = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
@@ -39,14 +72,25 @@ export default function QRDisplay() {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [refreshQR]);
+    }, [refreshQR, community, secret]);
 
-    if (!group) {
+    if (loading || adminLoading) {
+        return (
+            <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
+                <div className="empty-state">
+                    <div className="empty-icon">⏳</div>
+                    <p>Cargando...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!community || community.id !== groupId) {
         return (
             <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
                 <div className="empty-state">
                     <div className="empty-icon">❌</div>
-                    <p>Grupo no encontrado</p>
+                    <p>No tienes acceso a esta comunidad</p>
                     <button className="btn btn-primary" onClick={() => navigate('/admin')} style={{ marginTop: 16 }}>
                         ← Volver al Admin
                     </button>
@@ -83,17 +127,17 @@ export default function QRDisplay() {
                 <div className="qr-display-fullscreen">
                     {/* Group Info */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: '3rem', marginBottom: 8 }}>{group.emoji}</div>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{group.name}</h2>
+                        <div style={{ fontSize: '3rem', marginBottom: 8 }}>{community.emoji}</div>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{community.name}</h2>
                         <p style={{ color: 'var(--text-secondary)' }}>
-                            Stand {group.standNumber} · {qrType === 'visit' ? `${group.visitPoints || 10} pts por visita` : `${group.activityPoints || 25} pts por actividad`}
+                            Stand {community.stand_number} · {qrType === 'visit' ? `${community.visit_points || 10} pts por visita` : `${community.activity_points || 25} pts por actividad`}
                         </p>
                     </div>
 
                     {/* QR Code */}
                     <div className="qr-wrapper" style={{ animation: timeLeft <= 5 ? 'pulse 0.5s ease-in-out infinite' : 'none' }}>
                         <QRCodeSVG
-                            value={qrData}
+                            value={qrData || 'loading'}
                             size={260}
                             level="M"
                             includeMargin={false}

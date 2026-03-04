@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
-import { getParticipant } from './lib/storage.js';
+import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
 
 // Pages
 import Welcome from './pages/Welcome.jsx';
@@ -9,11 +9,12 @@ import Dashboard from './pages/Dashboard.jsx';
 import Scanner from './pages/Scanner.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
 import Rewards from './pages/Rewards.jsx';
+import AdminLogin from './pages/admin/AdminLogin.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import QRDisplay from './pages/admin/QRDisplay.jsx';
 
 function AppLayout({ children }) {
-    const participant = getParticipant();
+    const { participant } = useAuth();
     const location = useLocation();
 
     // Don't show nav on welcome, register, admin, or QR display pages
@@ -61,24 +62,21 @@ function AppLayout({ children }) {
                         <span className="nav-icon">🎁</span>
                         <span>Premios</span>
                     </NavLink>
-                    <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        <span className="nav-icon">⚙️</span>
-                        <span>Admin</span>
-                    </NavLink>
                 </div>
             </nav>
         </>
     );
 }
 
-// Protected route wrapper
+// Protected route wrapper for participants
 function RequireAuth({ children }) {
-    const participant = getParticipant();
+    const { participant, participantLoading } = useAuth();
+    if (participantLoading) return null;
     if (!participant) return <Navigate to="/" replace />;
     return children;
 }
 
-export default function App() {
+function AppRoutes() {
     return (
         <AppLayout>
             <Routes>
@@ -88,10 +86,19 @@ export default function App() {
                 <Route path="/scan" element={<RequireAuth><Scanner /></RequireAuth>} />
                 <Route path="/leaderboard" element={<RequireAuth><Leaderboard /></RequireAuth>} />
                 <Route path="/rewards" element={<RequireAuth><Rewards /></RequireAuth>} />
+                <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/qr/:groupId" element={<QRDisplay />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </AppLayout>
+    );
+}
+
+export default function App() {
+    return (
+        <AuthProvider>
+            <AppRoutes />
+        </AuthProvider>
     );
 }

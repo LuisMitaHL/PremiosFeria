@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getParticipant, addPoints } from '../lib/storage.js';
-import { validateQRPayload } from '../lib/qrSecurity.js';
+import { useAuth } from '../lib/AuthContext.jsx';
+import { scanQR } from '../lib/api.js';
+import { decodeQRPayload } from '../lib/qrSecurity.js';
 
 export default function Scanner() {
     const navigate = useNavigate();
-    const participant = getParticipant();
-    const [scanResult, setScanResult] = useState(null); // { success, message, points, groupName, groupEmoji }
+    const { participant, refreshParticipant } = useAuth();
+    const [scanResult, setScanResult] = useState(null);
     const [scanning, setScanning] = useState(true);
     const [manualInput, setManualInput] = useState('');
     const [showManual, setShowManual] = useState(false);
+    const [processing, setProcessing] = useState(false);
     const scannerRef = useRef(null);
     const html5QrRef = useRef(null);
 
@@ -59,31 +61,61 @@ export default function Scanner() {
         };
     }, [scanning, showManual]);
 
-    function handleScan(data) {
-        if (!participant) return;
+    async function handleScan(data) {
+        if (!participant || processing) return;
         setScanning(false);
+        setProcessing(true);
 
-        const result = validateQRPayload(data, participant.id);
+        try {
+            // Decode the QR payload to get the JSON string
+            const decoded = decodeQRPayload(data);
 
-        if (result.valid) {
-            // Add points
-            addPoints(participant.id, result.standId, result.points, result.type, result.groupName);
-            setScanResult({
-                success: true,
-                message: '¡Puntos obtenidos!',
-                points: result.points,
-                groupName: result.groupName,
-                groupEmoji: result.groupEmoji,
-                type: result.type,
-            });
-        } else {
+            if (!decoded) {
+                setScanResult({
+                    success: false,
+                    message: 'Código QR no reconocido',
+                    points: 0,
+                    groupName: '',
+                    groupEmoji: '❌',
+                });
+                setProcessing(false);
+                return;
+            }
+
+            // Send decoded JSON to server for validation
+            const jsonString = JSON.stringify(decoded);
+            const result = await scanQR(participant.id, jsonString);
+
+            if (result.valid) {
+                // Refresh participant to get updated points
+                await refreshParticipant();
+                setScanResult({
+                    success: true,
+                    message: '¡Puntos obtenidos!',
+                    points: result.points,
+                    groupName: result.groupName || result.groupname || '',
+                    groupEmoji: result.groupEmoji || result.groupemoji || '📍',
+                    type: result.type,
+                });
+            } else {
+                setScanResult({
+                    success: false,
+                    message: result.reason,
+                    points: 0,
+                    groupName: '',
+                    groupEmoji: '❌',
+                });
+            }
+        } catch (err) {
             setScanResult({
                 success: false,
-                message: result.reason,
+                message: err.message || 'Error al procesar el código QR',
                 points: 0,
                 groupName: '',
                 groupEmoji: '❌',
             });
+        } finally {
+            setProcessing(false);
         }
     }
 
@@ -101,6 +133,19 @@ export default function Scanner() {
     }
 
     if (!participant) return null;
+
+    // Show processing state
+    if (processing) {
+        return (
+            <div className="page">
+                <div className="container" style={{ paddingTop: 60, textAlign: 'center' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: 16 }}>⏳</div>
+                    <h2>Validando código...</h2>
+                    <p style={{ color: 'var(--text-secondary)' }}>Verificando con el servidor</p>
+                </div>
+            </div>
+        );
+    }
 
     // Show scan result
     if (scanResult) {
@@ -193,54 +238,6 @@ export default function Scanner() {
                             </button>
                         </div>
                     </form>
-                )}
-
-                {/* Debug helper for testing */}
-                {window.location.hostname === 'localhost' && showManual && (
-                    <div style={{ marginTop: 24, padding: 16, border: '1px dashed #666', borderRadius: 8 }}>
-                        <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: 8 }}>Debug Tools</p>
-                        <button
-                            type="button"
-                            className="btn btn-outline"
-                            style={{ fontSize: '0.7rem' }}
-                            onClick={() => {
-                                const groups = JSON.parse(localStorage.getItem('fp_groups') || '[]');
-                                const secretRaw = localStorage.getItem('fp_admin_secret');
-                                const secret = secretRaw ? JSON.parse(secretRaw) : null;
-
-                                if (groups.length > 0 && secret) {
-                                    // Pick random group to avoid cooldowns
-                                    const g = groups[Math.floor(Math.random() * groups.length)];
-
-                                    // Replicate generation logic
-                                    const ts = Math.floor(Date.now() / 1000 / 30);
-                                    const pts = g.visitPoints || 10;
-                                    const type = 'visit';
-
-                                    const data = {
-                                        sid: g.id, ts, pts, type, name: g.name, emoji: g.emoji
-                                    };
-                                    // Simple HMAC
-                                    const msg = `${g.id}|${ts}|${pts}|${type}`;
-                                    const combined = secret + '|' + msg;
-                                    let hash = 0;
-                                    for (let i = 0; i < combined.length; i++) {
-                                        const char = combined.charCodeAt(i);
-                                        hash = ((hash << 5) - hash) + char;
-                                        hash = hash & hash;
-                                    }
-                                    data.tok = Math.abs(hash).toString(16).padStart(8, '0');
-
-                                    const payload = btoa(encodeURIComponent(JSON.stringify(data)));
-                                    setManualInput(payload);
-                                } else {
-                                    alert('No groups or secret found in localStorage');
-                                }
-                            }}
-                        >
-                            🎲 Fill Valid Token (Random Group)
-                        </button>
-                    </div>
                 )}
 
                 <div className="glass-card" style={{ marginTop: 24, textAlign: 'center' }}>

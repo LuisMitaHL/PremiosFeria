@@ -1,24 +1,63 @@
-import React, { useState } from 'react';
-import { getRewards, getParticipant, claimReward } from '../lib/storage.js';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../lib/AuthContext.jsx';
+import { getRewards, getClaimedRewards, claimReward } from '../lib/api.js';
 
 export default function Rewards() {
-    const [rewards] = useState(getRewards());
-    const [participant, setParticipant] = useState(getParticipant());
+    const { participant, refreshParticipant } = useAuth();
+    const [rewards, setRewards] = useState([]);
+    const [claimedIds, setClaimedIds] = useState([]);
     const [toast, setToast] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    function handleClaim(rewardId) {
-        const result = claimReward(rewardId);
-        if (result.success) {
-            setParticipant({ ...result.participant });
-            setToast({ type: 'success', message: '🎉 ¡Premio reclamado exitosamente!' });
-        } else {
-            setToast({ type: 'error', message: result.reason });
+    useEffect(() => {
+        if (!participant) return;
+
+        const load = async () => {
+            try {
+                const [rewardsData, claimed] = await Promise.all([
+                    getRewards(),
+                    getClaimedRewards(participant.id),
+                ]);
+                setRewards(rewardsData);
+                setClaimedIds(claimed);
+            } catch (err) {
+                console.error('Rewards load error:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, [participant]);
+
+    async function handleClaim(rewardId) {
+        try {
+            const result = await claimReward(participant.id, rewardId);
+            if (result.success) {
+                await refreshParticipant();
+                setClaimedIds([...claimedIds, rewardId]);
+                setToast({ type: 'success', message: '🎉 ¡Premio reclamado exitosamente!' });
+            } else {
+                setToast({ type: 'error', message: result.reason });
+            }
+        } catch (err) {
+            setToast({ type: 'error', message: err.message || 'Error al canjear premio' });
         }
 
         setTimeout(() => setToast(null), 3000);
     }
 
     if (!participant) return null;
+
+    if (loading) {
+        return (
+            <div className="page">
+                <div className="container" style={{ textAlign: 'center', paddingTop: 60 }}>
+                    <div style={{ fontSize: '3rem', marginBottom: 16 }}>⏳</div>
+                    <p style={{ color: 'var(--text-secondary)' }}>Cargando premios...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="page">
@@ -42,7 +81,7 @@ export default function Rewards() {
                 {/* Rewards Grid */}
                 <div className="rewards-grid">
                     {rewards.map(reward => {
-                        const claimed = participant.claimedRewards.includes(reward.id);
+                        const claimed = claimedIds.includes(reward.id);
                         const canAfford = participant.points >= reward.cost;
 
                         return (

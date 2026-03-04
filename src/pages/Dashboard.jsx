@@ -1,22 +1,58 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getParticipant, getGroups, getScanLog } from '../lib/storage.js';
+import { useAuth } from '../lib/AuthContext.jsx';
+import { getCommunities, getScansForParticipant } from '../lib/api.js';
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const participant = getParticipant();
-    const groups = getGroups();
-    const scanLog = getScanLog().filter(s => s.participantId === participant?.id);
+    const { participant, participantLoading, refreshParticipant } = useAuth();
 
-    React.useEffect(() => {
-        if (!participant) navigate('/', { replace: true });
-    }, [participant, navigate]);
+    const [communities, setCommunities] = useState([]);
+    const [scanLog, setScanLog] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    if (!participant) return null;
+    useEffect(() => {
+        if (!participantLoading && !participant) {
+            navigate('/', { replace: true });
+        }
+    }, [participant, participantLoading, navigate]);
 
-    const visitedCount = participant.visitedStands.length;
-    const totalStands = groups.length;
-    const activitiesCount = participant.activitiesCompleted.length;
+    useEffect(() => {
+        if (!participant) return;
+
+        const load = async () => {
+            try {
+                const [comms, scans] = await Promise.all([
+                    getCommunities(),
+                    getScansForParticipant(participant.id),
+                ]);
+                setCommunities(comms);
+                setScanLog(scans);
+            } catch (err) {
+                console.error('Dashboard load error:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, [participant]);
+
+    if (participantLoading || !participant) return null;
+
+    // Derive visited stands from scans
+    const visitedStandIds = [...new Set(
+        scanLog.filter(s => s.type === 'visit').map(s => s.community_id)
+    )];
+    const activitiesCompletedIds = [...new Set(
+        scanLog.filter(s => s.type === 'activity').map(s => s.community_id)
+    )];
+
+    const visitedCount = visitedStandIds.length;
+    const totalStands = communities.length;
+    const activitiesCount = activitiesCompletedIds.length;
+
+    // Count claimed rewards (from scans with negative points could be used, but for now use a simple count)
+    const claimedCount = 0; // Will be updated when rewards page is integrated
 
     function formatTime(ts) {
         const d = new Date(ts);
@@ -58,22 +94,22 @@ export default function Dashboard() {
                         <div className="stat-label">Actividades</div>
                     </div>
                     <div className="stat-card">
-                        <div className="stat-value">{participant.claimedRewards.length}</div>
+                        <div className="stat-value">{claimedCount}</div>
                         <div className="stat-label">Premios</div>
                     </div>
                 </div>
 
                 {/* Visited Stands */}
                 <div className="section-title">📍 Stands</div>
-                {groups.length === 0 ? (
+                {communities.length === 0 ? (
                     <div className="empty-state">
                         <div className="empty-icon">🏗️</div>
                         <p>No hay stands registrados aún</p>
                     </div>
                 ) : (
                     <div className="stands-visited" style={{ marginBottom: 24 }}>
-                        {groups.map(g => {
-                            const visited = participant.visitedStands.includes(g.id);
+                        {communities.map(g => {
+                            const visited = visitedStandIds.includes(g.id);
                             return (
                                 <div key={g.id} className={`stand-chip ${visited ? 'visited' : ''}`}>
                                     <span>{g.emoji}</span>
@@ -103,9 +139,11 @@ export default function Dashboard() {
                                         {scan.type === 'visit' ? '📍' : '🎯'}
                                     </div>
                                     <div className="activity-info">
-                                        <div className="activity-title">{scan.groupName || 'Stand'}</div>
+                                        <div className="activity-title">
+                                            {scan.communities?.name || 'Stand'}
+                                        </div>
                                         <div className="activity-time">
-                                            {scan.type === 'visit' ? 'Visita' : 'Actividad'} · {formatTime(scan.timestamp)}
+                                            {scan.type === 'visit' ? 'Visita' : 'Actividad'} · {formatTime(scan.created_at)}
                                         </div>
                                     </div>
                                     <div className="activity-points">+{scan.points}</div>

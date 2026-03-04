@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../lib/AuthContext.jsx';
 
 export default function Welcome() {
     const navigate = useNavigate();
-    const [visible, setVisible] = useState(false);
+    const { participant, participantLoading } = useAuth();
 
+    // If already registered, redirect to dashboard
     useEffect(() => {
-        setVisible(true);
-    }, []);
+        if (!participantLoading && participant) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [participant, participantLoading, navigate]);
 
     return (
         <div className="welcome-page">
@@ -46,7 +50,7 @@ export default function Welcome() {
             </button>
 
             <p style={{ marginTop: 24, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate('/admin')}>
+                <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate('/admin/login')}>
                     Panel de administración →
                 </span>
             </p>

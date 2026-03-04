@@ -1,66 +1,110 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getGroups, addGroup, updateGroup, deleteGroup, getParticipantsDB, getScanLog, seedDemoData } from '../../lib/storage.js';
+import { useAuth } from '../../lib/AuthContext.jsx';
+import {
+    getMyCommunity,
+    updateCommunity,
+    getScansByCommunity,
+    getLeaderboard,
+} from '../../lib/api.js';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
-    const [groups, setGroups] = useState(getGroups());
+    const { adminUser, adminLoading, logoutAdmin } = useAuth();
+
+    const [community, setCommunity] = useState(null);
+    const [scans, setScans] = useState([]);
+    const [participants, setParticipants] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [editingGroup, setEditingGroup] = useState(null);
-    const [form, setForm] = useState({ name: '', emoji: '📚', standNumber: '', description: '', visitPoints: 10, activityPoints: 25 });
+    const [form, setForm] = useState({
+        name: '', emoji: '📚', stand_number: '', description: '',
+        visit_points: 10, activity_points: 25
+    });
 
-    const participants = getParticipantsDB();
-    const scanLog = getScanLog();
+    // Redirect if not authenticated
+    useEffect(() => {
+        if (!adminLoading && !adminUser) {
+            navigate('/admin/login', { replace: true });
+        }
+    }, [adminUser, adminLoading, navigate]);
 
-    const totalScans = scanLog.length;
-    const totalParticipants = participants.length;
-    const totalPoints = participants.reduce((sum, p) => sum + p.points, 0);
+    // Load community data
+    useEffect(() => {
+        if (!adminUser) return;
 
-    function handleSeedDemo() {
-        seedDemoData();
-        setGroups(getGroups());
-    }
+        const load = async () => {
+            try {
+                const [comm, allParts] = await Promise.all([
+                    getMyCommunity(adminUser.id),
+                    getLeaderboard(),
+                ]);
+                setCommunity(comm);
+                setParticipants(allParts);
 
-    function openAddModal() {
-        setEditingGroup(null);
-        setForm({ name: '', emoji: '📚', standNumber: '', description: '', visitPoints: 10, activityPoints: 25 });
-        setShowModal(true);
-    }
+                if (comm) {
+                    const communityScans = await getScansByCommunity(comm.id);
+                    setScans(communityScans);
+                }
+            } catch (err) {
+                console.error('Admin load error:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, [adminUser]);
 
-    function openEditModal(group) {
-        setEditingGroup(group);
+    function openEditModal() {
+        if (!community) return;
         setForm({
-            name: group.name,
-            emoji: group.emoji,
-            standNumber: group.standNumber,
-            description: group.description || '',
-            visitPoints: group.visitPoints || 10,
-            activityPoints: group.activityPoints || 25,
+            name: community.name,
+            emoji: community.emoji,
+            stand_number: community.stand_number || '',
+            description: community.description || '',
+            visit_points: community.visit_points || 10,
+            activity_points: community.activity_points || 25,
         });
         setShowModal(true);
     }
 
-    function handleSubmit(e) {
+    async function handleSubmit(e) {
         e.preventDefault();
-        if (!form.name.trim()) return;
+        if (!form.name.trim() || !community) return;
 
-        if (editingGroup) {
-            updateGroup(editingGroup.id, form);
-        } else {
-            addGroup(form);
+        try {
+            const updated = await updateCommunity(community.id, form);
+            setCommunity(updated);
+            setShowModal(false);
+        } catch (err) {
+            console.error('Update error:', err);
+            alert('Error al actualizar: ' + err.message);
         }
-        setGroups(getGroups());
-        setShowModal(false);
     }
 
-    function handleDelete(id) {
-        if (confirm('¿Eliminar este grupo?')) {
-            deleteGroup(id);
-            setGroups(getGroups());
-        }
+    async function handleLogout() {
+        await logoutAdmin();
+        navigate('/admin/login', { replace: true });
     }
 
     const emojis = ['📚', '💻', '⚡', '🤖', '🌐', '🎨', '🔬', '🧪', '📐', '🎮', '🌱', '🎵', '🏋️', '📸', '🚀', '🧠'];
+
+    if (adminLoading || loading) {
+        return (
+            <div className="admin-page page">
+                <div className="container" style={{ textAlign: 'center', paddingTop: 60 }}>
+                    <div style={{ fontSize: '3rem', marginBottom: 16 }}>⏳</div>
+                    <p style={{ color: 'var(--text-secondary)' }}>Cargando panel de administración...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!adminUser) return null;
+
+    const totalScans = scans.length;
+    const totalParticipants = participants.length;
+    const communityPoints = scans.reduce((sum, s) => sum + s.points, 0);
 
     return (
         <div className="admin-page page">
@@ -68,11 +112,13 @@ export default function AdminDashboard() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
                         <h1>⚙️ Admin</h1>
-                        <p>Gestiona grupos y stands</p>
+                        <p>{community?.name || 'Panel de administración'}</p>
                     </div>
-                    <button className="btn btn-outline" onClick={() => navigate('/')} style={{ fontSize: '0.8rem' }}>
-                        ← Salir
-                    </button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn btn-outline" onClick={handleLogout} style={{ fontSize: '0.8rem' }}>
+                            🚪 Salir
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -87,83 +133,87 @@ export default function AdminDashboard() {
                     <div className="stat-label">Escaneos</div>
                 </div>
                 <div className="stat-card">
-                    <div className="stat-value">{totalPoints}</div>
+                    <div className="stat-value">{communityPoints}</div>
                     <div className="stat-label">Puntos Dados</div>
                 </div>
             </div>
 
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-                <button className="btn btn-primary" onClick={openAddModal} style={{ flex: 1 }}>
-                    ➕ Agregar Grupo
-                </button>
-                {groups.length === 0 && (
-                    <button className="btn btn-outline" onClick={handleSeedDemo} style={{ flex: 1 }}>
-                        🎲 Demo Data
-                    </button>
-                )}
-            </div>
-
-            {/* Groups List */}
-            <div className="section-title">📋 Grupos ({groups.length})</div>
-
-            {groups.length === 0 ? (
-                <div className="empty-state">
-                    <div className="empty-icon">🏗️</div>
-                    <p>No hay grupos registrados. Agrega uno o carga datos de demo.</p>
-                </div>
-            ) : (
-                groups.map(group => (
-                    <div key={group.id} className="group-card">
-                        <div className="group-header">
-                            <div className="group-emoji">{group.emoji}</div>
-                            <div>
-                                <div className="group-name">{group.name}</div>
-                                <div className="group-stand">Stand: {group.standNumber}</div>
-                            </div>
-                        </div>
-                        {group.description && (
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                                {group.description}
-                            </p>
-                        )}
-                        <div className="group-points-config">
-                            <div className="point-tag">📍 Visita: {group.visitPoints || 10} pts</div>
-                            <div className="point-tag">🎯 Actividad: {group.activityPoints || 25} pts</div>
-                        </div>
-                        <div className="group-actions">
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => navigate(`/admin/qr/${group.id}`)}
-                                style={{ fontSize: '0.8rem', padding: '8px 16px' }}
-                            >
-                                📱 Mostrar QR
-                            </button>
-                            <button
-                                className="btn btn-outline"
-                                onClick={() => openEditModal(group)}
-                                style={{ fontSize: '0.8rem', padding: '8px 16px' }}
-                            >
-                                ✏️ Editar
-                            </button>
-                            <button
-                                className="btn btn-outline"
-                                onClick={() => handleDelete(group.id)}
-                                style={{ fontSize: '0.8rem', padding: '8px 16px', color: 'var(--accent-rose)' }}
-                            >
-                                🗑️
-                            </button>
+            {/* Community Info */}
+            {community ? (
+                <div className="group-card">
+                    <div className="group-header">
+                        <div className="group-emoji">{community.emoji}</div>
+                        <div>
+                            <div className="group-name">{community.name}</div>
+                            <div className="group-stand">Stand: {community.stand_number}</div>
                         </div>
                     </div>
-                ))
+                    {community.description && (
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
+                            {community.description}
+                        </p>
+                    )}
+                    <div className="group-points-config">
+                        <div className="point-tag">📍 Visita: {community.visit_points || 10} pts</div>
+                        <div className="point-tag">🎯 Actividad: {community.activity_points || 25} pts</div>
+                    </div>
+                    <div className="group-actions">
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => navigate(`/admin/qr/${community.id}`)}
+                            style={{ fontSize: '0.8rem', padding: '8px 16px' }}
+                        >
+                            📱 Mostrar QR
+                        </button>
+                        <button
+                            className="btn btn-outline"
+                            onClick={openEditModal}
+                            style={{ fontSize: '0.8rem', padding: '8px 16px' }}
+                        >
+                            ✏️ Editar
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <div className="empty-state">
+                    <div className="empty-icon">⚠️</div>
+                    <p>No tienes una comunidad asignada. Contacta al organizador.</p>
+                </div>
             )}
 
-            {/* Modal */}
+            {/* Recent Scans */}
+            {scans.length > 0 && (
+                <>
+                    <div className="section-title" style={{ marginTop: 24 }}>📋 Escaneos recientes ({scans.length})</div>
+                    <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+                        <ul className="activity-list">
+                            {scans.slice(0, 15).map((scan, i) => (
+                                <li key={scan.id} className="activity-item">
+                                    <div className={`activity-icon ${scan.type}`}>
+                                        {scan.type === 'visit' ? '📍' : '🎯'}
+                                    </div>
+                                    <div className="activity-info">
+                                        <div className="activity-title">
+                                            {scan.participants?.name || 'Participante'}
+                                        </div>
+                                        <div className="activity-time">
+                                            {scan.type === 'visit' ? 'Visita' : 'Actividad'} · {new Date(scan.created_at).toLocaleTimeString('es')}
+                                        </div>
+                                    </div>
+                                    <div className="activity-points">+{scan.points}</div>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </>
+            )}
+
+            {/* Edit Modal */}
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>{editingGroup ? 'Editar Grupo' : 'Nuevo Grupo'}</h2>
+                            <h2>Editar Comunidad</h2>
                             <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
                         </div>
 
@@ -208,8 +258,8 @@ export default function AdminDashboard() {
                                 <input
                                     className="form-input"
                                     type="text"
-                                    value={form.standNumber}
-                                    onChange={e => setForm({ ...form, standNumber: e.target.value })}
+                                    value={form.stand_number}
+                                    onChange={e => setForm({ ...form, stand_number: e.target.value })}
                                     placeholder="Ej: A-01"
                                 />
                             </div>
@@ -233,8 +283,8 @@ export default function AdminDashboard() {
                                         type="number"
                                         min="1"
                                         max="100"
-                                        value={form.visitPoints}
-                                        onChange={e => setForm({ ...form, visitPoints: parseInt(e.target.value) || 10 })}
+                                        value={form.visit_points}
+                                        onChange={e => setForm({ ...form, visit_points: parseInt(e.target.value) || 10 })}
                                     />
                                 </div>
                                 <div className="form-group">
@@ -244,14 +294,14 @@ export default function AdminDashboard() {
                                         type="number"
                                         min="1"
                                         max="100"
-                                        value={form.activityPoints}
-                                        onChange={e => setForm({ ...form, activityPoints: parseInt(e.target.value) || 25 })}
+                                        value={form.activity_points}
+                                        onChange={e => setForm({ ...form, activity_points: parseInt(e.target.value) || 25 })}
                                     />
                                 </div>
                             </div>
 
                             <button type="submit" className="btn btn-primary btn-full">
-                                {editingGroup ? '💾 Guardar Cambios' : '➕ Crear Grupo'}
+                                💾 Guardar Cambios
                             </button>
                         </form>
                     </div>

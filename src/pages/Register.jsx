@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { registerParticipant, getParticipant } from '../lib/storage.js';
+import { useAuth } from '../lib/AuthContext.jsx';
 
 export default function Register() {
     const navigate = useNavigate();
+    const { participant, registerParticipant } = useAuth();
     const [form, setForm] = useState({ name: '', email: '', universityId: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     // If already registered, redirect
-    React.useEffect(() => {
-        const p = getParticipant();
-        if (p) navigate('/dashboard', { replace: true });
-    }, [navigate]);
+    useEffect(() => {
+        if (participant) navigate('/dashboard', { replace: true });
+    }, [participant, navigate]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
@@ -28,16 +28,17 @@ export default function Register() {
         }
 
         setLoading(true);
-
-        // Small delay for UX
-        setTimeout(() => {
-            registerParticipant({
+        try {
+            await registerParticipant({
                 name: form.name.trim(),
                 email: form.email.trim(),
                 universityId: form.universityId.trim(),
             });
             navigate('/dashboard', { replace: true });
-        }, 500);
+        } catch (err) {
+            setError(err.message || 'Error al registrarse');
+            setLoading(false);
+        }
     };
 
     return (
@@ -98,7 +99,7 @@ export default function Register() {
                 </form>
 
                 <p style={{ textAlign: 'center', marginTop: 24, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Tu información se guarda localmente en tu dispositivo
+                    Tu información se guarda de forma segura en la nube
                 </p>
             </div>
         </div>

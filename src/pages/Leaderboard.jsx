@@ -1,9 +1,33 @@
-import React from 'react';
-import { getLeaderboard, getParticipant } from '../lib/storage.js';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../lib/AuthContext.jsx';
+import { getLeaderboard, subscribeToLeaderboard } from '../lib/api.js';
 
 export default function Leaderboard() {
-    const leaderboard = getLeaderboard();
-    const participant = getParticipant();
+    const { participant } = useAuth();
+    const [leaderboard, setLeaderboard] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const loadLeaderboard = async () => {
+        try {
+            const data = await getLeaderboard();
+            setLeaderboard(data);
+        } catch (err) {
+            console.error('Leaderboard error:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadLeaderboard();
+
+        // Subscribe to realtime updates
+        const unsubscribe = subscribeToLeaderboard(() => {
+            loadLeaderboard();
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const top3 = leaderboard.slice(0, 3);
     const rest = leaderboard.slice(3, 20);
@@ -18,6 +42,17 @@ export default function Leaderboard() {
 
     function getInitials(name) {
         return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    }
+
+    if (loading) {
+        return (
+            <div className="page">
+                <div className="container" style={{ textAlign: 'center', paddingTop: 60 }}>
+                    <div style={{ fontSize: '3rem', marginBottom: 16 }}>⏳</div>
+                    <p style={{ color: 'var(--text-secondary)' }}>Cargando ranking...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -54,7 +89,7 @@ export default function Leaderboard() {
                             </div>
                         )}
 
-                        {/* Rest of list */}
+                        {/* Full list */}
                         <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
                             <ul className="leaderboard-list">
                                 {leaderboard.map((p, i) => {
