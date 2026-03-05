@@ -6,7 +6,7 @@
 @font-face {
   font-family: 'Geomanist';
   src: url('/fonts/Geomanist-Medium.woff2') format('woff2'),
-       url('/fonts/Geomanist-Medium.ttf') format('truetype');
+    url('/fonts/Geomanist-Medium.ttf') format('truetype');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
@@ -70,7 +70,9 @@
 }
 
 /* --- Reset & Base --- */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -98,7 +100,7 @@ body::before {
   width: 200%;
   height: 200%;
   background: radial-gradient(circle at 30% 20%, rgba(129, 0, 255, 0.04) 0%, transparent 50%),
-              radial-gradient(circle at 70% 80%, rgba(245, 80, 12, 0.03) 0%, transparent 50%);
+    radial-gradient(circle at 70% 80%, rgba(245, 80, 12, 0.03) 0%, transparent 50%);
   z-index: -1;
   pointer-events: none;
 }
@@ -121,7 +123,9 @@ button {
   outline: none;
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   font-family: inherit;
   outline: none;
 }
@@ -141,53 +145,124 @@ input, select, textarea {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @keyframes countUp {
-  from { opacity: 0; transform: translateY(20px) scale(0.8); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @keyframes confetti {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(-100px) rotate(720deg); opacity: 0; }
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(-100px) rotate(720deg);
+    opacity: 0;
+  }
 }
 
 @keyframes ripple {
-  0% { transform: scale(0); opacity: 0.6; }
-  100% { transform: scale(4); opacity: 0; }
+  0% {
+    transform: scale(0);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
 }
 
 @keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Spinner animation for loader icons */
+.spin-icon {
+  animation: rotate 1s linear infinite;
 }
 
 /* --- Glass Card --- */
@@ -225,12 +300,12 @@ input, select, textarea {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(255,255,255,0);
+  background: rgba(255, 255, 255, 0);
   transition: background var(--transition-fast);
 }
 
 .btn:hover::after {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .btn:active {
@@ -564,9 +639,17 @@ input, select, textarea {
   flex-shrink: 0;
 }
 
-.activity-icon.visit { background: rgba(129, 0, 255, 0.1); }
-.activity-icon.activity { background: rgba(245, 80, 12, 0.1); }
-.activity-icon.reward { background: rgba(245, 158, 11, 0.1); }
+.activity-icon.visit {
+  background: rgba(129, 0, 255, 0.1);
+}
+
+.activity-icon.activity {
+  background: rgba(245, 80, 12, 0.1);
+}
+
+.activity-icon.reward {
+  background: rgba(245, 158, 11, 0.1);
+}
 
 .activity-info {
   flex: 1;
@@ -609,9 +692,17 @@ input, select, textarea {
   animation: slideUp 0.5s ease backwards;
 }
 
-.podium-item:nth-child(1) { animation-delay: 0.2s; }
-.podium-item:nth-child(2) { animation-delay: 0s; }
-.podium-item:nth-child(3) { animation-delay: 0.4s; }
+.podium-item:nth-child(1) {
+  animation-delay: 0.2s;
+}
+
+.podium-item:nth-child(2) {
+  animation-delay: 0s;
+}
+
+.podium-item:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 .podium-avatar {
   width: 48px;
@@ -821,7 +912,7 @@ input, select, textarea {
 }
 
 /* Override library-injected inline styles on internal wrapper divs */
-#qr-reader > div {
+#qr-reader>div {
   max-height: 400px !important;
   overflow: hidden !important;
 }
@@ -854,13 +945,15 @@ input, select, textarea {
 }
 
 .scanner-corners::before {
-  top: 0; left: 0;
+  top: 0;
+  left: 0;
   border-width: 3px 0 0 3px;
   border-radius: 4px 0 0 0;
 }
 
 .scanner-corners::after {
-  top: 0; right: 0;
+  top: 0;
+  right: 0;
   border-width: 3px 3px 0 0;
   border-radius: 0 4px 0 0;
 }
@@ -876,8 +969,15 @@ input, select, textarea {
 }
 
 @keyframes scanLine {
-  0%, 100% { top: 20%; }
-  50% { top: 78%; }
+
+  0%,
+  100% {
+    top: 20%;
+  }
+
+  50% {
+    top: 78%;
+  }
 }
 
 /* --- QR Display (Admin) --- */
@@ -948,13 +1048,28 @@ input, select, textarea {
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.toast.success { border-left: 3px solid var(--accent-emerald); }
-.toast.error { border-left: 3px solid var(--accent-rose); }
-.toast.warning { border-left: 3px solid var(--accent-amber); }
+.toast.success {
+  border-left: 3px solid var(--accent-emerald);
+}
+
+.toast.error {
+  border-left: 3px solid var(--accent-rose);
+}
+
+.toast.warning {
+  border-left: 3px solid var(--accent-amber);
+}
 
 .toast-icon {
   font-size: 1.5rem;
@@ -1311,7 +1426,15 @@ input, select, textarea {
 
 /* --- Responsive --- */
 @media (min-width: 768px) {
-  .container { max-width: 520px; }
-  .stats-grid { grid-template-columns: repeat(4, 1fr); }
-  .rewards-grid { grid-template-columns: repeat(2, 1fr); }
+  .container {
+    max-width: 520px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .rewards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

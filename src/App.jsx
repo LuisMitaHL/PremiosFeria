@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
+import { Compass, Home, Trophy, ScanLine, Gift, Star } from 'lucide-react';
 
 // Pages
 import Welcome from './pages/Welcome.jsx';
@@ -28,12 +29,12 @@ function AppLayout({ children }) {
             <header className="app-header">
                 <div className="header-content">
                     <div className="header-logo">
-                        <div className="logo-icon">🎪</div>
-                        <span>Community Quest</span>
+                        <div className="logo-icon"><Compass size={18} /></div>
+                        <span>Comunity Quest</span>
                     </div>
                     {participant && (
                         <div className="header-points">
-                            <span className="pts-icon">⭐</span>
+                            <span className="pts-icon"><Star size={14} /></span>
                             <span>{participant.points}</span>
                         </div>
                     )}
@@ -47,19 +48,19 @@ function AppLayout({ children }) {
             <nav className="bottom-nav">
                 <div className="nav-items">
                     <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        <span className="nav-icon">🏠</span>
+                        <span className="nav-icon"><Home size={20} /></span>
                         <span>Inicio</span>
                     </NavLink>
                     <NavLink to="/leaderboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        <span className="nav-icon">🏆</span>
+                        <span className="nav-icon"><Trophy size={20} /></span>
                         <span>Ranking</span>
                     </NavLink>
                     <NavLink to="/scan" className="nav-item scan-btn">
-                        <span className="nav-icon">📸</span>
+                        <span className="nav-icon"><ScanLine size={22} /></span>
                         <span>Scan</span>
                     </NavLink>
                     <NavLink to="/rewards" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        <span className="nav-icon">🎁</span>
+                        <span className="nav-icon"><Gift size={20} /></span>
                         <span>Premios</span>
                     </NavLink>
                 </div>

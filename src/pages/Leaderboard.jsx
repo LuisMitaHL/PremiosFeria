@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { getLeaderboard, subscribeToLeaderboard } from '../lib/api.js';
+import { Trophy, Loader, Star, Medal } from 'lucide-react';
 
 export default function Leaderboard() {
     const { participant } = useAuth();
@@ -48,7 +49,7 @@ export default function Leaderboard() {
         return (
             <div className="page">
                 <div className="container" style={{ textAlign: 'center', paddingTop: 60 }}>
-                    <div style={{ fontSize: '3rem', marginBottom: 16 }}>⏳</div>
+                    <div style={{ fontSize: '3rem', marginBottom: 16 }}><Loader size={40} className="spin-icon" /></div>
                     <p style={{ color: 'var(--text-secondary)' }}>Cargando ranking...</p>
                 </div>
             </div>
@@ -59,13 +60,13 @@ export default function Leaderboard() {
         <div className="page">
             <div className="container">
                 <div className="page-header" style={{ textAlign: 'center' }}>
-                    <h1>🏆 Leaderboard</h1>
+                    <h1><Trophy size={24} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} />Leaderboard</h1>
                     <p>Los participantes con más puntos</p>
                 </div>
 
                 {leaderboard.length === 0 ? (
                     <div className="empty-state">
-                        <div className="empty-icon">🏆</div>
+                        <div className="empty-icon"><Trophy size={40} /></div>
                         <p>Aún no hay participantes registrados</p>
                     </div>
                 ) : (
@@ -97,14 +98,14 @@ export default function Leaderboard() {
                                     return (
                                         <li key={p.id} className={`leaderboard-item ${isMe ? 'is-me' : ''}`}>
                                             <div className="lb-rank">
-                                                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                                                {i === 0 ? <Medal size={16} color="#f59e0b" /> : i === 1 ? <Medal size={16} color="#94a3b8" /> : i === 2 ? <Medal size={16} color="#cd7f32" /> : `#${i + 1}`}
                                             </div>
                                             <div className="lb-avatar">{getInitials(p.name)}</div>
                                             <div className="lb-name">
                                                 {p.name}
                                                 {isMe && <span className="badge badge-purple" style={{ marginLeft: 8 }}>Tú</span>}
                                             </div>
-                                            <div className="lb-points">⭐ {p.points}</div>
+                                            <div className="lb-points"><Star size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> {p.points}</div>
                                         </li>
                                     );
                                 })}

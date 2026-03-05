@@ -7,6 +7,7 @@ import {
     getScansByCommunity,
     getLeaderboard,
 } from '../../lib/api.js';
+import { Settings, LogOut, Loader, MapPin, Target, QrCode, Pencil, AlertTriangle, ClipboardList, Save, BookOpen, Monitor, Zap, Bot, Globe, Palette, FlaskConical, TestTube, Ruler, Gamepad2, Sprout, Music, Dumbbell, Camera, Rocket, Brain } from 'lucide-react';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [form, setForm] = useState({
-        name: '', emoji: '📚', stand_number: '', description: '',
+        name: '', emoji: 'BookOpen', stand_number: '', description: '',
         visit_points: 10, activity_points: 25
     });
 
@@ -87,13 +88,30 @@ export default function AdminDashboard() {
         navigate('/admin/login', { replace: true });
     }
 
-    const emojis = ['📚', '💻', '⚡', '🤖', '🌐', '🎨', '🔬', '🧪', '📐', '🎮', '🌱', '🎵', '🏋️', '📸', '🚀', '🧠'];
+    const iconOptions = [
+        { name: 'BookOpen', icon: BookOpen },
+        { name: 'Monitor', icon: Monitor },
+        { name: 'Zap', icon: Zap },
+        { name: 'Bot', icon: Bot },
+        { name: 'Globe', icon: Globe },
+        { name: 'Palette', icon: Palette },
+        { name: 'FlaskConical', icon: FlaskConical },
+        { name: 'TestTube', icon: TestTube },
+        { name: 'Ruler', icon: Ruler },
+        { name: 'Gamepad2', icon: Gamepad2 },
+        { name: 'Sprout', icon: Sprout },
+        { name: 'Music', icon: Music },
+        { name: 'Dumbbell', icon: Dumbbell },
+        { name: 'Camera', icon: Camera },
+        { name: 'Rocket', icon: Rocket },
+        { name: 'Brain', icon: Brain },
+    ];
 
     if (adminLoading || loading) {
         return (
             <div className="admin-page page">
                 <div className="container" style={{ textAlign: 'center', paddingTop: 60 }}>
-                    <div style={{ fontSize: '3rem', marginBottom: 16 }}>⏳</div>
+                    <div style={{ fontSize: '3rem', marginBottom: 16 }}><Loader size={40} className="spin-icon" /></div>
                     <p style={{ color: 'var(--text-secondary)' }}>Cargando panel de administración...</p>
                 </div>
             </div>
@@ -111,12 +129,12 @@ export default function AdminDashboard() {
             <div className="page-header">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
-                        <h1>⚙️ Admin</h1>
+                        <h1><Settings size={22} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} />Admin</h1>
                         <p>{community?.name || 'Panel de administración'}</p>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                         <button className="btn btn-outline" onClick={handleLogout} style={{ fontSize: '0.8rem' }}>
-                            🚪 Salir
+                            <LogOut size={14} /> Salir
                         </button>
                     </div>
                 </div>
@@ -154,8 +172,8 @@ export default function AdminDashboard() {
                         </p>
                     )}
                     <div className="group-points-config">
-                        <div className="point-tag">📍 Visita: {community.visit_points || 10} pts</div>
-                        <div className="point-tag">🎯 Actividad: {community.activity_points || 25} pts</div>
+                        <div className="point-tag"><MapPin size={12} /> Visita: {community.visit_points || 10} pts</div>
+                        <div className="point-tag"><Target size={12} /> Actividad: {community.activity_points || 25} pts</div>
                     </div>
                     <div className="group-actions">
                         <button
@@ -163,20 +181,20 @@ export default function AdminDashboard() {
                             onClick={() => navigate(`/admin/qr/${community.id}`)}
                             style={{ fontSize: '0.8rem', padding: '8px 16px' }}
                         >
-                            📱 Mostrar QR
+                            <QrCode size={14} /> Mostrar QR
                         </button>
                         <button
                             className="btn btn-outline"
                             onClick={openEditModal}
                             style={{ fontSize: '0.8rem', padding: '8px 16px' }}
                         >
-                            ✏️ Editar
+                            <Pencil size={14} /> Editar
                         </button>
                     </div>
                 </div>
             ) : (
                 <div className="empty-state">
-                    <div className="empty-icon">⚠️</div>
+                    <div className="empty-icon"><AlertTriangle size={40} /></div>
                     <p>No tienes una comunidad asignada. Contacta al organizador.</p>
                 </div>
             )}
@@ -184,13 +202,13 @@ export default function AdminDashboard() {
             {/* Recent Scans */}
             {scans.length > 0 && (
                 <>
-                    <div className="section-title" style={{ marginTop: 24 }}>📋 Escaneos recientes ({scans.length})</div>
+                    <div className="section-title" style={{ marginTop: 24 }}><ClipboardList size={16} style={{ display: 'inline', verticalAlign: 'middle' }} /> Escaneos recientes ({scans.length})</div>
                     <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
                         <ul className="activity-list">
                             {scans.slice(0, 15).map((scan, i) => (
                                 <li key={scan.id} className="activity-item">
                                     <div className={`activity-icon ${scan.type}`}>
-                                        {scan.type === 'visit' ? '📍' : '🎯'}
+                                        {scan.type === 'visit' ? <MapPin size={18} /> : <Target size={18} />}
                                     </div>
                                     <div className="activity-info">
                                         <div className="activity-title">
@@ -219,23 +237,26 @@ export default function AdminDashboard() {
 
                         <form onSubmit={handleSubmit}>
                             <div className="form-group">
-                                <label className="form-label">Emoji</label>
+                                <label className="form-label">Icono</label>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                    {emojis.map(em => (
+                                    {iconOptions.map(({ name, icon: Icon }) => (
                                         <button
                                             type="button"
-                                            key={em}
-                                            onClick={() => setForm({ ...form, emoji: em })}
+                                            key={name}
+                                            onClick={() => setForm({ ...form, emoji: name })}
                                             style={{
                                                 fontSize: '1.5rem',
                                                 padding: '8px',
                                                 borderRadius: 8,
-                                                border: form.emoji === em ? '2px solid var(--accent-purple)' : '2px solid transparent',
-                                                background: form.emoji === em ? 'rgba(168,85,247,0.15)' : 'var(--bg-glass)',
+                                                border: form.emoji === name ? '2px solid var(--accent-purple)' : '2px solid transparent',
+                                                background: form.emoji === name ? 'rgba(129,0,255,0.1)' : 'var(--bg-glass)',
                                                 cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
                                             }}
                                         >
-                                            {em}
+                                            <Icon size={20} />
                                         </button>
                                     ))}
                                 </div>
@@ -301,12 +322,13 @@ export default function AdminDashboard() {
                             </div>
 
                             <button type="submit" className="btn btn-primary btn-full">
-                                💾 Guardar Cambios
+                                <Save size={16} /> Guardar Cambios
                             </button>
                         </form>
                     </div>
-                </div>
-            )}
-        </div>
+                </div >
+            )
+            }
+        </div >
     );
 }

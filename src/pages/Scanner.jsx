@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { scanQR } from '../lib/api.js';
 import { decodeQRPayload } from '../lib/qrSecurity.js';
+import { ScanLine, Loader, PartyPopper, Frown, Home, CheckCircle, Lock, Camera, Keyboard, MapPin, XCircle } from 'lucide-react';
 
 export default function Scanner() {
     const navigate = useNavigate();
@@ -139,7 +140,7 @@ export default function Scanner() {
         return (
             <div className="page">
                 <div className="container" style={{ paddingTop: 60, textAlign: 'center' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: 16 }}>⏳</div>
+                    <div style={{ fontSize: '3rem', marginBottom: 16 }}><Loader size={40} className="spin-icon" /></div>
                     <h2>Validando código...</h2>
                     <p style={{ color: 'var(--text-secondary)' }}>Verificando con el servidor</p>
                 </div>
@@ -154,7 +155,7 @@ export default function Scanner() {
                 <div className="container" style={{ paddingTop: 60 }}>
                     <div className={`scan-result ${scanResult.success ? 'success' : 'error'}`}>
                         <div className="result-icon">
-                            {scanResult.success ? '🎉' : '😔'}
+                            {scanResult.success ? <PartyPopper size={48} /> : <Frown size={48} />}
                         </div>
                         <div className="result-title">
                             {scanResult.success ? '¡Éxito!' : 'Error'}
@@ -178,10 +179,10 @@ export default function Scanner() {
 
                         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
                             <button className="btn btn-primary" onClick={resetScanner}>
-                                📸 Escanear otro
+                                <ScanLine size={16} /> Escanear otro
                             </button>
                             <button className="btn btn-outline" onClick={() => navigate('/dashboard')}>
-                                🏠 Dashboard
+                                <Home size={16} /> Dashboard
                             </button>
                         </div>
                     </div>
@@ -194,7 +195,7 @@ export default function Scanner() {
         <div className="page">
             <div className="container">
                 <div className="page-header" style={{ textAlign: 'center' }}>
-                    <h1>📸 Escanear QR</h1>
+                    <h1><ScanLine size={22} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} />Escanear QR</h1>
                     <p>Apunta la cámara al código QR del stand</p>
                 </div>
 
@@ -213,7 +214,7 @@ export default function Scanner() {
                         onClick={() => setShowManual(!showManual)}
                         style={{ fontSize: '0.85rem' }}
                     >
-                        {showManual ? '📸 Usar cámara' : '⌨️ Ingresar código manualmente'}
+                        {showManual ? <><Camera size={14} /> Usar cámara</> : <><Keyboard size={14} /> Ingresar código manualmente</>}
                     </button>
                 </div>
 
@@ -234,7 +235,7 @@ export default function Scanner() {
                                 />
                             </div>
                             <button type="submit" className="btn btn-primary btn-full">
-                                ✅ Validar código
+                                <CheckCircle size={16} /> Validar código
                             </button>
                         </div>
                     </form>
@@ -242,7 +243,7 @@ export default function Scanner() {
 
                 <div className="glass-card" style={{ marginTop: 24, textAlign: 'center' }}>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        🔒 Los códigos QR rotan cada 30 segundos para tu seguridad. Asegúrate de escanear el QR que se muestra actualmente en el stand.
+                        <Lock size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Los códigos QR rotan cada 30 segundos para tu seguridad. Asegúrate de escanear el QR que se muestra actualmente en el stand.
                     </p>
                 </div>
             </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext.jsx';
+import { UserPlus, AlertTriangle, Loader, PartyPopper } from 'lucide-react';
 
 export default function Register() {
     const navigate = useNavigate();
@@ -45,7 +46,7 @@ export default function Register() {
         <div className="page">
             <div className="container" style={{ paddingTop: 60 }}>
                 <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                    <div style={{ fontSize: '3rem', marginBottom: 16 }}>✍️</div>
+                    <div style={{ fontSize: '3rem', marginBottom: 16 }}><UserPlus size={48} strokeWidth={1.5} /></div>
                     <h1 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Regístrate</h1>
                     <p style={{ color: 'var(--text-secondary)', marginTop: 8 }}>
                         Crea tu cuenta para empezar a acumular puntos
@@ -89,12 +90,12 @@ export default function Register() {
 
                     {error && (
                         <p style={{ color: 'var(--accent-rose)', fontSize: '0.85rem', marginBottom: 16 }}>
-                            ⚠️ {error}
+                            <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> {error}
                         </p>
                     )}
 
                     <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
-                        {loading ? '⏳ Registrando...' : '🎉 Registrarme'}
+                        {loading ? <><Loader size={16} className="spin-icon" /> Registrando...</> : <><PartyPopper size={16} /> Registrarme</>}
                     </button>
                 </form>
 

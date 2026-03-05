@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext.jsx';
+import { Compass, ScanLine, Star, Gift, ArrowRight } from 'lucide-react';
 
 export default function Welcome() {
     const navigate = useNavigate();
@@ -15,7 +16,7 @@ export default function Welcome() {
 
     return (
         <div className="welcome-page">
-            <div className="welcome-logo">🎪</div>
+            <div className="welcome-logo"><Compass size={64} strokeWidth={1.5} /></div>
             <h1 className="welcome-title">Comunity Quest</h1>
             <p className="welcome-subtitle">
                 Escanea códigos QR, acumula puntos y gana increíbles premios
@@ -23,21 +24,21 @@ export default function Welcome() {
 
             <div className="welcome-features">
                 <div className="welcome-feature" style={{ animationDelay: '0.1s' }}>
-                    <div className="feat-icon">📸</div>
+                    <div className="feat-icon"><ScanLine size={22} /></div>
                     <div className="feat-text">
                         <strong>Escanea QR</strong>
                         Visita stands y escanea sus códigos
                     </div>
                 </div>
                 <div className="welcome-feature" style={{ animationDelay: '0.2s' }}>
-                    <div className="feat-icon">⭐</div>
+                    <div className="feat-icon"><Star size={22} /></div>
                     <div className="feat-text">
                         <strong>Acumula Puntos</strong>
                         Gana puntos por visitas y actividades
                     </div>
                 </div>
                 <div className="welcome-feature" style={{ animationDelay: '0.3s' }}>
-                    <div className="feat-icon">🎁</div>
+                    <div className="feat-icon"><Gift size={22} /></div>
                     <div className="feat-text">
                         <strong>Canjea Premios</strong>
                         Intercambia tus puntos por recompensas
@@ -46,7 +47,7 @@ export default function Welcome() {
             </div>
 
             <button className="btn btn-primary btn-lg btn-full" onClick={() => navigate('/register')} style={{ maxWidth: 320 }}>
-                🚀 Comenzar
+                <ArrowRight size={18} /> Comenzar
             </button>
 
             <p style={{ marginTop: 24, fontSize: '0.8rem', color: 'var(--text-muted)' }}>

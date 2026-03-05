@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../../lib/AuthContext.jsx';
 import { getMyCommunity, getHmacSecret } from '../../lib/api.js';
 import { generateQRPayload, getTimeUntilRotation } from '../../lib/qrSecurity.js';
+import { Loader, XCircle, MapPin, Target, RefreshCw, Lock } from 'lucide-react';
 
 export default function QRDisplay() {
     const { groupId } = useParams();
@@ -78,7 +79,7 @@ export default function QRDisplay() {
         return (
             <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
                 <div className="empty-state">
-                    <div className="empty-icon">⏳</div>
+                    <div className="empty-icon"><Loader size={40} className="spin-icon" /></div>
                     <p>Cargando...</p>
                 </div>
             </div>
@@ -89,7 +90,7 @@ export default function QRDisplay() {
         return (
             <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
                 <div className="empty-state">
-                    <div className="empty-icon">❌</div>
+                    <div className="empty-icon"><XCircle size={40} /></div>
                     <p>No tienes acceso a esta comunidad</p>
                     <button className="btn btn-primary" onClick={() => navigate('/admin')} style={{ marginTop: 16 }}>
                         ← Volver al Admin
@@ -112,14 +113,14 @@ export default function QRDisplay() {
                             onClick={() => setQrType('visit')}
                             style={{ fontSize: '0.8rem', padding: '8px 16px' }}
                         >
-                            📍 Visita
+                            <MapPin size={14} /> Visita
                         </button>
                         <button
                             className={`btn ${qrType === 'activity' ? 'btn-primary' : 'btn-outline'}`}
                             onClick={() => setQrType('activity')}
                             style={{ fontSize: '0.8rem', padding: '8px 16px' }}
                         >
-                            🎯 Actividad
+                            <Target size={14} /> Actividad
                         </button>
                     </div>
                 </div>
@@ -148,7 +149,7 @@ export default function QRDisplay() {
 
                     {/* Timer */}
                     <div className="qr-timer" style={{ marginBottom: 16 }}>
-                        <span>🔄</span>
+                        <span><RefreshCw size={16} /></span>
                         <span style={{ color: timeLeft <= 5 ? 'var(--accent-rose)' : 'var(--text-primary)' }}>
                             {timeLeft}s
                         </span>
@@ -161,7 +162,7 @@ export default function QRDisplay() {
                     </div>
 
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: 300, textAlign: 'center' }}>
-                        🔒 El código QR se renueva cada 30 segundos para evitar uso indebido. Muestra esta pantalla a los visitantes.
+                        <Lock size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> El código QR se renueva cada 30 segundos para evitar uso indebido. Muestra esta pantalla a los visitantes.
                     </p>
                 </div>
             </div>

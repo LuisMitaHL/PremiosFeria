@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { getCommunities, getScansForParticipant } from '../lib/api.js';
+import { MapPin, ClipboardList, ScanLine, Construction, Target, Check } from 'lucide-react';
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -100,10 +101,10 @@ export default function Dashboard() {
                 </div>
 
                 {/* Visited Stands */}
-                <div className="section-title">📍 Stands</div>
+                <div className="section-title"><MapPin size={16} style={{ display: 'inline', verticalAlign: 'middle' }} /> Stands</div>
                 {communities.length === 0 ? (
                     <div className="empty-state">
-                        <div className="empty-icon">🏗️</div>
+                        <div className="empty-icon"><Construction size={40} /></div>
                         <p>No hay stands registrados aún</p>
                     </div>
                 ) : (
@@ -116,7 +117,7 @@ export default function Dashboard() {
                                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {g.name}
                                     </span>
-                                    {visited && <span className="check">✓</span>}
+                                    {visited && <span className="check"><Check size={14} /></span>}
                                 </div>
                             );
                         })}
@@ -124,11 +125,11 @@ export default function Dashboard() {
                 )}
 
                 {/* Recent Activity */}
-                <div className="section-title">📋 Actividad Reciente</div>
+                <div className="section-title"><ClipboardList size={16} style={{ display: 'inline', verticalAlign: 'middle' }} /> Actividad Reciente</div>
                 <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
                     {scanLog.length === 0 ? (
                         <div className="empty-state">
-                            <div className="empty-icon">📸</div>
+                            <div className="empty-icon"><ScanLine size={40} /></div>
                             <p>Escanea tu primer QR para comenzar</p>
                         </div>
                     ) : (
@@ -136,7 +137,7 @@ export default function Dashboard() {
                             {scanLog.slice(0, 10).map((scan, i) => (
                                 <li key={scan.id} className="activity-item" style={{ animationDelay: `${i * 0.05}s` }}>
                                     <div className={`activity-icon ${scan.type}`}>
-                                        {scan.type === 'visit' ? '📍' : '🎯'}
+                                        {scan.type === 'visit' ? <MapPin size={18} /> : <Target size={18} />}
                                     </div>
                                     <div className="activity-info">
                                         <div className="activity-title">
