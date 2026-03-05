@@ -141,7 +141,7 @@ export default function QRDisplay() {
                             size={260}
                             level="M"
                             includeMargin={false}
-                            fgColor="#1a1333"
+                            fgColor="#000000"
                             bgColor="#ffffff"
                         />
                     </div>

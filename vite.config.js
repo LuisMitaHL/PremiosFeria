@@ -9,11 +9,11 @@ export default defineConfig({
             registerType: 'autoUpdate',
             includeAssets: ['favicon.svg', 'icon-192.svg', 'icon-512.svg'],
             manifest: {
-                name: 'FeriaPoints — Rewards System',
-                short_name: 'FeriaPoints',
-                description: 'Escanea QR, acumula puntos y gana premios en la feria universitaria',
-                theme_color: '#0f0a1e',
-                background_color: '#0f0a1e',
+                name: 'Comunity Quest — Rewards System',
+                short_name: 'Comunity Quest',
+                description: 'Escanea QR, acumula puntos y gana premios',
+                theme_color: '#ffffff',
+                background_color: '#ffffff',
                 display: 'standalone',
                 start_url: '/',
                 icons: [

@@ -1,32 +1,42 @@
 /* ========================================
-   FeriaPoints Design System
+   Comunity Quest Design System
    ======================================== */
+
+/* --- Geomanist Font --- */
+@font-face {
+  font-family: 'Geomanist';
+  src: url('/fonts/Geomanist-Medium.woff2') format('woff2'),
+       url('/fonts/Geomanist-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* --- CSS Custom Properties --- */
 :root {
-  /* Colors */
-  --bg-primary: #0f0a1e;
-  --bg-secondary: #1a1333;
-  --bg-card: rgba(30, 22, 56, 0.8);
-  --bg-glass: rgba(255, 255, 255, 0.05);
-  --border-glass: rgba(255, 255, 255, 0.1);
+  /* Colors — Light Theme */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f7;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-glass: rgba(0, 0, 0, 0.04);
+  --border-glass: rgba(0, 0, 0, 0.1);
 
-  --text-primary: #f0eef6;
-  --text-secondary: #9b95b0;
-  --text-muted: #6b6480;
+  --text-primary: #000000;
+  --text-secondary: #555555;
+  --text-muted: #999999;
 
-  --accent-purple: #a855f7;
-  --accent-blue: #3b82f6;
+  --accent-purple: #8100ff;
+  --accent-orange: #f5500c;
   --accent-cyan: #06b6d4;
   --accent-emerald: #10b981;
   --accent-amber: #f59e0b;
   --accent-rose: #f43f5e;
   --accent-pink: #ec4899;
 
-  --gradient-primary: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+  --gradient-primary: linear-gradient(135deg, var(--accent-purple), var(--accent-orange));
   --gradient-success: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan));
   --gradient-warn: linear-gradient(135deg, var(--accent-amber), var(--accent-rose));
-  --gradient-card: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(59, 130, 246, 0.1));
+  --gradient-card: linear-gradient(135deg, rgba(129, 0, 255, 0.06), rgba(245, 80, 12, 0.06));
 
   /* Spacing */
   --space-xs: 4px;
@@ -44,11 +54,11 @@
   --radius-full: 9999px;
 
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --shadow-glow-purple: 0 0 30px rgba(168, 85, 247, 0.3);
-  --shadow-glow-blue: 0 0 30px rgba(59, 130, 246, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-glow-purple: 0 0 30px rgba(129, 0, 255, 0.2);
+  --shadow-glow-orange: 0 0 30px rgba(245, 80, 12, 0.2);
 
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -56,7 +66,7 @@
   --transition-slow: 400ms ease;
 
   /* Font */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family: 'Geomanist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* --- Reset & Base --- */
@@ -87,8 +97,8 @@ body::before {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle at 30% 20%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
-              radial-gradient(circle at 70% 80%, rgba(59, 130, 246, 0.06) 0%, transparent 50%);
+  background: radial-gradient(circle at 30% 20%, rgba(129, 0, 255, 0.04) 0%, transparent 50%),
+              radial-gradient(circle at 70% 80%, rgba(245, 80, 12, 0.03) 0%, transparent 50%);
   z-index: -1;
   pointer-events: none;
 }
@@ -234,7 +244,7 @@ input, select, textarea {
 }
 
 .btn-primary:hover {
-  box-shadow: 0 0 40px rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 40px rgba(129, 0, 255, 0.35);
 }
 
 .btn-success {
@@ -255,7 +265,7 @@ input, select, textarea {
 
 .btn-outline:hover {
   border-color: var(--accent-purple);
-  background: rgba(168, 85, 247, 0.1);
+  background: rgba(129, 0, 255, 0.08);
 }
 
 .btn-lg {
@@ -302,7 +312,7 @@ input, select, textarea {
 
 .form-input:focus {
   border-color: var(--accent-purple);
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+  box-shadow: 0 0 0 3px rgba(129, 0, 255, 0.12);
 }
 
 .form-input::placeholder {
@@ -314,7 +324,7 @@ input, select, textarea {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(15, 10, 30, 0.85);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-glass);
@@ -371,7 +381,7 @@ input, select, textarea {
   left: 0;
   right: 0;
   z-index: 100;
-  background: rgba(15, 10, 30, 0.92);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--border-glass);
@@ -501,7 +511,7 @@ input, select, textarea {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
+  background: radial-gradient(circle, rgba(129, 0, 255, 0.06) 0%, transparent 50%);
   animation: rotate 20s linear infinite;
   pointer-events: none;
 }
@@ -554,9 +564,9 @@ input, select, textarea {
   flex-shrink: 0;
 }
 
-.activity-icon.visit { background: rgba(168, 85, 247, 0.15); }
-.activity-icon.activity { background: rgba(59, 130, 246, 0.15); }
-.activity-icon.reward { background: rgba(245, 158, 11, 0.15); }
+.activity-icon.visit { background: rgba(129, 0, 255, 0.1); }
+.activity-icon.activity { background: rgba(245, 80, 12, 0.1); }
+.activity-icon.reward { background: rgba(245, 158, 11, 0.1); }
 
 .activity-info {
   flex: 1;
@@ -619,7 +629,7 @@ input, select, textarea {
 
 .podium-item.gold .podium-avatar {
   border-color: var(--accent-amber);
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
 }
 
 .podium-item.silver .podium-avatar {
@@ -687,8 +697,8 @@ input, select, textarea {
 }
 
 .leaderboard-item.is-me {
-  background: rgba(168, 85, 247, 0.08);
-  border: 1px solid rgba(168, 85, 247, 0.2);
+  background: rgba(129, 0, 255, 0.06);
+  border: 1px solid rgba(129, 0, 255, 0.15);
   border-radius: var(--radius-md);
   margin-bottom: var(--space-xs);
 }
@@ -781,7 +791,7 @@ input, select, textarea {
   font-weight: 700;
   font-size: 0.85rem;
   color: var(--accent-amber);
-  background: rgba(245, 158, 11, 0.1);
+  background: rgba(245, 158, 11, 0.08);
   padding: 2px var(--space-sm);
   border-radius: var(--radius-full);
 }
@@ -973,7 +983,7 @@ input, select, textarea {
 }
 
 .group-card:hover {
-  border-color: rgba(168, 85, 247, 0.3);
+  border-color: rgba(129, 0, 255, 0.2);
 }
 
 .group-header {
@@ -1194,13 +1204,13 @@ input, select, textarea {
 }
 
 .badge-purple {
-  background: rgba(168, 85, 247, 0.15);
+  background: rgba(129, 0, 255, 0.1);
   color: var(--accent-purple);
 }
 
-.badge-blue {
-  background: rgba(59, 130, 246, 0.15);
-  color: var(--accent-blue);
+.badge-orange {
+  background: rgba(245, 80, 12, 0.1);
+  color: var(--accent-orange);
 }
 
 .badge-green {
@@ -1291,8 +1301,8 @@ input, select, textarea {
 }
 
 .stand-chip.visited {
-  border-color: rgba(16, 185, 129, 0.3);
-  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.06);
 }
 
 .stand-chip .check {

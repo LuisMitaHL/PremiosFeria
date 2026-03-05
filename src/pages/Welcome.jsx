@@ -16,9 +16,9 @@ export default function Welcome() {
     return (
         <div className="welcome-page">
             <div className="welcome-logo">🎪</div>
-            <h1 className="welcome-title">FeriaPoints</h1>
+            <h1 className="welcome-title">Comunity Quest</h1>
             <p className="welcome-subtitle">
-                Escanea códigos QR, acumula puntos y gana increíbles premios en la feria universitaria
+                Escanea códigos QR, acumula puntos y gana increíbles premios
             </p>
 
             <div className="welcome-features">
