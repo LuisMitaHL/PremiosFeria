@@ -66,6 +66,13 @@ export async function getMyCommunity(authUserId) {
 }
 
 export async function updateCommunity(id, updates) {
+    if (updates.visit_points !== undefined && updates.visit_points > 30) {
+        throw new Error('El límite máximo de puntos por visita es 30.');
+    }
+    if (updates.activity_points !== undefined && updates.activity_points > 100) {
+        throw new Error('El límite máximo de puntos por actividad es 100.');
+    }
+
     const { data, error } = await supabase
         .from('communities')
         .update(updates)

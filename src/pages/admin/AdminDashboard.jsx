@@ -73,6 +73,15 @@ export default function AdminDashboard() {
         e.preventDefault();
         if (!form.name.trim() || !community) return;
 
+        if (form.visit_points > 30) {
+            alert('El límite de puntos por visita es 30.');
+            return;
+        }
+        if (form.activity_points > 100) {
+            alert('El límite de puntos por actividad es 100.');
+            return;
+        }
+
         try {
             const updated = await updateCommunity(community.id, form);
             setCommunity(updated);
@@ -303,9 +312,12 @@ export default function AdminDashboard() {
                                         className="form-input"
                                         type="number"
                                         min="1"
-                                        max="100"
+                                        max="30"
                                         value={form.visit_points}
-                                        onChange={e => setForm({ ...form, visit_points: parseInt(e.target.value) || 10 })}
+                                        onChange={e => {
+                                            const val = parseInt(e.target.value) || 10;
+                                            setForm({ ...form, visit_points: val > 30 ? 30 : val });
+                                        }}
                                     />
                                 </div>
                                 <div className="form-group">
@@ -316,7 +328,10 @@ export default function AdminDashboard() {
                                         min="1"
                                         max="100"
                                         value={form.activity_points}
-                                        onChange={e => setForm({ ...form, activity_points: parseInt(e.target.value) || 25 })}
+                                        onChange={e => {
+                                            const val = parseInt(e.target.value) || 25;
+                                            setForm({ ...form, activity_points: val > 100 ? 100 : val });
+                                        }}
                                     />
                                 </div>
                             </div>
