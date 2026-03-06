@@ -197,7 +197,12 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'reason', 'Necesitas ' || (v_reward.cost - v_participant.points)::TEXT || ' puntos más');
   END IF;
 
+  IF v_reward.stock <= 0 THEN
+    RETURN jsonb_build_object('success', false, 'reason', '¡Agotado! Ya no quedan unidades de este premio');
+  END IF;
+
   UPDATE participants SET points = points - v_reward.cost WHERE id = p_participant_id;
+  UPDATE rewards SET stock = stock - 1 WHERE id = p_reward_id;
   INSERT INTO claimed_rewards (participant_id, reward_id) VALUES (p_participant_id, p_reward_id);
 
   RETURN jsonb_build_object('success', true, 'newPoints', v_participant.points - v_reward.cost);

@@ -133,7 +133,7 @@ export async function getScansByCommunity(communityId) {
 export async function getRewards() {
     const { data, error } = await supabase
         .from('rewards')
-        .select('*');
+        .select('*, communities(name)');
 
     if (error) throw new Error(`Error al obtener premios: ${error.message}`);
     return data;

@@ -85,28 +85,36 @@ export default function Rewards() {
                     {rewards.map(reward => {
                         const claimed = claimedIds.includes(reward.id);
                         const canAfford = participant.points >= reward.cost;
+                        const inStock = reward.stock > 0;
+                        const canClaim = canAfford && inStock;
 
                         return (
                             <div key={reward.id} className={`reward-card ${claimed ? 'claimed' : ''}`}>
-                                <div className="reward-emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div className="reward-emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: inStock ? 1 : 0.5 }}>
                                     <DynamicIcon name={reward.emoji} size={32} />
                                 </div>
                                 <div className="reward-info">
                                     <div className="reward-name">
                                         {reward.name}
                                         {claimed && <span className="badge badge-green" style={{ marginLeft: 8 }}>Canjeado</span>}
+                                        {!inStock && !claimed && <span className="badge badge-red" style={{ marginLeft: 8, background: 'var(--accent-rose)', color: 'white' }}>Agotado</span>}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
+                                        Stand: {reward.communities?.name || 'Desconocido'} · Quedan: {reward.stock}
                                     </div>
                                     <div className="reward-desc">{reward.description}</div>
-                                    <div className="reward-cost"><Star size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> {reward.cost} pts</div>
+                                    <div className="reward-cost">
+                                        <Star size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> {reward.cost} pts
+                                    </div>
                                 </div>
                                 {!claimed && (
                                     <button
-                                        className={`btn ${canAfford ? 'btn-primary' : 'btn-outline'}`}
-                                        onClick={() => canAfford && handleClaim(reward.id)}
-                                        disabled={!canAfford}
+                                        className={`btn ${canClaim ? 'btn-primary' : 'btn-outline'}`}
+                                        onClick={() => canClaim && handleClaim(reward.id)}
+                                        disabled={!canClaim}
                                         style={{ flexShrink: 0, fontSize: '0.8rem', padding: '8px 16px' }}
                                     >
-                                        {canAfford ? 'Canjear' : <Lock size={14} />}
+                                        {canClaim ? 'Canjear' : <Lock size={14} />}
                                     </button>
                                 )}
                             </div>
