@@ -16,7 +16,9 @@ export default function Welcome() {
 
     return (
         <div className="welcome-page">
-            <div className="welcome-logo"><img src="/images/logo/LOGO.svg" alt="Logo" style={{ width: 380, height: 'auto' }} /></div>
+            <div className="welcome-logo" style={{ textAlign: 'center', margin: '2rem 0' }}>
+                <img src="/images/logo/LOGO.svg" alt="Logo" style={{ width: '100%', maxWidth: 380, height: 'auto' }} />
+            </div>
 
             <p className="welcome-subtitle">
                 Escanea códigos QR, acumula puntos y gana increíbles premios
@@ -46,12 +48,12 @@ export default function Welcome() {
                 </div>
             </div>
 
-            <button className="btn btn-primary btn-lg btn-full" onClick={() => navigate('/register')} style={{ maxWidth: 320 }}>
+            <button className="btn btn-primary btn-lg btn-full" onClick={() => navigate('/register')} style={{ maxWidth: 320, margin: '0 auto', display: 'flex' }}>
                 <ArrowRight size={18} /> Comenzar
             </button>
 
-            <p style={{ marginTop: 24, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate('/admin/login')}>
+            <p style={{ marginTop: 40, fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                <span style={{ cursor: 'pointer', textDecoration: 'underline', fontWeight: 500 }} onClick={() => navigate('/admin/login')}>
                     Panel de administración →
                 </span>
             </p>

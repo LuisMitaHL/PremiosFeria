@@ -40,7 +40,7 @@ export default function AdminLogin() {
         <div className="page">
             <div className="container" style={{ paddingTop: 60 }}>
                 <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                    <div style={{ fontSize: '3rem', marginBottom: 16 }}><ShieldCheck size={48} strokeWidth={1.5} /></div>
+                    <div style={{ fontSize: '3rem', marginBottom: 24 }}><ShieldCheck size={48} strokeWidth={1.5} /></div>
                     <h1 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Admin Login</h1>
                     <p style={{ color: 'var(--text-secondary)', marginTop: 8 }}>
                         Ingresa las credenciales de tu comunidad
@@ -82,8 +82,8 @@ export default function AdminLogin() {
                     </button>
                 </form>
 
-                <p style={{ textAlign: 'center', marginTop: 24, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate('/')}>
+                <p style={{ textAlign: 'center', marginTop: 32, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    <span style={{ cursor: 'pointer', textDecoration: 'underline', fontWeight: 500 }} onClick={() => navigate('/')}>
                         ← Volver al inicio
                     </span>
                 </p>

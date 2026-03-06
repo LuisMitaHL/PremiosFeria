@@ -75,7 +75,7 @@ export default function Dashboard() {
                 <div className="points-hero">
                     <div className="points-label">Tus Puntos</div>
                     <div className="points-value">{participant.points}</div>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: 8 }}>
+                    <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.85rem', marginTop: 8 }}>
                         ¡Sigue escaneando para ganar más!
                     </p>
                 </div>

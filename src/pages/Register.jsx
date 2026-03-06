@@ -99,7 +99,7 @@ export default function Register() {
                     </button>
                 </form>
 
-                <p style={{ textAlign: 'center', marginTop: 24, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <p style={{ textAlign: 'center', marginTop: 32, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                     Tu información se guarda de forma segura en la nube
                 </p>
             </div>
