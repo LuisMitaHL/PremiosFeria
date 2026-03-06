@@ -16,8 +16,8 @@ export default function Welcome() {
 
     return (
         <div className="welcome-page">
-            <div className="welcome-logo"><Compass size={64} strokeWidth={1.5} /></div>
-            <h1 className="welcome-title">Community Quest</h1>
+            <div className="welcome-logo"><img src="/images/logo/LOGO.svg" alt="Logo" style={{ width: 380, height: 'auto' }} /></div>
+
             <p className="welcome-subtitle">
                 Escanea códigos QR, acumula puntos y gana increíbles premios
             </p>

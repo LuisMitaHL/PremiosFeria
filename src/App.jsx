@@ -28,10 +28,7 @@ function AppLayout({ children }) {
             {/* Header */}
             <header className="app-header">
                 <div className="header-content">
-                    <div className="header-logo">
-                        <div className="logo-icon"><Compass size={18} /></div>
-                        <span>Community Quest</span>
-                    </div>
+                    <div className="logo-icon"><img src="/images/logo/LOGO.svg" alt="Logo" style={{ width: 120, height: 'auto' }} /></div>
                     {participant && (
                         <div className="header-points">
                             <span className="pts-icon"><Star size={14} /></span>

@@ -95,7 +95,7 @@ export default function Register() {
                     )}
 
                     <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
-                        {loading ? <><Loader size={16} className="spin-icon" /> Registrando...</> : <><PartyPopper size={16} /> Registrarme</>}
+                        {loading ? <><Loader size={16} className="spin-icon" /> Registrando...</> : <>Registrarme</>}
                     </button>
                 </form>
 
