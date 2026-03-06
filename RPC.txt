@@ -125,20 +125,23 @@ BEGIN
   END IF;
 
   -- ==========================================
-  -- C) VERIFICAR COOLDOWN
+  -- C) VERIFICAR COOLDOWN (SOLO PARA VISITAS)
   -- ==========================================
-  SELECT * INTO v_existing FROM scans
-    WHERE participant_id = p_participant_id
-    AND community_id = v_community.id
-    ORDER BY created_at DESC LIMIT 1;
+  IF v_type = 'visit' THEN
+    SELECT * INTO v_existing FROM scans
+      WHERE participant_id = p_participant_id
+      AND community_id = v_community.id
+      AND type = 'visit'
+      ORDER BY created_at DESC LIMIT 1;
 
-  IF FOUND THEN
-    v_elapsed := now() - v_existing.created_at;
-    IF v_elapsed < INTERVAL '5 minutes' THEN
-      RETURN jsonb_build_object('valid', false, 'reason',
-        '🔒 Ya escaneaste este stand. Espera ' ||
-        CEIL(EXTRACT(EPOCH FROM (INTERVAL '5 minutes' - v_elapsed)) / 60)::TEXT ||
-        ' minuto(s)');
+    IF FOUND THEN
+      v_elapsed := now() - v_existing.created_at;
+      IF v_elapsed < INTERVAL '5 minutes' THEN
+        RETURN jsonb_build_object('valid', false, 'reason',
+          '🔒 Ya visitaste este stand. Espera ' ||
+          CEIL(EXTRACT(EPOCH FROM (INTERVAL '5 minutes' - v_elapsed)) / 60)::TEXT ||
+          ' minuto(s) para volver a registrar una visita.');
+      END IF;
     END IF;
   END IF;
 
