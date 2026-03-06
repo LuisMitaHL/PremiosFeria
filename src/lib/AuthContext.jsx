@@ -43,20 +43,14 @@ export function AuthProvider({ children }) {
         load();
     }, []);
 
-    // Listen for Supabase auth state changes (admin login/logout)
+    // Listen for custom admin auth state changes
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setAdminUser(session?.user ?? null);
-            setAdminLoading(false);
+        import('./api.js').then(({ getSession }) => {
+            getSession().then(session => {
+                setAdminUser(session?.user ?? null);
+                setAdminLoading(false);
+            });
         });
-
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
-            setAdminUser(session?.user ?? null);
-        });
-
-        return () => subscription.unsubscribe();
     }, []);
 
     // --- Participant actions ---
@@ -85,8 +79,18 @@ export function AuthProvider({ children }) {
     };
 
     // --- Admin actions ---
+    const loginAdmin = async (username, password) => {
+        const { loginAdmin: apiLoginAdmin } = await import('./api.js');
+        const result = await apiLoginAdmin(username, password);
+        if (result.success) {
+            setAdminUser(result.user);
+        }
+        return result;
+    };
+
     const logoutAdmin = async () => {
-        await supabase.auth.signOut();
+        const { logoutAdmin: apiLogoutAdmin } = await import('./api.js');
+        await apiLogoutAdmin();
         setAdminUser(null);
     };
 
@@ -100,6 +104,7 @@ export function AuthProvider({ children }) {
         // Admin
         adminUser,
         adminLoading,
+        loginAdmin,
         logoutAdmin,
     };
 

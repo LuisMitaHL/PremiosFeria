@@ -1,0 +1,91 @@
+-- =========================================================================
+-- SCRIPT DE POBLADO DE DATOS (SEED) PARA SUPABASE
+-- =========================================================================
+-- Instrucciones:
+-- 1. Copia y pega todo el contenido de este archivo en el SQL Editor de Supabase.
+-- 2. Asegúrate de haber creado las tablas primero con tu script de schemas.
+-- 3. Ejecútalo. 
+-- 4. ¡Listo! Todas las comunidades podrán loguearse y sus premios estarán disponibles.
+
+-- Habilitar pgcrypto para encriptar las contraseñas correctamente
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Limpiar datos anteriores para evitar duplicados si se corre varias veces
+DELETE FROM claimed_rewards;
+DELETE FROM rewards;
+DELETE FROM scans;
+DELETE FROM communities;
+DELETE FROM auth.users WHERE email LIKE '%@feria.local';
+
+-- ==========================================
+-- 1. INSERTAR USUARIOS DE AUTENTICACIÓN
+-- ==========================================
+INSERT INTO auth.users (
+  id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+) VALUES 
+-- Contraseña de todos: CypherAnvil2024*
+('ed612341-b062-4de3-bb11-447101783510', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'cypheranviil@feria.local', crypt('Cypher2024*', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW()),
+('ed612342-b062-4de3-bb11-447101783510', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'meh@feria.local', crypt('Meh2024*', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW()),
+('ed612343-b062-4de3-bb11-447101783510', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'ieee@feria.local', crypt('Ieee2024*', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW()),
+('ed612344-b062-4de3-bb11-447101783510', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'aws.umsa@feria.local', crypt('Aws2024*', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW()),
+('ed612345-b062-4de3-bb11-447101783510', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'guild@feria.local', crypt('Guild2024*', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW()),
+('ed612346-b062-4de3-bb11-447101783510', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'codemiaw@feria.local', crypt('Codecats2024*', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW()),
+('ed612347-b062-4de3-bb11-447101783510', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'pancho@feria.local', crypt('Cpc2024*', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW()),
+('ed612348-b062-4de3-bb11-447101783510', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'casdasd@feria.local', crypt('Ctrldev2024*', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW()),
+('ed612349-b062-4de3-bb11-447101783510', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'microbot@feria.local', crypt('Microbot2024*', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW()),
+('ed61234a-b062-4de3-bb11-447101783510', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'trateur010@feria.local', crypt('Ciasi2024*', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW());
+
+-- Así mismo insertamos las identidades de Supabase para que los correos sirvan como login
+INSERT INTO auth.identities (provider_id, id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at) VALUES
+('ed612341-b062-4de3-bb11-447101783510', 'ed612341-b062-4de3-bb11-447101783510', 'ed612341-b062-4de3-bb11-447101783510', format('{"sub":"%s","email":"%s"}', 'ed612341-b062-4de3-bb11-447101783510', 'cypheranviil@feria.local')::jsonb, 'email', NOW(), NOW(), NOW()),
+('ed612342-b062-4de3-bb11-447101783510', 'ed612342-b062-4de3-bb11-447101783510', 'ed612342-b062-4de3-bb11-447101783510', format('{"sub":"%s","email":"%s"}', 'ed612342-b062-4de3-bb11-447101783510', 'meh@feria.local')::jsonb, 'email', NOW(), NOW(), NOW()),
+('ed612343-b062-4de3-bb11-447101783510', 'ed612343-b062-4de3-bb11-447101783510', 'ed612343-b062-4de3-bb11-447101783510', format('{"sub":"%s","email":"%s"}', 'ed612343-b062-4de3-bb11-447101783510', 'ieee@feria.local')::jsonb, 'email', NOW(), NOW(), NOW()),
+('ed612344-b062-4de3-bb11-447101783510', 'ed612344-b062-4de3-bb11-447101783510', 'ed612344-b062-4de3-bb11-447101783510', format('{"sub":"%s","email":"%s"}', 'ed612344-b062-4de3-bb11-447101783510', 'aws.umsa@feria.local')::jsonb, 'email', NOW(), NOW(), NOW()),
+('ed612345-b062-4de3-bb11-447101783510', 'ed612345-b062-4de3-bb11-447101783510', 'ed612345-b062-4de3-bb11-447101783510', format('{"sub":"%s","email":"%s"}', 'ed612345-b062-4de3-bb11-447101783510', 'guild@feria.local')::jsonb, 'email', NOW(), NOW(), NOW()),
+('ed612346-b062-4de3-bb11-447101783510', 'ed612346-b062-4de3-bb11-447101783510', 'ed612346-b062-4de3-bb11-447101783510', format('{"sub":"%s","email":"%s"}', 'ed612346-b062-4de3-bb11-447101783510', 'codemiaw@feria.local')::jsonb, 'email', NOW(), NOW(), NOW()),
+('ed612347-b062-4de3-bb11-447101783510', 'ed612347-b062-4de3-bb11-447101783510', 'ed612347-b062-4de3-bb11-447101783510', format('{"sub":"%s","email":"%s"}', 'ed612347-b062-4de3-bb11-447101783510', 'pancho@feria.local')::jsonb, 'email', NOW(), NOW(), NOW()),
+('ed612348-b062-4de3-bb11-447101783510', 'ed612348-b062-4de3-bb11-447101783510', 'ed612348-b062-4de3-bb11-447101783510', format('{"sub":"%s","email":"%s"}', 'ed612348-b062-4de3-bb11-447101783510', 'casdasd@feria.local')::jsonb, 'email', NOW(), NOW(), NOW()),
+('ed612349-b062-4de3-bb11-447101783510', 'ed612349-b062-4de3-bb11-447101783510', 'ed612349-b062-4de3-bb11-447101783510', format('{"sub":"%s","email":"%s"}', 'ed612349-b062-4de3-bb11-447101783510', 'microbot@feria.local')::jsonb, 'email', NOW(), NOW(), NOW()),
+('ed61234a-b062-4de3-bb11-447101783510', 'ed61234a-b062-4de3-bb11-447101783510', 'ed61234a-b062-4de3-bb11-447101783510', format('{"sub":"%s","email":"%s"}', 'ed61234a-b062-4de3-bb11-447101783510', 'trateur010@feria.local')::jsonb, 'email', NOW(), NOW(), NOW());
+
+-- ==========================================
+-- 2. INSERTAR COMUNIDADES (Tabla Pública)
+-- ==========================================
+INSERT INTO communities (id, auth_user_id, name, emoji, stand_number) VALUES
+('d0000001-0000-0000-0000-000000000000', 'ed612341-b062-4de3-bb11-447101783510', 'CypherAnvil', 'Shield', '1'),
+('d0000002-0000-0000-0000-000000000000', 'ed612342-b062-4de3-bb11-447101783510', 'MEH', 'Cpu', '2'),
+('d0000003-0000-0000-0000-000000000000', 'ed612343-b062-4de3-bb11-447101783510', 'IEEE', 'RadioReceiver', '3'),
+('d0000004-0000-0000-0000-000000000000', 'ed612344-b062-4de3-bb11-447101783510', 'AWS', 'Cloud', '4'),
+('d0000005-0000-0000-0000-000000000000', 'ed612345-b062-4de3-bb11-447101783510', 'Guild', 'Swords', '5'),
+('d0000006-0000-0000-0000-000000000000', 'ed612346-b062-4de3-bb11-447101783510', 'Codecats', 'Cat', '6'),
+('d0000007-0000-0000-0000-000000000000', 'ed612347-b062-4de3-bb11-447101783510', 'CPC', 'Code', '7'),
+('d0000008-0000-0000-0000-000000000000', 'ed612348-b062-4de3-bb11-447101783510', 'CtrlDev', 'Terminal', '8'),
+('d0000009-0000-0000-0000-000000000000', 'ed612349-b062-4de3-bb11-447101783510', 'Microsoft Umsa', 'LayoutGrid', '9'),
+('d000000a-0000-0000-0000-000000000000', 'ed61234a-b062-4de3-bb11-447101783510', 'CIASI', 'Database', '10');
+
+-- ==========================================
+-- 3. INSERTAR PREMIOS (Tabla Pública)
+-- ==========================================
+INSERT INTO rewards (community_id, name, description, cost, stock, emoji) VALUES
+-- MEH
+('d0000002-0000-0000-0000-000000000000', 'CuboRubik Dotnet', 'Premio de MEH', 150, 1, 'Box'),
+-- AWS
+('d0000004-0000-0000-0000-000000000000', 'Polera Community Day XL', 'Premio de la comunidad AWS Umsa', 200, 1, 'Shirt'),
+-- CtrlDev
+('d0000008-0000-0000-0000-000000000000', '1 mes vps', 'Servicio cloud de CtrlDev', 250, 1, 'Server'),
+-- Microsoft Umsa
+('d0000009-0000-0000-0000-000000000000', 'Pelotitas Antiestres', 'Premio de Microsoft', 50, 1, 'Circle');
+
+-- ==========================================
+-- RESUMEN DE CREDENCIALES (Para pasarle a las comunidades):
+-- ==========================================
+-- cypheranviil@feria.local | Cypher2024*
+-- meh@feria.local          | Meh2024*
+-- ieee@feria.local         | Ieee2024*
+-- aws.umsa@feria.local     | Aws2024*
+-- guild@feria.local        | Guild2024*
+-- codemiaw@feria.local     | Codecats2024*
+-- pancho@feria.local       | Cpc2024*
+-- casdasd@feria.local      | Ctrldev2024*
+-- microbot@feria.local     | Microbot2024*
+-- trateur010@feria.local   | Ciasi2024*

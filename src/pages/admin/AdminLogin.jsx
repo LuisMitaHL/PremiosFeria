@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loginAdmin } from '../../lib/api.js';
 import { useAuth } from '../../lib/AuthContext.jsx';
 import { ShieldCheck, AlertTriangle, Loader, ArrowRight } from 'lucide-react';
 
 export default function AdminLogin() {
     const navigate = useNavigate();
-    const { adminUser } = useAuth();
+    const { adminUser, loginAdmin } = useAuth();
     const [form, setForm] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -32,7 +31,8 @@ export default function AdminLogin() {
         if (result.success) {
             navigate('/admin', { replace: true });
         } else {
-            setError(result.error || 'Credenciales incorrectas');
+            console.error("Login attempt failed:", result);
+            setError(result.error ? `Error: ${result.error}` : 'Credenciales incorrectas o error de conexión');
         }
     };
 

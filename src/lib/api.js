@@ -52,18 +52,18 @@ export async function getCommunities() {
     return data;
 }
 
-export async function getMyCommunity(authUserId) {
+export async function getMyCommunity(communityId) {
     const { data, error } = await supabase
         .from('communities')
         .select('*')
-        .eq('auth_user_id', authUserId)
+        .eq('id', communityId)
         .single();
 
     if (error) return null;
     return data;
 }
 
-export async function updateCommunity(id, updates) {
+export async function updateCommunity(communityId, updates) {
     if (updates.visit_points !== undefined && updates.visit_points > 30) {
         throw new Error('El límite máximo de puntos por visita es 30.');
     }
@@ -74,7 +74,7 @@ export async function updateCommunity(id, updates) {
     const { data, error } = await supabase
         .from('communities')
         .update(updates)
-        .eq('id', id)
+        .eq('id', communityId)
         .select()
         .single();
 
@@ -159,24 +159,36 @@ export async function claimReward(participantId, rewardId) {
 
 // ─── Auth (Admin) ────────────────────────────
 
-export async function loginAdmin(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-    });
+export async function loginAdmin(username, password) {
+    const { data, error } = await supabase
+        .from('communities')
+        .select('*')
+        .eq('username', username)
+        .eq('password', password)
+        .single();
 
-    if (error) return { success: false, error: error.message };
-    return { success: true, user: data.user, session: data.session };
+    if (error || !data) {
+        console.error('Custom Login Error:', error);
+        return { success: false, error: 'Credenciales incorrectas' };
+    }
+    
+    // Create a mock user object representing the community
+    const user = { id: data.id, email: username, communityId: data.id, role: 'community_admin' };
+    
+    // Store in localStorage directly as a patch since we bypassed real Auth
+    localStorage.setItem('admin_session', JSON.stringify(user));
+    
+    return { success: true, user: user, session: { user } };
 }
 
 export async function logoutAdmin() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw new Error(`Error al cerrar sesión: ${error.message}`);
+    localStorage.removeItem('admin_session');
 }
 
 export async function getSession() {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session;
+    const stored = localStorage.getItem('admin_session');
+    if (stored) return { user: JSON.parse(stored) };
+    return null;
 }
 
 // ─── Settings ────────────────────────────────
