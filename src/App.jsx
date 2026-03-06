@@ -14,6 +14,16 @@ import AdminLogin from './pages/admin/AdminLogin.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import QRDisplay from './pages/admin/QRDisplay.jsx';
 
+function BackgroundDecorations() {
+    return (
+        <div className="bg-ornaments">
+            <img src="/images/backgrounds/Recurso1.svg" className="bg-ornament ornament-1" alt="" />
+            <img src="/images/backgrounds/Recurso2.svg" className="bg-ornament ornament-2" alt="" />
+            <img src="/images/backgrounds/Recurso3.svg" className="bg-ornament ornament-3" alt="" />
+        </div>
+    );
+}
+
 function AppLayout({ children }) {
     const { participant } = useAuth();
     const location = useLocation();
@@ -25,6 +35,7 @@ function AppLayout({ children }) {
 
     return (
         <>
+            <BackgroundDecorations />
             {/* Header */}
             <header className="app-header">
                 <div className="header-content">
