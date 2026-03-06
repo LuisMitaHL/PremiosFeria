@@ -1,0 +1,154 @@
+-- 1. Función para simular el HMAC criptográfico (Replica exacta del cliente web)
+CREATE OR REPLACE FUNCTION simple_hmac(secret TEXT, message TEXT) RETURNS TEXT AS $$
+DECLARE
+  combined TEXT := secret || '|' || message;
+  hash BIGINT := 0;
+  i INT;
+  char_code INT;
+BEGIN
+  FOR i IN 1..length(combined) LOOP
+    char_code := ascii(substring(combined from i for 1));
+    -- JS: hash = ((hash << 5) - hash) + char_code
+    hash := (hash * 32) - hash + char_code;
+    
+    -- Simulate JS 32-bit signed int overflow (Bitwise truncation)
+    hash := hash % 4294967296;
+    IF hash > 2147483647 THEN
+      hash := hash - 4294967296;
+    ELSIF hash < -2147483648 THEN
+      hash := hash + 4294967296;
+    END IF;
+  END LOOP;
+  RETURN lpad(to_hex(abs(hash)), 8, '0');
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- 2. Validar QR y registrar scan (Lógica de validación temporal y de puntos 100% segura en el backend)
+CREATE OR REPLACE FUNCTION validate_and_scan(
+  p_participant_id UUID,
+  p_encoded_payload TEXT
+) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_json JSONB;
+  v_secret TEXT;
+  v_community communities%ROWTYPE;
+  v_existing scans%ROWTYPE;
+  v_elapsed INTERVAL;
+  
+  -- Para validaciones y limites:
+  v_type TEXT;
+  v_pts INT;
+  v_qr_ts BIGINT;
+  v_current_ts BIGINT;
+  v_max_pts INT;
+  v_final_pts INT;
+  v_expected_tok TEXT;
+BEGIN
+  -- Decodificar payload (El frontend debe enviar el JSON parseable como string antes de insertarlo)
+  v_json := p_encoded_payload::JSONB;
+  v_type := COALESCE(v_json->>'type', 'visit');
+  v_pts := (v_json->>'pts')::INT;
+
+  -- ==========================================
+  -- A) VALIDAR TIEMPO DEL CÓDIGO QR (Regeneración de 15 segundos)
+  -- ==========================================
+  v_qr_ts := (v_json->>'ts')::BIGINT;
+  v_current_ts := EXTRACT(EPOCH FROM NOW())::BIGINT / 15;
+  
+  -- Permitir tolerancia de 1 ventana hacia atrás por posible delay de red (Total validez 15-30 seg reales)
+  IF (v_current_ts - v_qr_ts) > 1 OR (v_qr_ts > v_current_ts) THEN
+    RETURN jsonb_build_object('valid', false, 'reason', '⏱️ Código QR caducado, escanee el código actual del stand.');
+  END IF;
+
+  -- ==========================================
+  -- B) VERIFICAR LA COMUNIDAD Y LA INTEGRIDAD CRIPTOGRÁFICA
+  -- ==========================================
+  SELECT * INTO v_community FROM communities WHERE id = (v_json->>'sid')::UUID;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('valid', false, 'reason', '❌ Comunidad no encontrada');
+  END IF;
+
+  SELECT value INTO v_secret FROM settings WHERE key = 'hmac_secret';
+  
+  -- Verificar si el token (HMAC) no fue alterado para inflar puntos o el timestamp
+  v_expected_tok := simple_hmac(v_secret, v_community.id || '|' || v_qr_ts || '|' || v_pts || '|' || v_type);
+  IF v_expected_tok != (v_json->>'tok') THEN
+    RETURN jsonb_build_object('valid', false, 'reason', '🛡️ Código QR inválido o falsificado.');
+  END IF;
+
+  -- ==========================================
+  -- C) VERIFICAR COOLDOWN
+  -- ==========================================
+  SELECT * INTO v_existing FROM scans
+    WHERE participant_id = p_participant_id
+    AND community_id = v_community.id
+    ORDER BY created_at DESC LIMIT 1;
+
+  IF FOUND THEN
+    v_elapsed := now() - v_existing.created_at;
+    IF v_elapsed < INTERVAL '5 minutes' THEN
+      RETURN jsonb_build_object('valid', false, 'reason',
+        '🔒 Ya escaneaste este stand. Espera ' ||
+        CEIL(EXTRACT(EPOCH FROM (INTERVAL '5 minutes' - v_elapsed)) / 60)::TEXT ||
+        ' minuto(s)');
+    END IF;
+  END IF;
+
+  -- ==========================================
+  -- D) VALIDAR LÍMITES DE PUNTOS DE LA BASE DE DATOS
+  -- ==========================================
+  IF v_type = 'visit' THEN
+    v_max_pts := LEAST(COALESCE(v_community.visit_points, 10), 30);
+  ELSE
+    v_max_pts := LEAST(COALESCE(v_community.activity_points, 25), 100);
+  END IF;
+  
+  -- Aunque el frontend envíe algo más grande (hackeado), usamos el límite máximo forzado por la BD:
+  v_final_pts := LEAST(v_pts, v_max_pts);
+
+  -- Insertar scan y actualizar puntos
+  INSERT INTO scans (participant_id, community_id, points, type)
+  VALUES (p_participant_id, v_community.id, v_final_pts, v_type);
+
+  UPDATE participants SET points = points + v_final_pts
+  WHERE id = p_participant_id;
+
+  RETURN jsonb_build_object(
+    'valid', true,
+    'points', v_final_pts,
+    'type', v_type,
+    'groupName', v_community.name,
+    'groupEmoji', v_community.emoji
+  );
+END;
+$$;
+
+-- 3. Reclamar premio
+CREATE OR REPLACE FUNCTION claim_reward(
+  p_participant_id UUID,
+  p_reward_id UUID
+) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_participant participants%ROWTYPE;
+  v_reward rewards%ROWTYPE;
+  v_already_claimed BOOLEAN;
+BEGIN
+  SELECT * INTO v_participant FROM participants WHERE id = p_participant_id;
+  IF NOT FOUND THEN RETURN jsonb_build_object('success', false, 'reason', 'No registrado'); END IF;
+
+  SELECT * INTO v_reward FROM rewards WHERE id = p_reward_id;
+  IF NOT FOUND THEN RETURN jsonb_build_object('success', false, 'reason', 'Premio no encontrado'); END IF;
+
+  SELECT EXISTS(SELECT 1 FROM claimed_rewards WHERE participant_id = p_participant_id AND reward_id = p_reward_id) INTO v_already_claimed;
+  IF v_already_claimed THEN RETURN jsonb_build_object('success', false, 'reason', 'Ya reclamaste este premio'); END IF;
+
+  IF v_participant.points < v_reward.cost THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'Necesitas ' || (v_reward.cost - v_participant.points)::TEXT || ' puntos más');
+  END IF;
+
+  UPDATE participants SET points = points - v_reward.cost WHERE id = p_participant_id;
+  INSERT INTO claimed_rewards (participant_id, reward_id) VALUES (p_participant_id, p_reward_id);
+
+  RETURN jsonb_build_object('success', true, 'newPoints', v_participant.points - v_reward.cost);
+END;
+$$;

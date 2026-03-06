@@ -7,7 +7,7 @@
      (validate_and_scan PostgreSQL function)
    ============================================ */
 
-const TIME_STEP = 30; // seconds — QR rotates every 30s
+const TIME_STEP = 15; // seconds — QR rotates every 15s
 
 // --- HMAC-like token generation ---
 function simpleHMAC(secret, message) {

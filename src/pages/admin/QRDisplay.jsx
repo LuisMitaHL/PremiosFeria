@@ -15,7 +15,7 @@ export default function QRDisplay() {
     const [secret, setSecret] = useState(null);
     const [qrType, setQrType] = useState('visit');
     const [qrData, setQrData] = useState('');
-    const [timeLeft, setTimeLeft] = useState(30);
+    const [timeLeft, setTimeLeft] = useState(15);
     const [loading, setLoading] = useState(true);
 
     // Redirect if not authenticated
@@ -66,7 +66,7 @@ export default function QRDisplay() {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     refreshQR();
-                    return 30;
+                    return 15;
                 }
                 return prev - 1;
             });
@@ -156,13 +156,13 @@ export default function QRDisplay() {
                         <div className="qr-timer-bar">
                             <div
                                 className="qr-timer-fill"
-                                style={{ width: `${(timeLeft / 30) * 100}%`, background: timeLeft <= 5 ? 'var(--gradient-warn)' : 'var(--gradient-primary)' }}
+                                style={{ width: `${(timeLeft / 15) * 100}%`, background: timeLeft <= 5 ? 'var(--gradient-warn)' : 'var(--gradient-primary)' }}
                             />
                         </div>
                     </div>
 
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: 300, textAlign: 'center' }}>
-                        <Lock size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> El código QR se renueva cada 30 segundos para evitar uso indebido. Muestra esta pantalla a los visitantes.
+                        <Lock size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> El código QR se renueva cada 15 segundos para evitar uso indebido. Muestra esta pantalla a los visitantes.
                     </p>
                 </div>
             </div>

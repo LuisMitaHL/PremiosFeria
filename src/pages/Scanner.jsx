@@ -243,7 +243,7 @@ export default function Scanner() {
 
                 <div className="glass-card" style={{ marginTop: 24, textAlign: 'center' }}>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        <Lock size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Los códigos QR rotan cada 30 segundos para tu seguridad. Asegúrate de escanear el QR que se muestra actualmente en el stand.
+                        <Lock size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Los códigos QR rotan cada 15 segundos para tu seguridad. Asegúrate de escanear el QR que se muestra actualmente en el stand.
                     </p>
                 </div>
             </div>
