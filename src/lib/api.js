@@ -6,13 +6,11 @@ import { supabase } from '../supabaseClient.js';
 
 // ─── Participants ────────────────────────────
 
-export async function registerParticipant(name, email, universityId, fingerprint) {
+export async function registerParticipant(name, fingerprint) {
     const { data, error } = await supabase
         .from('participants')
         .insert({
             name,
-            email: email || null,
-            university_id: universityId || null,
             fingerprint: fingerprint || null,
         })
         .select('id')

@@ -6,7 +6,7 @@ import { UserPlus, AlertTriangle, Loader, PartyPopper } from 'lucide-react';
 export default function Register() {
     const navigate = useNavigate();
     const { participant, registerParticipant } = useAuth();
-    const [form, setForm] = useState({ name: '', email: '', universityId: '' });
+    const [form, setForm] = useState({ name: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -31,9 +31,7 @@ export default function Register() {
         setLoading(true);
         try {
             await registerParticipant({
-                name: form.name.trim(),
-                email: form.email.trim(),
-                universityId: form.universityId.trim(),
+                name: form.name.trim()
             });
             navigate('/dashboard', { replace: true });
         } catch (err) {
@@ -63,28 +61,6 @@ export default function Register() {
                             value={form.name}
                             onChange={e => setForm({ ...form, name: e.target.value })}
                             autoFocus
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Correo (opcional)</label>
-                        <input
-                            className="form-input"
-                            type="email"
-                            placeholder="maria@universidad.edu"
-                            value={form.email}
-                            onChange={e => setForm({ ...form, email: e.target.value })}
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">ID Universitario (opcional)</label>
-                        <input
-                            className="form-input"
-                            type="text"
-                            placeholder="Ej: A12345678"
-                            value={form.universityId}
-                            onChange={e => setForm({ ...form, universityId: e.target.value })}
                         />
                     </div>
 

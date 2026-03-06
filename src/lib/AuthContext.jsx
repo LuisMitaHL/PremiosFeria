@@ -60,9 +60,9 @@ export function AuthProvider({ children }) {
     }, []);
 
     // --- Participant actions ---
-    const registerParticipant = async ({ name, email, universityId }) => {
+    const registerParticipant = async ({ name }) => {
         const fingerprint = getDeviceFingerprint();
-        const id = await apiRegister(name, email, universityId, fingerprint);
+        const id = await apiRegister(name, fingerprint);
         saveCurrentParticipantId(id);
         const p = await getParticipantById(id);
         setParticipant(p);

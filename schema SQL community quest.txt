@@ -15,8 +15,6 @@ CREATE TABLE communities (
 CREATE TABLE participants (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
-  email TEXT,
-  university_id TEXT,
   points INT DEFAULT 0,
   fingerprint TEXT,
   registered_at TIMESTAMPTZ DEFAULT now()
