@@ -12,6 +12,31 @@
   font-display: swap;
 }
 
+/* --- Thole Font (Titles) --- */
+@font-face {
+  font-family: 'Thole';
+  src: url('/fonts/Thole-Thinpersonal.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thole';
+  src: url('/fonts/Thole-Regpersonal.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thole';
+  src: url('/fonts/Thole-Boldpersonal.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* --- CSS Custom Properties --- */
 :root {
   /* Colors — Light Theme */
@@ -67,6 +92,7 @@
 
   /* Font */
   --font-family: 'Geomanist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-title: 'Thole', 'Geomanist', sans-serif;
 }
 
 /* --- Reset & Base --- */
@@ -523,8 +549,9 @@ textarea {
 }
 
 .page-header h1 {
+  font-family: var(--font-title);
   font-size: 1.8rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -551,8 +578,9 @@ textarea {
 }
 
 .stat-card .stat-value {
+  font-family: var(--font-title);
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 700;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -592,8 +620,9 @@ textarea {
 }
 
 .points-hero .points-value {
+  font-family: var(--font-title);
   font-size: 4rem;
-  font-weight: 900;
+  font-weight: 700;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -748,7 +777,8 @@ textarea {
   align-items: flex-start;
   justify-content: center;
   padding-top: var(--space-md);
-  font-weight: 800;
+  font-family: var(--font-title);
+  font-weight: 700;
   font-size: 1.1rem;
 }
 
@@ -1120,6 +1150,7 @@ textarea {
 }
 
 .group-name {
+  font-family: var(--font-title);
   font-weight: 700;
   font-size: 1.1rem;
 }
@@ -1170,8 +1201,9 @@ textarea {
 }
 
 .welcome-title {
+  font-family: var(--font-title);
   font-size: 2.5rem;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: -0.03em;
   margin-bottom: var(--space-sm);
   background: var(--gradient-primary);
@@ -1261,6 +1293,7 @@ textarea {
 }
 
 .modal-header h2 {
+  font-family: var(--font-title);
   font-size: 1.3rem;
   font-weight: 700;
 }
@@ -1281,6 +1314,7 @@ textarea {
 
 /* --- Section Title --- */
 .section-title {
+  font-family: var(--font-title);
   font-size: 1.1rem;
   font-weight: 700;
   margin-bottom: var(--space-md);
@@ -1376,8 +1410,9 @@ textarea {
 }
 
 .scan-result .result-title {
+  font-family: var(--font-title);
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: 700;
   margin-bottom: var(--space-sm);
 }
 
