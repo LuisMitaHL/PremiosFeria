@@ -30,7 +30,7 @@ function AppLayout({ children }) {
                 <div className="header-content">
                     <div className="header-logo">
                         <div className="logo-icon"><Compass size={18} /></div>
-                        <span>Comunity Quest</span>
+                        <span>Community Quest</span>
                     </div>
                     {participant && (
                         <div className="header-points">
