@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/AuthContext.jsx';
 import { getMyCommunity, getHmacSecret } from '../../lib/api.js';
 import { generateQRPayload, getTimeUntilRotation } from '../../lib/qrSecurity.js';
 import { Loader, XCircle, MapPin, Target, RefreshCw, Lock } from 'lucide-react';
+import DynamicIcon from '../../components/DynamicIcon.jsx';
 
 export default function QRDisplay() {
     const { groupId } = useParams();
@@ -15,6 +16,7 @@ export default function QRDisplay() {
     const [secret, setSecret] = useState(null);
     const [qrType, setQrType] = useState('visit');
     const [qrData, setQrData] = useState('');
+    const [shortCode, setShortCode] = useState('');
     const [timeLeft, setTimeLeft] = useState(15);
     const [loading, setLoading] = useState(true);
 
@@ -48,8 +50,9 @@ export default function QRDisplay() {
 
     const refreshQR = useCallback(() => {
         if (!community || !secret) return;
-        const payload = generateQRPayload(community, qrType, secret);
-        setQrData(payload);
+        const result = generateQRPayload(community, qrType, secret);
+        setQrData(result.payload);
+        setShortCode(result.shortCode);
         setTimeLeft(getTimeUntilRotation());
     }, [community, qrType, secret]);
 
@@ -128,7 +131,9 @@ export default function QRDisplay() {
                 <div className="qr-display-fullscreen">
                     {/* Group Info */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: '3rem', marginBottom: 8 }}>{community.emoji}</div>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8, color: 'var(--text-primary)' }}>
+                            <DynamicIcon name={community.emoji} size={48} />
+                        </div>
                         <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{community.name}</h2>
                         <p style={{ color: 'var(--text-secondary)' }}>
                             Stand {community.stand_number} · {qrType === 'visit' ? `${community.visit_points || 10} pts por visita` : `${community.activity_points || 25} pts por actividad`}
@@ -145,6 +150,16 @@ export default function QRDisplay() {
                             fgColor="#000000"
                             bgColor="#ffffff"
                         />
+                    </div>
+
+                    {/* Short Code for Manual Entry */}
+                    <div className="glass-card" style={{ padding: '8px 24px', margin: '24px auto', display: 'inline-block', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                            Código Manual
+                        </div>
+                        <div style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '0.15em', color: 'var(--text-primary)', fontFamily: 'monospace' }}>
+                            {shortCode}
+                        </div>
                     </div>
 
                     {/* Timer */}

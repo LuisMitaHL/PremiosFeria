@@ -4,6 +4,8 @@ import { useAuth } from '../lib/AuthContext.jsx';
 import { getCommunities, getScansForParticipant } from '../lib/api.js';
 import { MapPin, ClipboardList, ScanLine, Construction, Target, Check } from 'lucide-react';
 
+import DynamicIcon from '../components/DynamicIcon.jsx';
+
 export default function Dashboard() {
     const navigate = useNavigate();
     const { participant, participantLoading, refreshParticipant } = useAuth();
@@ -113,7 +115,9 @@ export default function Dashboard() {
                             const visited = visitedStandIds.includes(g.id);
                             return (
                                 <div key={g.id} className={`stand-chip ${visited ? 'visited' : ''}`}>
-                                    <span>{g.emoji}</span>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <DynamicIcon name={g.emoji} size={16} />
+                                    </span>
                                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {g.name}
                                     </span>

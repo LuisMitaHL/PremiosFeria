@@ -4,6 +4,7 @@ import { useAuth } from '../lib/AuthContext.jsx';
 import { scanQR } from '../lib/api.js';
 import { decodeQRPayload } from '../lib/qrSecurity.js';
 import { ScanLine, Loader, PartyPopper, Frown, Home, CheckCircle, Lock, Camera, Keyboard, MapPin, XCircle } from 'lucide-react';
+import DynamicIcon from '../components/DynamicIcon.jsx';
 
 export default function Scanner() {
     const navigate = useNavigate();
@@ -68,8 +69,15 @@ export default function Scanner() {
         setProcessing(true);
 
         try {
-            // Decode the QR payload to get the JSON string
-            const decoded = decodeQRPayload(data);
+            // Determine if it's a short manual code or a full QR payload
+            let decoded;
+            if (data.trim().length <= 8) {
+                // Short code entry
+                decoded = { short_code: data.trim().toUpperCase() };
+            } else {
+                // Decode the QR payload to get the JSON string
+                decoded = decodeQRPayload(data);
+            }
 
             if (!decoded) {
                 setScanResult({
@@ -163,8 +171,9 @@ export default function Scanner() {
 
                         {scanResult.success && (
                             <>
-                                <div style={{ fontSize: '2rem', marginBottom: 8 }}>
-                                    {scanResult.groupEmoji} {scanResult.groupName}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: 8, gap: 12 }}>
+                                    <DynamicIcon name={scanResult.groupEmoji} size={32} />
+                                    <span>{scanResult.groupName}</span>
                                 </div>
                                 <div className="result-points">+{scanResult.points} pts</div>
                                 <div className="result-desc">
@@ -222,16 +231,16 @@ export default function Scanner() {
                     <form onSubmit={handleManualSubmit} style={{ marginTop: 24 }}>
                         <div className="glass-card">
                             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
-                                Pega aquí el código QR si no puedes usar la cámara:
+                                Introduce el código manual de 6 caracteres o pega el código QR:
                             </p>
                             <div className="form-group">
                                 <textarea
                                     className="form-input"
                                     rows={3}
-                                    placeholder="Pega el código aquí..."
+                                    placeholder="Ej: A1B2C3"
                                     value={manualInput}
                                     onChange={e => setManualInput(e.target.value)}
-                                    style={{ resize: 'none', fontFamily: 'monospace', fontSize: '0.8rem' }}
+                                    style={{ resize: 'none', fontFamily: 'monospace', fontSize: '1.2rem', textAlign: 'center', textTransform: 'uppercase' }}
                                 />
                             </div>
                             <button type="submit" className="btn btn-primary btn-full">

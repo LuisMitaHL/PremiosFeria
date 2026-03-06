@@ -1,0 +1,25 @@
+-- Participantes: cualquiera puede leer (leaderboard), insertar (registro)
+ALTER TABLE participants ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "participants_read" ON participants FOR SELECT USING (true);
+CREATE POLICY "participants_insert" ON participants FOR INSERT WITH CHECK (true);
+
+-- Comunidades: lectura pública, edición solo por su admin
+ALTER TABLE communities ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "communities_read" ON communities FOR SELECT USING (true);
+CREATE POLICY "communities_update" ON communities FOR UPDATE USING (auth.uid() = auth_user_id);
+
+-- Scans: lectura pública, insert via RPC únicamente
+ALTER TABLE scans ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "scans_read" ON scans FOR SELECT USING (true);
+
+-- Settings: solo lectura por admins autenticados
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "settings_read" ON settings FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Rewards: lectura pública
+ALTER TABLE rewards ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "rewards_read" ON rewards FOR SELECT USING (true);
+
+-- Claimed rewards: lectura pública, insert via RPC
+ALTER TABLE claimed_rewards ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "claimed_rewards_read" ON claimed_rewards FOR SELECT USING (true);

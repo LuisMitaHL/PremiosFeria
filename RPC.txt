@@ -46,34 +46,82 @@ DECLARE
 BEGIN
   -- Decodificar payload (El frontend debe enviar el JSON parseable como string antes de insertarlo)
   v_json := p_encoded_payload::JSONB;
-  v_type := COALESCE(v_json->>'type', 'visit');
-  v_pts := (v_json->>'pts')::INT;
+  -- ==========================================
+  -- 0) SELECCIONAR FLUJO (CÓDIGO MANUAL vs QR NORMAL)
+  -- ==========================================
+  IF v_json ? 'short_code' THEN
+    DECLARE
+      v_short_code TEXT := upper(v_json->>'short_code');
+      v_comp_comm communities%ROWTYPE;
+      v_comp_type TEXT;
+      v_comp_pts INT;
+      v_found BOOLEAN := false;
+    BEGIN
+      SELECT value INTO v_secret FROM settings WHERE key = 'hmac_secret';
+      v_current_ts := EXTRACT(EPOCH FROM NOW())::BIGINT / 15;
 
-  -- ==========================================
-  -- A) VALIDAR TIEMPO DEL CÓDIGO QR (Regeneración de 15 segundos)
-  -- ==========================================
-  v_qr_ts := (v_json->>'ts')::BIGINT;
-  v_current_ts := EXTRACT(EPOCH FROM NOW())::BIGINT / 15;
-  
-  -- Permitir tolerancia de 1 ventana hacia atrás por posible delay de red (Total validez 15-30 seg reales)
-  IF (v_current_ts - v_qr_ts) > 1 OR (v_qr_ts > v_current_ts) THEN
-    RETURN jsonb_build_object('valid', false, 'reason', '⏱️ Código QR caducado, escanee el código actual del stand.');
-  END IF;
+      -- Buscar entre todas las comunidades la firma que coincida con este código
+      FOR v_comp_comm IN SELECT * FROM communities LOOP
+        FOR v_comp_type IN SELECT unnest(ARRAY['visit', 'activity']) LOOP
+          v_comp_pts := CASE WHEN v_comp_type = 'visit' THEN LEAST(COALESCE(v_comp_comm.visit_points, 10), 30) ELSE LEAST(COALESCE(v_comp_comm.activity_points, 25), 100) END;
+          
+          -- Intentar con el TS actual
+          IF upper(substring(simple_hmac(v_secret, v_comp_comm.id || '|' || v_current_ts || '|' || v_comp_pts || '|' || v_comp_type) from 1 for 6)) = v_short_code THEN
+            v_community := v_comp_comm;
+            v_type := v_comp_type;
+            v_pts := v_comp_pts;
+            v_qr_ts := v_current_ts;
+            v_found := true;
+            EXIT;
+          END IF;
+          
+          -- Intentar con el TS anterior (tolerancia de red)
+          IF upper(substring(simple_hmac(v_secret, v_comp_comm.id || '|' || (v_current_ts - 1) || '|' || v_comp_pts || '|' || v_comp_type) from 1 for 6)) = v_short_code THEN
+            v_community := v_comp_comm;
+            v_type := v_comp_type;
+            v_pts := v_comp_pts;
+            v_qr_ts := v_current_ts - 1;
+            v_found := true;
+            EXIT;
+          END IF;
+        END LOOP;
+        EXIT WHEN v_found;
+      END LOOP;
 
-  -- ==========================================
-  -- B) VERIFICAR LA COMUNIDAD Y LA INTEGRIDAD CRIPTOGRÁFICA
-  -- ==========================================
-  SELECT * INTO v_community FROM communities WHERE id = (v_json->>'sid')::UUID;
-  IF NOT FOUND THEN
-    RETURN jsonb_build_object('valid', false, 'reason', '❌ Comunidad no encontrada');
-  END IF;
+      IF NOT v_found THEN
+        RETURN jsonb_build_object('valid', false, 'reason', '❌ Código manual inválido o caducado.');
+      END IF;
+    END;
 
-  SELECT value INTO v_secret FROM settings WHERE key = 'hmac_secret';
-  
-  -- Verificar si el token (HMAC) no fue alterado para inflar puntos o el timestamp
-  v_expected_tok := simple_hmac(v_secret, v_community.id || '|' || v_qr_ts || '|' || v_pts || '|' || v_type);
-  IF v_expected_tok != (v_json->>'tok') THEN
-    RETURN jsonb_build_object('valid', false, 'reason', '🛡️ Código QR inválido o falsificado.');
+  ELSE
+    -- ==========================================
+    -- FLUJO NORMAL DE QR (JSON PAYLOAD BASE64)
+    -- ==========================================
+    v_type := COALESCE(v_json->>'type', 'visit');
+    v_pts := (v_json->>'pts')::INT;
+
+    -- A) VALIDAR TIEMPO DEL CÓDIGO QR (Regeneración de 15 segundos)
+    v_qr_ts := (v_json->>'ts')::BIGINT;
+    v_current_ts := EXTRACT(EPOCH FROM NOW())::BIGINT / 15;
+    
+    -- Permitir tolerancia de 1 ventana hacia atrás por posible delay de red
+    IF (v_current_ts - v_qr_ts) > 1 OR (v_qr_ts > v_current_ts) THEN
+      RETURN jsonb_build_object('valid', false, 'reason', '⏱️ Código QR caducado, escanee el código actual del stand.');
+    END IF;
+
+    -- B) VERIFICAR LA COMUNIDAD Y LA INTEGRIDAD CRIPTOGRÁFICA
+    SELECT * INTO v_community FROM communities WHERE id = (v_json->>'sid')::UUID;
+    IF NOT FOUND THEN
+      RETURN jsonb_build_object('valid', false, 'reason', '❌ Comunidad no encontrada');
+    END IF;
+
+    SELECT value INTO v_secret FROM settings WHERE key = 'hmac_secret';
+    
+    -- Verificar si el token (HMAC) no fue alterado
+    v_expected_tok := simple_hmac(v_secret, v_community.id || '|' || v_qr_ts || '|' || v_pts || '|' || v_type);
+    IF v_expected_tok != (v_json->>'tok') THEN
+      RETURN jsonb_build_object('valid', false, 'reason', '🛡️ Código QR inválido o falsificado.');
+    END IF;
   END IF;
 
   -- ==========================================

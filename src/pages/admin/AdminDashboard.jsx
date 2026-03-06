@@ -8,6 +8,7 @@ import {
     getLeaderboard,
 } from '../../lib/api.js';
 import { Settings, LogOut, Loader, MapPin, Target, QrCode, Pencil, AlertTriangle, ClipboardList, Save, BookOpen, Monitor, Zap, Bot, Globe, Palette, FlaskConical, TestTube, Ruler, Gamepad2, Sprout, Music, Dumbbell, Camera, Rocket, Brain } from 'lucide-react';
+import DynamicIcon from '../../components/DynamicIcon.jsx';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -169,7 +170,9 @@ export default function AdminDashboard() {
             {community ? (
                 <div className="group-card">
                     <div className="group-header">
-                        <div className="group-emoji">{community.emoji}</div>
+                        <div className="group-emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <DynamicIcon name={community.emoji} size={32} />
+                        </div>
                         <div>
                             <div className="group-name">{community.name}</div>
                             <div className="group-stand">Stand: {community.stand_number}</div>

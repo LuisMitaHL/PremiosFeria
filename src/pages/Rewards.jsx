@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { getRewards, getClaimedRewards, claimReward } from '../lib/api.js';
 import { Gift, Star, Lock, Loader, CheckCircle, XCircle } from 'lucide-react';
+import DynamicIcon from '../components/DynamicIcon.jsx';
 
 export default function Rewards() {
     const { participant, refreshParticipant } = useAuth();
@@ -87,7 +88,9 @@ export default function Rewards() {
 
                         return (
                             <div key={reward.id} className={`reward-card ${claimed ? 'claimed' : ''}`}>
-                                <div className="reward-emoji">{reward.emoji}</div>
+                                <div className="reward-emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <DynamicIcon name={reward.emoji} size={32} />
+                                </div>
                                 <div className="reward-info">
                                     <div className="reward-name">
                                         {reward.name}

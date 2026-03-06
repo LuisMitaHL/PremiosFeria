@@ -3,7 +3,7 @@ CREATE TABLE communities (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   auth_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   name TEXT NOT NULL,
-  emoji TEXT DEFAULT '📚',
+  emoji TEXT DEFAULT 'BookOpen',
   stand_number TEXT,
   description TEXT,
   visit_points INT DEFAULT 10 CHECK (visit_points <= 30),
@@ -38,7 +38,7 @@ CREATE TABLE rewards (
   name TEXT NOT NULL,
   description TEXT,
   cost INT NOT NULL,
-  emoji TEXT DEFAULT '🎁'
+  emoji TEXT DEFAULT 'Gift'
 );
 
 -- Premios reclamados

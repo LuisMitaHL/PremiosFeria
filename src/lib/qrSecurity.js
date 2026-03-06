@@ -46,7 +46,10 @@ export function generateQRPayload(stand, type = 'visit', secret) {
 
     // Encode to base64
     const json = JSON.stringify(data);
-    return btoa(encodeURIComponent(json));
+    return {
+        payload: btoa(encodeURIComponent(json)),
+        shortCode: data.tok.substring(0, 6).toUpperCase()
+    };
 }
 
 // --- Decode QR payload (participant, client-side) ---
