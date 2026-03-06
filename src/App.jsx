@@ -52,7 +52,7 @@ function AppLayout({ children }) {
                         <span className="nav-icon"><Trophy size={20} /></span>
                         <span>Ranking</span>
                     </NavLink>
-                    <NavLink to="/scan" className="nav-item scan-btn">
+                    <NavLink to="/scan" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <span className="nav-icon"><ScanLine size={22} /></span>
                         <span>Scan</span>
                     </NavLink>
