@@ -4,7 +4,7 @@
 #
 # Stands up, via Docker:
 #   - Postgres 16   (schema + RLS + RPC + seed applied on first init)
-#   - PostgREST v12 (REST API that supabase-js talks to on /rest/v1)
+#   - PostgREST v12 (REST API; exposed under /rest/v1 via an nginx gateway)
 # then runs the Vite dev server against it.
 #
 # The backend reproduces the app's COMMITTED schema/RLS/RPC (verbatim copies of
@@ -118,6 +118,22 @@ INSERT INTO participants (id, name, points) VALUES
 ('a0000001-0000-0000-0000-000000000000', 'Participante Demo', 0);
 SQL
 
+# nginx gateway: maps supabase-js's /rest/v1/* onto PostgREST's root.
+# In production Supabase's Kong gateway strips /rest/v1; raw PostgREST serves at /.
+cat > "$DEV/nginx.conf" <<'NGINX'
+server {
+    listen 3000;
+    server_name _;
+
+    location /rest/v1/ {
+        proxy_pass http://rest:3000/;
+        proxy_pass_request_headers on;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+NGINX
+
 # Docker compose: Postgres + PostgREST. ${VAR:-default} is expansion for
 # docker compose, so it is kept literal here.
 cat > "$COMPOSE" <<YAML
@@ -145,11 +161,17 @@ services:
       PGRST_JWT_SECRET: dev_only_super_secret_do_not_use_in_prod
       PGRST_SERVER_PORT: "3000"
       PGRST_SERVER_CORS_ALLOWED_ORIGINS: "*"
-    ports:
-      - "${API_PORT:-3000}:3000"
     depends_on:
       db:
         condition: service_healthy
+  gateway:
+    image: nginx:alpine
+    ports:
+      - "${API_PORT:-3000}:3000"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - rest
 volumes:
   dev_pgdata:
 YAML
@@ -169,7 +191,7 @@ console.log(h+"."+p+"."+sign(h+"."+p));
 # ---------------------------------------------------------------------------
 # Bring up docker stack, wait for PostgREST
 # ---------------------------------------------------------------------------
-echo "▸ starting Postgres + PostgREST (first run pulls images)..."
+echo "▸ starting Postgres + PostgREST + gateway (first run pulls images)..."
 docker compose -f "$COMPOSE" up -d
 
 echo "▸ waiting for API at http://localhost:${API_PORT} ..."
