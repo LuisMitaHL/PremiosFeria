@@ -126,10 +126,22 @@ server {
     server_name _;
 
     location /rest/v1/ {
+        if ($request_method = OPTIONS) {
+            add_header Access-Control-Allow-Origin "*" always;
+            add_header Access-Control-Allow-Methods "$http_access_control_request_method" always;
+            add_header Access-Control-Allow-Headers "$http_access_control_request_headers" always;
+            add_header Access-Control-Max-Age "86400" always;
+            return 204;
+        }
         proxy_pass http://rest:3000/;
         proxy_pass_request_headers on;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_hide_header Access-Control-Allow-Origin;
+        proxy_hide_header Access-Control-Allow-Headers;
+        proxy_hide_header Access-Control-Expose-Headers;
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Access-Control-Expose-Headers "Content-Profile" always;
     }
 }
 NGINX
@@ -160,7 +172,6 @@ services:
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: dev_only_super_secret_do_not_use_in_prod
       PGRST_SERVER_PORT: "3000"
-      PGRST_SERVER_CORS_ALLOWED_ORIGINS: "*"
     depends_on:
       db:
         condition: service_healthy
