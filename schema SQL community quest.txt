@@ -38,7 +38,7 @@ CREATE TABLE rewards (
   name TEXT NOT NULL,
   description TEXT,
   cost INT NOT NULL CHECK (cost >= 0),
-  stock INT DEFAULT 0,
+  stock INT DEFAULT 0 CHECK (stock >= 0),
   emoji TEXT DEFAULT 'Gift'
 );
 

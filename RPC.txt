@@ -227,6 +227,7 @@ DECLARE
   v_participant participants%ROWTYPE;
   v_reward rewards%ROWTYPE;
   v_already_claimed BOOLEAN;
+  v_new_points INT;
 BEGIN
   -- El participante es SIEMPRE el llamador autenticado (nunca un parámetro)
   SELECT * INTO v_participant FROM participants WHERE auth_user_id = auth.uid();
@@ -246,10 +247,37 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'reason', '¡Agotado! Ya no quedan unidades de este premio');
   END IF;
 
-  UPDATE participants SET points = points - v_reward.cost WHERE id = v_participant.id;
-  UPDATE rewards SET stock = stock - 1 WHERE id = p_reward_id;
-  INSERT INTO claimed_rewards (participant_id, reward_id) VALUES (v_participant.id, p_reward_id);
+  -- Los pre-chequeos de arriba solo dan mensajes amigables; la puerta real
+  -- son los UPDATE condicionales: la condición vive en el WHERE, así que dos
+  -- reclamaciones concurrentes se serializan en el lock de la fila y la
+  -- perdedora re-evalúa contra la fila ya confirmada y ve 0 filas.
+  -- El bloque con EXCEPTION es una subtransacción: si algo falla dentro
+  -- (RAISE o error de BD), se revierte TODO lo escrito en él — nunca queda
+  -- stock descontado sin puntos debitados, ni viceversa.
+  BEGIN
+    UPDATE rewards SET stock = stock - 1
+    WHERE id = p_reward_id AND stock > 0;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION '%', '¡Agotado! Ya no quedan unidades de este premio';
+    END IF;
 
-  RETURN jsonb_build_object('success', true, 'newPoints', v_participant.points - v_reward.cost);
+    UPDATE participants SET points = points - v_reward.cost
+    WHERE id = v_participant.id AND points >= v_reward.cost;
+    IF NOT FOUND THEN
+      -- Tu balance cambió por una transacción concurrente entre el pre-chequeo y aquí
+      RAISE EXCEPTION '%', 'Tus puntos cambiaron, inténtalo de nuevo';
+    END IF;
+
+    INSERT INTO claimed_rewards (participant_id, reward_id) VALUES (v_participant.id, p_reward_id);
+  EXCEPTION
+    WHEN unique_violation THEN
+      -- Carrera de la misma persona contra el UNIQUE(participant_id, reward_id)
+      RETURN jsonb_build_object('success', false, 'reason', 'Ya reclamaste este premio');
+    WHEN OTHERS THEN
+      RETURN jsonb_build_object('success', false, 'reason', SQLERRM);
+  END;
+
+  SELECT points INTO v_new_points FROM participants WHERE id = v_participant.id;
+  RETURN jsonb_build_object('success', true, 'newPoints', v_new_points);
 END;
 $$;
