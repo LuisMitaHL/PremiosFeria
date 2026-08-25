@@ -119,7 +119,7 @@ BEGIN
     
     -- Verificar si el token (HMAC) no fue alterado
     v_expected_tok := simple_hmac(v_secret, v_community.id || '|' || v_qr_ts || '|' || v_pts || '|' || v_type);
-    IF v_expected_tok != (v_json->>'tok') THEN
+    IF v_expected_tok IS DISTINCT FROM (v_json->>'tok') THEN
       RETURN jsonb_build_object('valid', false, 'reason', '🛡️ Código QR inválido o falsificado.');
     END IF;
   END IF;
