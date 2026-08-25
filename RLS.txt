@@ -6,13 +6,15 @@ CREATE POLICY "participants_read" ON participants FOR SELECT USING (true);
 DROP POLICY IF EXISTS "participants_insert" ON participants;
 CREATE POLICY "participants_insert" ON participants FOR INSERT WITH CHECK (true);
 
--- Comunidades: lectura pública, edición solo por su admin
+-- Comunidades: lectura pública, edición solo por su admin (vinculado vía auth_user_id)
 ALTER TABLE communities ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "communities_read" ON communities;
 CREATE POLICY "communities_read" ON communities FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "communities_update" ON communities;
-CREATE POLICY "communities_update" ON communities FOR UPDATE USING (true);
+CREATE POLICY "communities_update" ON communities FOR UPDATE
+  USING (auth_user_id = auth.uid())
+  WITH CHECK (auth_user_id = auth.uid());
 
 -- Scans: lectura pública, insert via RPC únicamente
 ALTER TABLE scans ENABLE ROW LEVEL SECURITY;

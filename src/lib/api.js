@@ -159,36 +159,54 @@ export async function claimReward(participantId, rewardId) {
 
 // ─── Auth (Admin) ────────────────────────────
 
-export async function loginAdmin(username, password) {
-    const { data, error } = await supabase
-        .from('communities')
-        .select('*')
-        .eq('username', username)
-        .eq('password', password)
-        .single();
+export async function loginAdmin(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error || !data) {
-        console.error('Custom Login Error:', error);
+    if (error || !data.user) {
         return { success: false, error: 'Credenciales incorrectas' };
     }
-    
-    // Create a mock user object representing the community
-    const user = { id: data.id, email: username, communityId: data.id, role: 'community_admin' };
-    
-    // Store in localStorage directly as a patch since we bypassed real Auth
-    localStorage.setItem('admin_session', JSON.stringify(user));
-    
-    return { success: true, user: user, session: { user } };
+
+    // Resolve the community linked to this authenticated admin
+    const { data: comm, error: commErr } = await supabase
+        .from('communities')
+        .select('*')
+        .eq('auth_user_id', data.user.id)
+        .single();
+
+    if (commErr || !comm) {
+        await supabase.auth.signOut();
+        return { success: false, error: 'No hay comunidad vinculada a esta cuenta' };
+    }
+
+    const user = { id: comm.id, authId: data.user.id, email, communityId: comm.id, role: 'community_admin' };
+    return { success: true, user, session: { user } };
 }
 
 export async function logoutAdmin() {
-    localStorage.removeItem('admin_session');
+    await supabase.auth.signOut();
 }
 
 export async function getSession() {
-    const stored = localStorage.getItem('admin_session');
-    if (stored) return { user: JSON.parse(stored) };
-    return null;
+    const { data } = await supabase.auth.getSession();
+    const uid = data?.session?.user?.id;
+    if (!uid) return null;
+
+    const { data: comm } = await supabase
+        .from('communities')
+        .select('*')
+        .eq('auth_user_id', uid)
+        .single();
+
+    if (!comm) return null;
+    return {
+        user: {
+            id: comm.id,
+            authId: uid,
+            email: data.session.user.email,
+            communityId: comm.id,
+            role: 'community_admin',
+        },
+    };
 }
 
 // ─── Settings ────────────────────────────────
