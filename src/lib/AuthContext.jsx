@@ -25,20 +25,36 @@ export function AuthProvider({ children }) {
     const [adminUser, setAdminUser] = useState(null);
     const [adminLoading, setAdminLoading] = useState(true);
 
-    // Load participant from localStorage on mount
+    // Load participant on mount: prefiere la fila vinculada a la sesión de
+    // Supabase Auth; localStorage solo es caché de visualización.
     useEffect(() => {
         const load = async () => {
-            const id = getCurrentParticipantId();
-            if (id) {
-                try {
-                    const p = await getParticipantById(id);
-                    setParticipant(p);
-                } catch {
-                    // ID in localStorage but not in DB — clear it
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                let p = null;
+                if (user) {
+                    const { data } = await supabase
+                        .from('participants')
+                        .select('*')
+                        .eq('auth_user_id', user.id)
+                        .maybeSingle();
+                    p = data;
+                }
+                if (!p) {
+                    const id = getCurrentParticipantId();
+                    if (id) p = await getParticipantById(id);
+                }
+                if (p) {
+                    saveCurrentParticipantId(p.id);
+                } else {
                     clearCurrentParticipant();
                 }
+                setParticipant(p);
+            } catch {
+                clearCurrentParticipant();
+            } finally {
+                setParticipantLoading(false);
             }
-            setParticipantLoading(false);
         };
         load();
     }, []);
@@ -73,7 +89,8 @@ export function AuthProvider({ children }) {
         return null;
     };
 
-    const logoutParticipant = () => {
+    const logoutParticipant = async () => {
+        await supabase.auth.signOut();
         clearCurrentParticipant();
         setParticipant(null);
     };

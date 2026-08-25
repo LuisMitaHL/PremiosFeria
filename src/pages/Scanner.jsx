@@ -93,7 +93,7 @@ export default function Scanner() {
 
             // Send decoded JSON to server for validation
             const jsonString = JSON.stringify(decoded);
-            const result = await scanQR(participant.id, jsonString);
+            const result = await scanQR(jsonString);
 
             if (result.valid) {
                 // Refresh participant to get updated points

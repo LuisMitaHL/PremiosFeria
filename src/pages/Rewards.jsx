@@ -33,7 +33,7 @@ export default function Rewards() {
 
     async function handleClaim(rewardId) {
         try {
-            const result = await claimReward(participant.id, rewardId);
+            const result = await claimReward(rewardId);
             if (result.success) {
                 await refreshParticipant();
                 setClaimedIds([...claimedIds, rewardId]);

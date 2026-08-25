@@ -6,12 +6,24 @@ import { supabase } from '../supabaseClient.js';
 
 // ─── Participants ────────────────────────────
 
+// Registro: crea una identidad anónima de Supabase Auth y vincula el
+// participante a ella. El servidor ya nunca acepta un participant_id
+// del cliente: los RPC resuelven al participante por auth.uid().
 export async function registerParticipant(name, fingerprint) {
+    // Cierra cualquier sesión anónima previa para no acumular usuarios huérfanos
+    await supabase.auth.signOut();
+
+    const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+    if (authError || !authData?.user) {
+        throw new Error('No se pudo crear tu sesión. Habilita "Anonymous sign-ins" en Supabase.');
+    }
+
     const { data, error } = await supabase
         .from('participants')
         .insert({
             name,
             fingerprint: fingerprint || null,
+            auth_user_id: authData.user.id,
         })
         .select('id')
         .single();
@@ -84,9 +96,8 @@ export async function updateCommunity(communityId, updates) {
 
 // ─── Scans ───────────────────────────────────
 
-export async function scanQR(participantId, encodedPayload) {
+export async function scanQR(encodedPayload) {
     const { data, error } = await supabase.rpc('validate_and_scan', {
-        p_participant_id: participantId,
         p_encoded_payload: encodedPayload,
     });
 
@@ -147,9 +158,8 @@ export async function getClaimedRewards(participantId) {
     return data.map(r => r.reward_id);
 }
 
-export async function claimReward(participantId, rewardId) {
+export async function claimReward(rewardId) {
     const { data, error } = await supabase.rpc('claim_reward', {
-        p_participant_id: participantId,
         p_reward_id: rewardId,
     });
 

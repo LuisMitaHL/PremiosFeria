@@ -35,10 +35,11 @@ BEGIN
   END IF;
 
   v_ts := EXTRACT(EPOCH FROM NOW())::BIGINT / 15;
-  v_pts := CASE WHEN p_type = 'visit'
+  -- Los puntos nunca son negativos (la configuración del stand podría serlo)
+  v_pts := GREATEST(0, CASE WHEN p_type = 'visit'
     THEN LEAST(COALESCE(v_comm.visit_points, 10), 30)
     ELSE LEAST(COALESCE(v_comm.activity_points, 25), 100)
-  END;
+  END);
 
   v_tok := encode(
     hmac(v_comm.id || '|' || v_ts || '|' || v_pts || '|' || p_type, v_secret, 'sha256'),
@@ -63,7 +64,6 @@ $$;
 
 -- 2. Validar QR y registrar scan (Lógica de validación temporal y de puntos 100% segura en el backend)
 CREATE OR REPLACE FUNCTION validate_and_scan(
-  p_participant_id UUID,
   p_encoded_payload TEXT
 ) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
@@ -81,7 +81,13 @@ DECLARE
   v_max_pts INT;
   v_final_pts INT;
   v_expected_tok TEXT;
+  v_participant_id UUID;
 BEGIN
+  -- El participante es SIEMPRE el llamador autenticado (nunca un parámetro)
+  SELECT id INTO v_participant_id FROM participants WHERE auth_user_id = auth.uid();
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('valid', false, 'reason', '👤 Regístrate para participar.');
+  END IF;
   -- Decodificar payload (El frontend debe enviar el JSON parseable como string antes de insertarlo)
   v_json := p_encoded_payload::JSONB;
   -- ==========================================
@@ -101,7 +107,7 @@ BEGIN
       -- Buscar entre todas las comunidades la firma que coincida con este código
       FOR v_comp_comm IN SELECT * FROM communities LOOP
         FOR v_comp_type IN SELECT unnest(ARRAY['visit', 'activity']) LOOP
-          v_comp_pts := CASE WHEN v_comp_type = 'visit' THEN LEAST(COALESCE(v_comp_comm.visit_points, 10), 30) ELSE LEAST(COALESCE(v_comp_comm.activity_points, 25), 100) END;
+          v_comp_pts := CASE WHEN v_comp_type = 'visit' THEN GREATEST(0, LEAST(COALESCE(v_comp_comm.visit_points, 10), 30)) ELSE GREATEST(0, LEAST(COALESCE(v_comp_comm.activity_points, 25), 100)) END;
           
           -- Intentar con el TS actual
           IF upper(substring(encode(hmac(v_comp_comm.id || '|' || v_current_ts || '|' || v_comp_pts || '|' || v_comp_type, v_secret, 'sha256'), 'hex') from 1 for 6)) = v_short_code THEN
@@ -167,7 +173,7 @@ BEGIN
   -- ==========================================
   IF v_type = 'visit' THEN
     SELECT * INTO v_existing FROM scans
-      WHERE participant_id = p_participant_id
+      WHERE participant_id = v_participant_id
       AND community_id = v_community.id
       AND type = 'visit'
       ORDER BY created_at DESC LIMIT 1;
@@ -193,14 +199,15 @@ BEGIN
   END IF;
   
   -- Aunque el frontend envíe algo más grande (hackeado), usamos el límite máximo forzado por la BD:
-  v_final_pts := LEAST(v_pts, v_max_pts);
+  -- Aunque el payload traiga puntos negativos, el crédito nunca resta
+  v_final_pts := GREATEST(0, LEAST(v_pts, v_max_pts));
 
   -- Insertar scan y actualizar puntos
   INSERT INTO scans (participant_id, community_id, points, type)
-  VALUES (p_participant_id, v_community.id, v_final_pts, v_type);
+  VALUES (v_participant_id, v_community.id, v_final_pts, v_type);
 
   UPDATE participants SET points = points + v_final_pts
-  WHERE id = p_participant_id;
+  WHERE id = v_participant_id;
 
   RETURN jsonb_build_object(
     'valid', true,
@@ -214,21 +221,21 @@ $$;
 
 -- 3. Reclamar premio
 CREATE OR REPLACE FUNCTION claim_reward(
-  p_participant_id UUID,
   p_reward_id UUID
-) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   v_participant participants%ROWTYPE;
   v_reward rewards%ROWTYPE;
   v_already_claimed BOOLEAN;
 BEGIN
-  SELECT * INTO v_participant FROM participants WHERE id = p_participant_id;
+  -- El participante es SIEMPRE el llamador autenticado (nunca un parámetro)
+  SELECT * INTO v_participant FROM participants WHERE auth_user_id = auth.uid();
   IF NOT FOUND THEN RETURN jsonb_build_object('success', false, 'reason', 'No registrado'); END IF;
 
   SELECT * INTO v_reward FROM rewards WHERE id = p_reward_id;
   IF NOT FOUND THEN RETURN jsonb_build_object('success', false, 'reason', 'Premio no encontrado'); END IF;
 
-  SELECT EXISTS(SELECT 1 FROM claimed_rewards WHERE participant_id = p_participant_id AND reward_id = p_reward_id) INTO v_already_claimed;
+  SELECT EXISTS(SELECT 1 FROM claimed_rewards WHERE participant_id = v_participant.id AND reward_id = p_reward_id) INTO v_already_claimed;
   IF v_already_claimed THEN RETURN jsonb_build_object('success', false, 'reason', 'Ya reclamaste este premio'); END IF;
 
   IF v_participant.points < v_reward.cost THEN
@@ -239,9 +246,9 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'reason', '¡Agotado! Ya no quedan unidades de este premio');
   END IF;
 
-  UPDATE participants SET points = points - v_reward.cost WHERE id = p_participant_id;
+  UPDATE participants SET points = points - v_reward.cost WHERE id = v_participant.id;
   UPDATE rewards SET stock = stock - 1 WHERE id = p_reward_id;
-  INSERT INTO claimed_rewards (participant_id, reward_id) VALUES (p_participant_id, p_reward_id);
+  INSERT INTO claimed_rewards (participant_id, reward_id) VALUES (v_participant.id, p_reward_id);
 
   RETURN jsonb_build_object('success', true, 'newPoints', v_participant.points - v_reward.cost);
 END;
