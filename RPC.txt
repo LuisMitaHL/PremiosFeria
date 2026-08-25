@@ -1,33 +1,71 @@
--- 1. Función para simular el HMAC criptográfico (Replica exacta del cliente web)
-CREATE OR REPLACE FUNCTION simple_hmac(secret TEXT, message TEXT) RETURNS TEXT AS $$
+-- 1. Firmar códigos QR en el servidor (el secreto nunca sale de la base de datos)
+-- Nota de despliegue: rota el secreto UNA vez tras aplicar esta versión,
+-- porque el valor anterior fue público (hallazgo F3 del audit):
+--   UPDATE settings SET value = gen_random_uuid()::text || gen_random_uuid()::text
+--   WHERE key = 'hmac_secret';
+DROP FUNCTION IF EXISTS simple_hmac(TEXT, TEXT);
+
+CREATE OR REPLACE FUNCTION sign_scan_code(
+  p_community_id UUID,
+  p_type TEXT
+) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  combined TEXT := secret || '|' || message;
-  hash BIGINT := 0;
-  i INT;
-  char_code INT;
+  v_comm communities%ROWTYPE;
+  v_secret TEXT;
+  v_ts BIGINT;
+  v_pts INT;
+  v_tok TEXT;
 BEGIN
-  FOR i IN 1..length(combined) LOOP
-    char_code := ascii(substring(combined from i for 1));
-    -- JS: hash = ((hash << 5) - hash) + char_code
-    hash := (hash * 32) - hash + char_code;
-    
-    -- Simulate JS 32-bit signed int overflow (Bitwise truncation)
-    hash := hash % 4294967296;
-    IF hash > 2147483647 THEN
-      hash := hash - 4294967296;
-    ELSIF hash < -2147483648 THEN
-      hash := hash + 4294967296;
-    END IF;
-  END LOOP;
-  RETURN lpad(to_hex(abs(hash)), 8, '0');
+  IF p_type NOT IN ('visit', 'activity') THEN
+    RETURN jsonb_build_object('error', 'Tipo inválido');
+  END IF;
+
+  SELECT * INTO v_comm FROM communities WHERE id = p_community_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Comunidad no encontrada');
+  END IF;
+
+  IF v_comm.auth_user_id IS DISTINCT FROM auth.uid() THEN
+    RETURN jsonb_build_object('error', 'No autorizado');
+  END IF;
+
+  SELECT value INTO v_secret FROM settings WHERE key = 'hmac_secret';
+  IF v_secret IS NULL THEN
+    RETURN jsonb_build_object('error', 'Secreto no configurado');
+  END IF;
+
+  v_ts := EXTRACT(EPOCH FROM NOW())::BIGINT / 15;
+  v_pts := CASE WHEN p_type = 'visit'
+    THEN LEAST(COALESCE(v_comm.visit_points, 10), 30)
+    ELSE LEAST(COALESCE(v_comm.activity_points, 25), 100)
+  END;
+
+  v_tok := encode(
+    hmac(v_comm.id || '|' || v_ts || '|' || v_pts || '|' || p_type, v_secret, 'sha256'),
+    'hex'
+  );
+
+  RETURN jsonb_build_object(
+    'payload', jsonb_build_object(
+      'sid', v_comm.id,
+      'ts', v_ts,
+      'pts', v_pts,
+      'type', p_type,
+      'name', v_comm.name,
+      'emoji', v_comm.emoji,
+      'tok', v_tok
+    ),
+    'shortCode', upper(substring(v_tok from 1 for 6)),
+    'ts', v_ts
+  );
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$;
 
 -- 2. Validar QR y registrar scan (Lógica de validación temporal y de puntos 100% segura en el backend)
 CREATE OR REPLACE FUNCTION validate_and_scan(
   p_participant_id UUID,
   p_encoded_payload TEXT
-) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   v_json JSONB;
   v_secret TEXT;
@@ -66,7 +104,7 @@ BEGIN
           v_comp_pts := CASE WHEN v_comp_type = 'visit' THEN LEAST(COALESCE(v_comp_comm.visit_points, 10), 30) ELSE LEAST(COALESCE(v_comp_comm.activity_points, 25), 100) END;
           
           -- Intentar con el TS actual
-          IF upper(substring(simple_hmac(v_secret, v_comp_comm.id || '|' || v_current_ts || '|' || v_comp_pts || '|' || v_comp_type) from 1 for 6)) = v_short_code THEN
+          IF upper(substring(encode(hmac(v_comp_comm.id || '|' || v_current_ts || '|' || v_comp_pts || '|' || v_comp_type, v_secret, 'sha256'), 'hex') from 1 for 6)) = v_short_code THEN
             v_community := v_comp_comm;
             v_type := v_comp_type;
             v_pts := v_comp_pts;
@@ -76,7 +114,7 @@ BEGIN
           END IF;
           
           -- Intentar con el TS anterior (tolerancia de red)
-          IF upper(substring(simple_hmac(v_secret, v_comp_comm.id || '|' || (v_current_ts - 1) || '|' || v_comp_pts || '|' || v_comp_type) from 1 for 6)) = v_short_code THEN
+          IF upper(substring(encode(hmac(v_comp_comm.id || '|' || (v_current_ts - 1) || '|' || v_comp_pts || '|' || v_comp_type, v_secret, 'sha256'), 'hex') from 1 for 6)) = v_short_code THEN
             v_community := v_comp_comm;
             v_type := v_comp_type;
             v_pts := v_comp_pts;
@@ -118,7 +156,7 @@ BEGIN
     SELECT value INTO v_secret FROM settings WHERE key = 'hmac_secret';
     
     -- Verificar si el token (HMAC) no fue alterado
-    v_expected_tok := simple_hmac(v_secret, v_community.id || '|' || v_qr_ts || '|' || v_pts || '|' || v_type);
+    v_expected_tok := encode(hmac(v_community.id || '|' || v_qr_ts || '|' || v_pts || '|' || v_type, v_secret, 'sha256'), 'hex');
     IF v_expected_tok IS DISTINCT FROM (v_json->>'tok') THEN
       RETURN jsonb_build_object('valid', false, 'reason', '🛡️ Código QR inválido o falsificado.');
     END IF;

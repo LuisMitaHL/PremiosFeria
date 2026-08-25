@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../../lib/AuthContext.jsx';
-import { getMyCommunity, getHmacSecret } from '../../lib/api.js';
-import { generateQRPayload, getTimeUntilRotation } from '../../lib/qrSecurity.js';
+import { getMyCommunity, getSignedScanCode } from '../../lib/api.js';
+import { encodeQRPayload, getTimeUntilRotation } from '../../lib/qrSecurity.js';
 import { Loader, XCircle, MapPin, Target, RefreshCw, Lock } from 'lucide-react';
 import DynamicIcon from '../../components/DynamicIcon.jsx';
 
@@ -13,7 +13,6 @@ export default function QRDisplay() {
     const { adminUser, adminLoading } = useAuth();
 
     const [community, setCommunity] = useState(null);
-    const [secret, setSecret] = useState(null);
     const [qrType, setQrType] = useState('visit');
     const [qrData, setQrData] = useState('');
     const [shortCode, setShortCode] = useState('');
@@ -27,18 +26,13 @@ export default function QRDisplay() {
         }
     }, [adminUser, adminLoading, navigate]);
 
-    // Load community and HMAC secret
+    // Load community
     useEffect(() => {
         if (!adminUser) return;
 
         const load = async () => {
             try {
-                const [comm, hmacSecret] = await Promise.all([
-                    getMyCommunity(adminUser.id),
-                    getHmacSecret(),
-                ]);
-                setCommunity(comm);
-                setSecret(hmacSecret);
+                setCommunity(await getMyCommunity(adminUser.id));
             } catch (err) {
                 console.error('QR load error:', err);
             } finally {
@@ -48,13 +42,22 @@ export default function QRDisplay() {
         load();
     }, [adminUser]);
 
-    const refreshQR = useCallback(() => {
-        if (!community || !secret) return;
-        const result = generateQRPayload(community, qrType, secret);
-        setQrData(result.payload);
-        setShortCode(result.shortCode);
-        setTimeLeft(getTimeUntilRotation());
-    }, [community, qrType, secret]);
+    // El servidor firma el código; el secreto nunca llega al navegador
+    const refreshQR = useCallback(async () => {
+        if (!community) return;
+        try {
+            const result = await getSignedScanCode(community.id, qrType);
+            if (result.error) {
+                console.error('QR sign error:', result.error);
+                return;
+            }
+            setQrData(encodeQRPayload(result.payload));
+            setShortCode(result.shortCode);
+            setTimeLeft(getTimeUntilRotation());
+        } catch (err) {
+            console.error('QR sign error:', err);
+        }
+    }, [community, qrType]);
 
     // Generate QR on mount and on type/community change
     useEffect(() => {
@@ -63,7 +66,7 @@ export default function QRDisplay() {
 
     // Countdown timer
     useEffect(() => {
-        if (!community || !secret) return;
+        if (!community) return;
 
         const interval = setInterval(() => {
             setTimeLeft(prev => {
@@ -76,7 +79,7 @@ export default function QRDisplay() {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [refreshQR, community, secret]);
+    }, [refreshQR, community]);
 
     if (loading || adminLoading) {
         return (

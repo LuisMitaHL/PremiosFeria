@@ -21,10 +21,9 @@ ALTER TABLE scans ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "scans_read" ON scans;
 CREATE POLICY "scans_read" ON scans FOR SELECT USING (true);
 
--- Settings: solo lectura general (necesario para generar QRs)
+-- Settings: sin acceso público; solo funciones SECURITY DEFINER leen el secreto
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "settings_read" ON settings;
-CREATE POLICY "settings_read" ON settings FOR SELECT USING (true);
 
 -- Rewards: lectura pública
 ALTER TABLE rewards ENABLE ROW LEVEL SECURITY;

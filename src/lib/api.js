@@ -209,17 +209,17 @@ export async function getSession() {
     };
 }
 
-// ─── Settings ────────────────────────────────
+// ─── QR Signing (server-side) ────────────────
 
-export async function getHmacSecret() {
-    const { data, error } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'hmac_secret')
-        .single();
+// Firma el código QR rotativo en el servidor (el secreto nunca sale de la BD).
+export async function getSignedScanCode(communityId, type) {
+    const { data, error } = await supabase.rpc('sign_scan_code', {
+        p_community_id: communityId,
+        p_type: type,
+    });
 
-    if (error) throw new Error(`Error al obtener secreto: ${error.message}`);
-    return data.value;
+    if (error) throw new Error(`Error al firmar código: ${error.message}`);
+    return data; // { payload, shortCode, ts } or { error }
 }
 
 // ─── Realtime ────────────────────────────────

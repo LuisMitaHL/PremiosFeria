@@ -1,58 +1,20 @@
 /* ============================================
-   QR Security — TOTP-like rotating codes
+   QR Security — códigos rotativos firmados en el servidor
    ============================================
-   - generateQRPayload: runs CLIENT-SIDE on admin pages
-     (secret fetched from Supabase settings table)
-   - Validation: runs SERVER-SIDE via RPC
-     (validate_and_scan PostgreSQL function)
+   - La firma (HMAC-SHA256) ocurre en la base de datos vía el RPC
+     sign_scan_code; el secreto nunca llega al navegador.
+   - Validación: RPC validate_and_scan.
    ============================================ */
 
-const TIME_STEP = 15; // seconds — QR rotates every 15s
+const TIME_STEP = 15; // segundos — QR rota cada 15s
 
-// --- HMAC-like token generation ---
-function simpleHMAC(secret, message) {
-    const combined = secret + '|' + message;
-    let hash = 0;
-    for (let i = 0; i < combined.length; i++) {
-        const char = combined.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return Math.abs(hash).toString(16).padStart(8, '0');
+// --- Codificar payload para el QR (admin, client-side) ---
+export function encodeQRPayload(payloadObj) {
+    const json = JSON.stringify(payloadObj);
+    return btoa(encodeURIComponent(json));
 }
 
-// Get current time step
-function getTimeStep() {
-    return Math.floor(Date.now() / 1000 / TIME_STEP);
-}
-
-// --- Generate QR Payload (admin, client-side) ---
-export function generateQRPayload(stand, type = 'visit', secret) {
-    const ts = getTimeStep();
-    const points = type === 'visit' ? (stand.visit_points || 10) : (stand.activity_points || 25);
-
-    const data = {
-        sid: stand.id,
-        ts,
-        pts: points,
-        type,
-        name: stand.name,
-        emoji: stand.emoji,
-    };
-
-    // Generate token
-    const tokenMessage = `${stand.id}|${ts}|${points}|${type}`;
-    data.tok = simpleHMAC(secret, tokenMessage);
-
-    // Encode to base64
-    const json = JSON.stringify(data);
-    return {
-        payload: btoa(encodeURIComponent(json)),
-        shortCode: data.tok.substring(0, 6).toUpperCase()
-    };
-}
-
-// --- Decode QR payload (participant, client-side) ---
+// --- Decodificar payload del QR (participante, client-side) ---
 export function decodeQRPayload(encodedPayload) {
     try {
         const json = decodeURIComponent(atob(encodedPayload));
@@ -62,14 +24,9 @@ export function decodeQRPayload(encodedPayload) {
     }
 }
 
-// --- Time remaining until next QR rotation ---
+// --- Tiempo restante hasta la próxima rotación del QR ---
 export function getTimeUntilRotation() {
     const now = Date.now() / 1000;
     const elapsed = now % TIME_STEP;
     return Math.ceil(TIME_STEP - elapsed);
-}
-
-// --- Get current time step value (for display) ---
-export function getCurrentTimeStep() {
-    return getTimeStep();
 }
