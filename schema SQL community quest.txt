@@ -31,6 +31,10 @@ CREATE TABLE scans (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Actividades: una sola vez por stand y participante (las visitas siguen siendo repetibles tras su cooldown)
+CREATE UNIQUE INDEX IF NOT EXISTS scans_one_activity_per_stand
+  ON scans (participant_id, community_id) WHERE (type = 'activity');
+
 -- Premios
 CREATE TABLE rewards (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
