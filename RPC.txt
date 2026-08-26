@@ -84,7 +84,10 @@ DECLARE
   v_participant_id UUID;
 BEGIN
   -- El participante es SIEMPRE el llamador autenticado (nunca un parámetro)
-  SELECT id INTO v_participant_id FROM participants WHERE auth_user_id = auth.uid();
+  SELECT id INTO v_participant_id FROM participants
+  WHERE auth_user_id = auth.uid()
+  FOR UPDATE; -- serializa los scans del mismo participante: el cooldown de
+              -- visitas re-evalúa contra lo ya confirmado (hallazgo F8)
   IF NOT FOUND THEN
     RETURN jsonb_build_object('valid', false, 'reason', '👤 Regístrate para participar.');
   END IF;
