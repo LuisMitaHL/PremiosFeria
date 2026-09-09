@@ -12,6 +12,13 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Public Supabase endpoint + anon key, baked by Vite at build time.
+# Passed via docker-compose build.args; falls back to .env files when built bare.
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=$VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY
+
 # Build the application
 RUN npm run build
 

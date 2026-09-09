@@ -1,0 +1,37 @@
+-- 40_rls.sql — verbatim copy of RLS.txt (repo source of truth).
+-- Participantes: cualquiera puede leer (leaderboard), insertar (registro)
+ALTER TABLE participants ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "participants_read" ON participants;
+CREATE POLICY "participants_read" ON participants FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "participants_insert" ON participants;
+CREATE POLICY "participants_insert" ON participants FOR INSERT WITH CHECK (auth_user_id = auth.uid());
+
+-- Comunidades: lectura pública, edición solo por su admin (vinculado vía auth_user_id)
+ALTER TABLE communities ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "communities_read" ON communities;
+CREATE POLICY "communities_read" ON communities FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "communities_update" ON communities;
+CREATE POLICY "communities_update" ON communities FOR UPDATE
+  USING (auth_user_id = auth.uid())
+  WITH CHECK (auth_user_id = auth.uid());
+
+-- Scans: lectura pública, insert via RPC únicamente
+ALTER TABLE scans ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "scans_read" ON scans;
+CREATE POLICY "scans_read" ON scans FOR SELECT USING (true);
+
+-- Settings: sin acceso público; solo funciones SECURITY DEFINER leen el secreto
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "settings_read" ON settings;
+
+-- Rewards: lectura pública
+ALTER TABLE rewards ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "rewards_read" ON rewards;
+CREATE POLICY "rewards_read" ON rewards FOR SELECT USING (true);
+
+-- Claimed rewards: lectura pública, insert via RPC
+ALTER TABLE claimed_rewards ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "claimed_rewards_read" ON claimed_rewards;
+CREATE POLICY "claimed_rewards_read" ON claimed_rewards FOR SELECT USING (true);
