@@ -4,12 +4,12 @@
 --   rewards.csv  header: stand,name,description,cost,stock,emoji  (optional)
 -- bootstrap.sh skips this file when /seed/stands.csv is unreadable.
 --
--- Staging via \copy (client-side read of the mount) + INSERT..SELECT so
--- bcrypt hashing (crypt) and id linking happen in pure SQL. Idempotent:
--- users/identities/communities keyed on email/username, rewards guarded by
--- WHERE NOT EXISTS (same stand+name). No DELETEs — never wipes prod data.
--- Rows with blank user/pw are ignored; CHECK violations abort loudly
--- (psql runs with ON_ERROR_STOP=1).
+-- Identity model (no GoTrue): stands log in with bare usernames against
+-- communities.password_hash (bcrypt). communities.auth_user_id = own id, so
+-- both app session paths resolve (user_metadata.community_id from the JWT,
+-- and the communities-by-auth_user_id fallback).
+-- Idempotent: keyed on username / stand+name, no DELETEs. Rows with blank
+-- user/pw are ignored; blank names / bad costs abort loudly (ON_ERROR_STOP).
 
 BEGIN;
 
@@ -35,49 +35,18 @@ CREATE TEMP TABLE stage_rewards (
 \copy stage_rewards FROM '/seed/rewards.csv' WITH (FORMAT csv, HEADER true)
 \endif
 
--- 1. GoTrue users (bcrypt via pgcrypto) -------------------------------------
--- Tokens must be '' not NULL (GoTrue >= 2.17x scans them into Go strings).
-INSERT INTO auth.users (
-  id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
-  confirmation_token, recovery_token, email_change_token_new, email_change,
-  is_super_admin,
-  raw_app_meta_data, raw_user_meta_data, created_at, updated_at
-)
-SELECT gen_random_uuid(),
-       '00000000-0000-0000-0000-000000000000',
-       'authenticated', 'authenticated',
-       btrim(user_), crypt(pw_, gen_salt('bf')), NOW(),
-       '', '', '', '', false,
-       '{"provider":"email","providers":["email"]}', '{}', NOW(), NOW()
+-- 1. Communities (username = bare login name; bcrypt hash via pgcrypto) ------
+INSERT INTO communities (username, name, password_hash)
+SELECT btrim(user_), NULLIF(btrim(name_), ''), crypt(pw_, gen_salt('bf'))
 FROM stage_stands
 WHERE NULLIF(btrim(user_), '') IS NOT NULL
   AND NULLIF(pw_, '') IS NOT NULL
-ON CONFLICT DO NOTHING;
-
--- 2. Email identities (login by email needs these) ---------------------------
-INSERT INTO auth.identities (
-  provider_id, id, user_id, identity_data, provider,
-  last_sign_in_at, created_at, updated_at
-)
-SELECT u.id::text, u.id, u.id,
-       format('{"sub":"%s","email":"%s"}', u.id, u.email)::jsonb,
-       'email', NOW(), NOW(), NOW()
-FROM auth.users u
-JOIN (SELECT DISTINCT btrim(user_) AS email FROM stage_stands
-      WHERE NULLIF(btrim(user_), '') IS NOT NULL) s ON s.email = u.email
-ON CONFLICT DO NOTHING;
-
--- 3. Communities (username = login email, linked via auth_user_id) ------------
-INSERT INTO communities (auth_user_id, username, name)
-SELECT u.id, u.email, NULLIF(btrim(s.name_), '')
-FROM (SELECT DISTINCT ON (btrim(user_)) btrim(user_) AS email, name_
-      FROM stage_stands
-      WHERE NULLIF(btrim(user_), '') IS NOT NULL
-        AND NULLIF(pw_, '') IS NOT NULL) s
-JOIN auth.users u ON u.email = s.email
 ON CONFLICT (username) DO NOTHING;
 
--- 4. Rewards (stand = login email of the owning community) --------------------
+-- Link each stand to its own id (auth_user_id = JWT sub for stand sessions).
+UPDATE communities SET auth_user_id = id WHERE auth_user_id IS NULL;
+
+-- 2. Rewards (stand = username of the owning community) -----------------------
 \if :HAS_REWARDS
 INSERT INTO rewards (community_id, name, description, cost, stock, emoji)
 SELECT c.id,

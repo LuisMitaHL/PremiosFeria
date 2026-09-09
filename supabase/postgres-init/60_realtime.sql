@@ -7,6 +7,8 @@
 -- Ecto migrations there on boot; the schema must pre-exist (the
 -- supabase/postgres image ships it, plain postgres does not).
 CREATE SCHEMA IF NOT EXISTS _realtime;
+-- Tenant migrations also expect a `realtime` schema (same origin).
+CREATE SCHEMA IF NOT EXISTS realtime;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
     CREATE PUBLICATION supabase_realtime FOR TABLE public.participants, public.scans;

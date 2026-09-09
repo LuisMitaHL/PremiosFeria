@@ -1,8 +1,8 @@
 -- 10_roles.sql — prod roles (idempotent; runs once on empty ./data/db).
 -- PostgREST connects as `authenticator` and SET ROLEs to the JWT role per
 -- request, so `authenticator` must be a member of every API role.
--- NOTE: no `community_admin` role here (dev mock artifact). Real GoTrue
--- issues role=authenticated; RLS keys off auth.uid(), not the role name.
+-- NOTE: no `community_admin` role here (dev mock artifact). JWTs always
+-- carry role=authenticated; RLS keys off auth.uid(), not the role name.
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
     CREATE ROLE anon NOLOGIN;

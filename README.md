@@ -16,7 +16,7 @@ A Progressive Web App (PWA) designed for university fairs, allowing attendees to
 - **Styling**: Vanilla CSS (CSS Modules/Variables)
 - **Routing**: React Router DOM
 - **Libraries**: `html5-qrcode` (Scanner), `qrcode.react` (Generator)
-- **Backend**: self-hosted Supabase-minimal — Postgres 16 + PostgREST v12 + GoTrue (auth) + Realtime, behind an nginx gateway. Game rules live in Postgres RPC (`sign_scan_code`, `validate_and_scan`, `claim_reward`); RLS scopes writes to `auth.uid()`.
+- **Backend**: self-hosted minimal stack — Postgres 16 + PostgREST v12 + Realtime + a zero-dependency Node auth service (username/password, HS256 sessions), behind an nginx gateway. Game rules live in Postgres RPC (`sign_scan_code`, `validate_and_scan`, `claim_reward`, `stand_login`); RLS scopes writes to `auth.uid()`.
 
 ## Development (local backend mock)
 
@@ -45,7 +45,7 @@ Never commit `.env.prod`. `POSTGRES_PASSWORD` is hex-only (URL-safe, embedded in
 docker compose --env-file .env.prod up -d --build
 ```
 
-First boot: Postgres init (`supabase/postgres-init/`: roles, schema, RLS, RPC, realtime publication) → GoTrue migrates `auth.*` → one-shot `bootstrap` seeds 10 stands + 4 rewards + GoTrue users. Check:
+First boot: Postgres init (`supabase/postgres-init/`: roles, schema, RLS, RPC, realtime publication) → one-shot `bootstrap` seeds stands + rewards from `./seed/*.csv` and links `auth_user_id`. Check:
 
 ```bash
 curl -s http://localhost:8080/auth/v1/health
@@ -60,11 +60,11 @@ Forward to gateway `${GATEWAY_PORT:-8080}` as plain HTTP, preserving `Host` and 
 | Path | Target |
 |---|---|
 | `/rest/v1/*` | PostgREST |
-| `/auth/v1/*` | GoTrue |
+| `/auth/v1/*` | Auth service |
 | `/realtime/v1/*` | Realtime (websocket) |
 | `/*` | App (SPA) |
 
-`SITE_URL` / `VITE_SUPABASE_URL` must be the public `https://` origin — Vite bakes them at `docker build` time, so changing the domain requires `--build`.
+`VITE_SUPABASE_URL` must be the public `https://` origin — Vite bakes it at `docker build` time, so changing the domain requires `--build`.
 
 ### 4. Seed accounts from CSV
 
@@ -74,15 +74,15 @@ Drop two files in `./seed/` (git-ignored, operator-only). No accounts are hardco
 
 ```csv
 user,pw,name
-meh@feria.local,Meh2024*,MEH
-ieee@feria.local,Ieee2024*,IEEE
+meh,Meh2024*,MEH
+ieee,Ieee2024*,IEEE
 ```
 
 `seed/rewards.csv` (optional, header `stand,name,description,cost,stock,emoji` — `stand` matches a `user` above):
 
 ```csv
 stand,name,description,cost,stock,emoji
-meh@feria.local,CuboRubik Dotnet,Premio de MEH,150,1,Box
+meh,CuboRubik Dotnet,Premio de MEH,150,1,Box
 ```
 
 Rules: UTF-8, quote fields containing commas. Blank `user`/`pw` rows are ignored; blank `name`/`cost` abort the seed visibly. Re-running only adds missing rows (keyed on email / stand+name) — never duplicates, never wipes. If `stands.csv` is absent at boot, seeding is skipped; add files later and re-run:
@@ -93,7 +93,15 @@ docker compose --env-file .env.prod run --rm bootstrap
 
 ### 5. Stand credentials
 
-Seeded logins are whatever you put in `seed/stands.csv` — hand each `user,pw` pair to its stand over a secure channel. Rotate after handover via password reset, or update `auth.users` directly with `crypt(newpw, gen_salt('bf'))`.
+Seeded logins are whatever you put in `seed/stands.csv` — hand each `user,pw` pair to its stand over a secure channel. There is no email recovery; rotate via SQL:
+
+```sql
+UPDATE communities
+SET password_hash = crypt('NewPass*', gen_salt('bf'))
+WHERE username = 'meh';
+```
+
+(Re-running `bootstrap` with an edited CSV only ADDS missing stands — it never updates passwords.)
 
 ### 6. Wipe / redeploy
 

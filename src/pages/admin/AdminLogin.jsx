@@ -6,7 +6,7 @@ import { ShieldCheck, AlertTriangle, Loader, ArrowRight } from 'lucide-react';
 export default function AdminLogin() {
     const navigate = useNavigate();
     const { adminUser, loginAdmin } = useAuth();
-    const [form, setForm] = useState({ email: '', password: '' });
+    const [form, setForm] = useState({ username: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -19,13 +19,13 @@ export default function AdminLogin() {
         e.preventDefault();
         setError('');
 
-        if (!form.email.trim() || !form.password.trim()) {
+        if (!form.username.trim() || !form.password.trim()) {
             setError('Completa todos los campos');
             return;
         }
 
         setLoading(true);
-        const result = await loginAdmin(form.email.trim(), form.password.trim());
+        const result = await loginAdmin(form.username.trim(), form.password.trim());
         setLoading(false);
 
         if (result.success) {
@@ -49,13 +49,13 @@ export default function AdminLogin() {
 
                 <form onSubmit={handleSubmit} className="glass-card">
                     <div className="form-group">
-                        <label className="form-label">Email de comunidad</label>
+                        <label className="form-label">Usuario de comunidad</label>
                         <input
                             className="form-input"
-                            type="email"
-                            placeholder="tucomunidad@feria.local"
-                            value={form.email}
-                            onChange={e => setForm({ ...form, email: e.target.value })}
+                            type="text"
+                            placeholder="meh"
+                            value={form.username}
+                            onChange={e => setForm({ ...form, username: e.target.value })}
                             autoFocus
                         />
                     </div>

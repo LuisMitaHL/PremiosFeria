@@ -36,35 +36,23 @@ services:
     restart: unless-stopped
 
   auth:
-    image: supabase/gotrue:v2.177.0
+    build: ./auth
     depends_on:
-      db:
-        condition: service_healthy
+      rest:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
       timeout: 5s
       interval: 10s
       retries: 5
     environment:
-      GOTRUE_API_HOST: 0.0.0.0
-      GOTRUE_API_PORT: 9999
-      API_EXTERNAL_URL: ${SITE_URL:?set SITE_URL in .env.prod}
-      GOTRUE_DB_DRIVER: postgres
-      # search_path=auth: GoTrue creates some types unqualified; without this
-      # they land in public and later migrations referencing auth.* fail.
-      GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres?search_path=auth
-      GOTRUE_SITE_URL: ${SITE_URL}
-      GOTRUE_URI_ALLOW_LIST: ${SITE_URL}
-      GOTRUE_DISABLE_SIGNUP: "false"
-      GOTRUE_JWT_ADMIN_ROLES: service_role
-      GOTRUE_JWT_AUD: authenticated
-      GOTRUE_JWT_EXP: 3600
-      GOTRUE_JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env.prod}
-      GOTRUE_JWT_ISSUER: ${SITE_URL}
-      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
-      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "true"
-      GOTRUE_MAILER_AUTOCONFIRM: "true"
-      GOTRUE_SMS_AUTOCONFIRM: "true"
+      PGRST_URL: http://rest:3000
+      ANON_KEY: ${ANON_KEY:?set ANON_KEY in .env.prod}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env.prod}
+      ACCESS_TTL: 43200
+      REFRESH_TTL: 7776000
+      RATE_LIMIT_MAX: 20
+      RATE_LIMIT_WINDOW: 300
     restart: unless-stopped
 
   rest:

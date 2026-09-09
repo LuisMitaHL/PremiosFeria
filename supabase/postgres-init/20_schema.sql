@@ -1,7 +1,7 @@
 -- 20_schema.sql — app tables. Faithful to "schema SQL community quest.txt"
 -- (IF NOT EXISTS / ON CONFLICT guards added so re-provision never errors).
 -- The plaintext `password` column is dropped later in 25_auth_columns.sql
--- (audit F2: credentials move to GoTrue / auth.users).
+-- (audit F2: credentials move to communities.password_hash + auth service).
 
 -- Comunidades (antes "groups")
 CREATE TABLE IF NOT EXISTS communities (

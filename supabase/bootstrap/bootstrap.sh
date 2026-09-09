@@ -1,7 +1,6 @@
 #!/bin/sh
 # bootstrap.sh — one-shot seed job (restart: "no").
-# Waits for Postgres + GoTrue (whose startup migrations create auth.*),
-# then applies the idempotent seed.sql as superuser.
+# Waits for Postgres + auth service, then applies SQL files as superuser.
 set -eu
 
 echo "bootstrap: waiting for postgres at $PGHOST..."
@@ -11,7 +10,7 @@ for _ in $(seq 1 60); do
 done
 pg_isready -h "$PGHOST" -U "$PGUSER"
 
-echo "bootstrap: waiting for GoTrue at $AUTH_URL..."
+echo "bootstrap: waiting for auth service at $AUTH_URL..."
 for _ in $(seq 1 120); do
   if wget -q -O /dev/null "$AUTH_URL" >/dev/null 2>&1; then break; fi
   sleep 2
@@ -20,6 +19,7 @@ wget -q -O /dev/null "$AUTH_URL"
 
 echo "bootstrap: applying /srv/10_*.sql (always)..."
 for f in /srv/10_*.sql; do
+  [ -e "$f" ] || continue
   echo "bootstrap: -- $f"
   psql -v ON_ERROR_STOP=1 -f "$f"
 done
@@ -35,6 +35,7 @@ else
     HAS_REWARDS=0
   fi
   for f in /srv/20_*.sql; do
+    [ -e "$f" ] || continue
     echo "bootstrap: -- $f"
     psql -v ON_ERROR_STOP=1 -v HAS_REWARDS="$HAS_REWARDS" -f "$f"
   done
