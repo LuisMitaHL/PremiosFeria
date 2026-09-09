@@ -94,6 +94,47 @@ SQL
 cp "$REPO/RLS.txt" "$SQL/40_rls.sql"
 cp "$REPO/RPC.txt" "$SQL/50_rpc.sql"
 
+# Auth compat — must run BEFORE RLS.txt (its policies call auth.uid() and
+# reference auth_user_id). Supabase provides auth.uid()/auth.jwt() and the
+# schema txt has drifted from RLS/RPC; local Postgres gets a compat layer.
+cat > "$SQL/35_auth_compat.sql" <<'SQL'
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb
+LANGUAGE sql STABLE AS $$
+  SELECT COALESCE(NULLIF(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb)
+$$;
+CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid
+LANGUAGE sql STABLE AS $$
+  SELECT NULLIF(auth.jwt() ->> 'sub', '')::uuid
+$$;
+GRANT USAGE ON SCHEMA auth TO PUBLIC;
+
+-- pgcrypto: preinstalled in Supabase; RPC.txt uses hmac() for scan codes.
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS auth_user_id UUID;
+ALTER TABLE communities ADD COLUMN IF NOT EXISTS auth_user_id UUID;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    CREATE ROLE authenticated NOLOGIN;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'community_admin') THEN
+    CREATE ROLE community_admin NOLOGIN;
+  END IF;
+END $$;
+GRANT anon TO authenticated;
+GRANT anon TO community_admin;
+GRANT authenticated TO authenticator;
+GRANT community_admin TO authenticator;
+SQL
+
+# After seed (60_*): dev mock auth issues sub = community id for admin logins,
+# so link each community to its own uuid.
+cat > "$SQL/70_auth_link.sql" <<'SQL'
+UPDATE communities SET auth_user_id = id WHERE auth_user_id IS NULL;
+SQL
+
 # Dev seed: communities get plaintext username/password (the app's loginAdmin
 # reads them) so you can log in as any stand. No auth.users / auth_user_id —
 # those no longer exist in the HEAD schema.
@@ -133,6 +174,21 @@ server {
     listen 3000;
     server_name _;
 
+    location /auth/v1/ {
+        if ($request_method = OPTIONS) {
+            add_header Access-Control-Allow-Origin "*" always;
+            add_header Access-Control-Allow-Methods "$http_access_control_request_method" always;
+            add_header Access-Control-Allow-Headers "$http_access_control_request_headers" always;
+            add_header Access-Control-Max-Age "86400" always;
+            return 204;
+        }
+        proxy_pass http://auth:3001/;
+        proxy_pass_request_headers on;
+        proxy_set_header Host $host;
+        proxy_hide_header Access-Control-Allow-Origin;
+        add_header Access-Control-Allow-Origin "*" always;
+    }
+
     location /rest/v1/ {
         if ($request_method = OPTIONS) {
             add_header Access-Control-Allow-Origin "*" always;
@@ -153,6 +209,17 @@ server {
     }
 }
 NGINX
+
+# Anon key = HS256 JWT (role=anon) signed with the same secret PostgREST knows.
+# Needed before the compose write (the auth service passes it to PostgREST too).
+ANON_KEY="$(node --input-type=module -e '
+import crypto from "node:crypto";
+const b64=(b)=>Buffer.from(b).toString("base64url");
+const sign=(d)=>crypto.createHmac("sha256", process.env.JWT_SECRET).update(d).digest("base64url");
+const h=b64(JSON.stringify({alg:"HS256",typ:"JWT"}));
+const p=b64(JSON.stringify({role:"anon",iss:"supabase",iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+31536000}));
+console.log(h+"."+p+"."+sign(h+"."+p));
+')"
 
 # Docker compose: Postgres + PostgREST. ${VAR:-default} is expansion for
 # docker compose, so it is kept literal here.
@@ -183,6 +250,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
+  auth:
+    image: node:20-alpine
+    command: node /srv/auth-mock.mjs
+    environment:
+      PGRST_URL: http://rest:3000
+      ANON_KEY: ${ANON_KEY}
+      JWT_SECRET: dev_only_super_secret_do_not_use_in_prod
+    volumes:
+      - ./auth-mock.mjs:/srv/auth-mock.mjs:ro
+    depends_on:
+      - rest
   gateway:
     image: nginx:alpine
     ports:
@@ -191,21 +269,10 @@ services:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - rest
+      - auth
 volumes:
   dev_pgdata:
 YAML
-
-# ---------------------------------------------------------------------------
-# Anon key = HS256 JWT (role=anon) signed with the same secret PostgREST knows.
-# ---------------------------------------------------------------------------
-ANON_KEY="$(node --input-type=module -e '
-import crypto from "node:crypto";
-const b64=(b)=>Buffer.from(b).toString("base64url");
-const sign=(d)=>crypto.createHmac("sha256", process.env.JWT_SECRET).update(d).digest("base64url");
-const h=b64(JSON.stringify({alg:"HS256",typ:"JWT"}));
-const p=b64(JSON.stringify({role:"anon",iss:"supabase",iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+31536000}));
-console.log(h+"."+p+"."+sign(h+"."+p));
-')"
 
 # ---------------------------------------------------------------------------
 # Bring up docker stack, wait for PostgREST
@@ -247,10 +314,16 @@ echo "  API:           http://${LAN_IP}:${API_PORT}"
 echo "  DB (optional): localhost:${DB_PORT}"
 echo
 echo "  Stand demo login (username / password):"
-echo "    meh@feria.local       / Meh2024*"
-echo "    aws.umsa@feria.local  / Aws2024*"
-echo "    casdasd@feria.local   / Ctrldev2024*"
-echo "    (+ 7 more in .dev/sql/60_seed.sql)"
+echo "    cypheranviil@feria.local  / Cypher2024*    (CypherAnvil)"
+echo "    meh@feria.local           / Meh2024*       (MEH)"
+echo "    ieee@feria.local          / Ieee2024*      (IEEE)"
+echo "    aws.umsa@feria.local      / Aws2024*       (AWS)"
+echo "    guild@feria.local         / Guild2024*     (Guild)"
+echo "    codemiaw@feria.local      / Codecats2024*  (Codecats)"
+echo "    pancho@feria.local        / Cpc2024*       (CPC)"
+echo "    casdasd@feria.local       / Ctrldev2024*   (CtrlDev)"
+echo "    microbot@feria.local      / Microbot2024*  (Microsoft Umsa)"
+echo "    trateur010@feria.local    / Ciasi2024*     (CIASI)"
 echo "  Demo participant: a0000001-0000-0000-0000-000000000000"
 echo "  Remote camera needs HTTPS — use manual codes on other devices."
 echo "────────────────────────────────────────────────────────"

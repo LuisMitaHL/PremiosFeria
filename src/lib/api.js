@@ -172,20 +172,28 @@ export async function claimReward(rewardId) {
 export async function loginAdmin(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error || !data.user) {
+    if (error || !data?.user) {
         return { success: false, error: 'Credenciales incorrectas' };
     }
 
-    // Resolve the community linked to this authenticated admin
-    const { data: comm, error: commErr } = await supabase
-        .from('communities')
-        .select('*')
-        .eq('auth_user_id', data.user.id)
-        .single();
+    // The auth session carries the linked community in user_metadata (set by
+    // Supabase Auth in prod and by the dev auth mock). Fall back to resolving
+    // via communities.auth_user_id for sessions without that metadata.
+    let comm = data.user.user_metadata?.community_id
+        ? { id: data.user.user_metadata.community_id }
+        : null;
 
-    if (commErr || !comm) {
-        await supabase.auth.signOut();
-        return { success: false, error: 'No hay comunidad vinculada a esta cuenta' };
+    if (!comm) {
+        const { data: row, error: commErr } = await supabase
+            .from('communities')
+            .select('*')
+            .eq('auth_user_id', data.user.id)
+            .single();
+        if (commErr || !row) {
+            await supabase.auth.signOut();
+            return { success: false, error: 'No hay comunidad vinculada a esta cuenta' };
+        }
+        comm = row;
     }
 
     const user = { id: comm.id, authId: data.user.id, email, communityId: comm.id, role: 'community_admin' };
@@ -200,6 +208,19 @@ export async function getSession() {
     const { data } = await supabase.auth.getSession();
     const uid = data?.session?.user?.id;
     if (!uid) return null;
+
+    const meta = data.session.user.user_metadata;
+    if (meta?.community_id) {
+        return {
+            user: {
+                id: meta.community_id,
+                authId: uid,
+                email: data.session.user.email,
+                communityId: meta.community_id,
+                role: 'community_admin',
+            },
+        };
+    }
 
     const { data: comm } = await supabase
         .from('communities')
