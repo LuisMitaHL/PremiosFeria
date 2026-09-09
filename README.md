@@ -66,11 +66,36 @@ Forward to gateway `${GATEWAY_PORT:-8080}` as plain HTTP, preserving `Host` and 
 
 `SITE_URL` / `VITE_SUPABASE_URL` must be the public `https://` origin — Vite bakes them at `docker build` time, so changing the domain requires `--build`.
 
-### 4. Stand credentials
+### 4. Seed accounts from CSV
 
-Seeded logins (`seed.txt` header): `meh@feria.local / Meh2024*`, etc. Rotate after handover via password reset, or update `auth.users` directly with `crypt(newpw, gen_salt('bf'))`.
+Drop two files in `./seed/` (git-ignored, operator-only). No accounts are hardcoded in SQL.
 
-### 5. Wipe / redeploy
+`seed/stands.csv` (required, header `user,pw,name`):
+
+```csv
+user,pw,name
+meh@feria.local,Meh2024*,MEH
+ieee@feria.local,Ieee2024*,IEEE
+```
+
+`seed/rewards.csv` (optional, header `stand,name,description,cost,stock,emoji` — `stand` matches a `user` above):
+
+```csv
+stand,name,description,cost,stock,emoji
+meh@feria.local,CuboRubik Dotnet,Premio de MEH,150,1,Box
+```
+
+Rules: UTF-8, quote fields containing commas. Blank `user`/`pw` rows are ignored; blank `name`/`cost` abort the seed visibly. Re-running only adds missing rows (keyed on email / stand+name) — never duplicates, never wipes. If `stands.csv` is absent at boot, seeding is skipped; add files later and re-run:
+
+```bash
+docker compose --env-file .env.prod run --rm bootstrap
+```
+
+### 5. Stand credentials
+
+Seeded logins are whatever you put in `seed/stands.csv` — hand each `user,pw` pair to its stand over a secure channel. Rotate after handover via password reset, or update `auth.users` directly with `crypt(newpw, gen_salt('bf'))`.
+
+### 6. Wipe / redeploy
 
 ```bash
 docker compose --env-file .env.prod down

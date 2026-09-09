@@ -144,6 +144,7 @@ services:
     command: ["sh", "/srv/bootstrap.sh"]
     volumes:
       - ./supabase/bootstrap:/srv:ro
+      - ./seed:/seed:ro
     environment:
       PGHOST: db
       PGUSER: postgres

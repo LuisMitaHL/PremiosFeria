@@ -18,9 +18,25 @@ for _ in $(seq 1 120); do
 done
 wget -q -O /dev/null "$AUTH_URL"
 
-echo "bootstrap: applying /srv/*.sql in order..."
-for f in /srv/*.sql; do
+echo "bootstrap: applying /srv/10_*.sql (always)..."
+for f in /srv/10_*.sql; do
   echo "bootstrap: -- $f"
   psql -v ON_ERROR_STOP=1 -f "$f"
 done
+
+if [ ! -r /seed/stands.csv ]; then
+  echo "bootstrap: no /seed/stands.csv — skipping seed (drop stands.csv + optional rewards.csv in ./seed/ and re-run: docker compose run --rm bootstrap)."
+else
+  echo "bootstrap: applying /srv/20_*.sql (seed)..."
+  if [ -r /seed/rewards.csv ]; then
+    HAS_REWARDS=1
+  else
+    echo "bootstrap: no /seed/rewards.csv — stands only."
+    HAS_REWARDS=0
+  fi
+  for f in /srv/20_*.sql; do
+    echo "bootstrap: -- $f"
+    psql -v ON_ERROR_STOP=1 -v HAS_REWARDS="$HAS_REWARDS" -f "$f"
+  done
+fi
 echo "bootstrap: done."
