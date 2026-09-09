@@ -113,6 +113,7 @@ body {
   font-family: var(--font-family);
   background: var(--bg-primary);
   color: var(--text-primary);
+  min-height: 100vh;
   min-height: 100dvh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -121,6 +122,7 @@ body {
 /* Removed legacy radial gradient background */
 
 #root {
+  min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -314,6 +316,10 @@ textarea {
 .btn::after {
   content: '';
   position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   background: rgba(255, 255, 255, 0);
   transition: background var(--transition-fast);
@@ -939,12 +945,20 @@ textarea {
 
 .scanner-overlay {
   position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   pointer-events: none;
 }
 
 .scanner-corners {
   position: absolute;
+  top: 20%;
+  right: 20%;
+  bottom: 20%;
+  left: 20%;
   inset: 20%;
   border: 2px solid transparent;
 }
@@ -1174,6 +1188,7 @@ textarea {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-height: 100vh;
   min-height: 100dvh;
   text-align: center;
   padding: var(--space-xl);
@@ -1247,6 +1262,10 @@ textarea {
 /* --- Modal --- */
 .modal-overlay {
   position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
@@ -1462,6 +1481,10 @@ textarea {
 /* --- Background Ornaments --- */
 .bg-ornaments {
   position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   z-index: -1;
   pointer-events: none;

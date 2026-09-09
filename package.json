@@ -21,5 +21,9 @@
     "@vitejs/plugin-react": "^4.3.0",
     "vite": "^6.1.0",
     "vite-plugin-pwa": "^0.21.1"
-  }
+  },
+  "browserslist": [
+    "chrome >= 83",
+    "chromeAndroid >= 83"
+  ]
 }

@@ -28,5 +28,13 @@ export default defineConfig({
     ],
     server: {
         allowedHosts: true
+    },
+    // Minimum target: Bromite 83 (= Chromium 83). Chrome 83 supports
+    // native ESM + dynamic import + import.meta, so no SystemJS legacy
+    // bundle needed — just stop Oxc from emitting post-83 syntax.
+    build: {
+        target: 'chrome83',
+        cssTarget: 'chrome83',
+        modulePreload: { polyfill: true },
     }
 });
