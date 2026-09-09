@@ -253,30 +253,18 @@ export async function getSignedScanCode(communityId, type) {
     return data; // { payload, shortCode, ts } or { error }
 }
 
-// ─── Realtime ────────────────────────────────
-
-export function subscribeToLeaderboard(callback) {
-    const channel = supabase
-        .channel('leaderboard-changes')
-        .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'participants' },
-            () => callback()
-        )
-        .subscribe();
-
-    return () => supabase.removeChannel(channel);
-}
-
-export function subscribeToScans(callback) {
-    const channel = supabase
-        .channel('scans-changes')
-        .on(
-            'postgres_changes',
-            { event: 'INSERT', schema: 'public', table: 'scans' },
-            (payload) => callback(payload.new)
-        )
-        .subscribe();
-
-    return () => supabase.removeChannel(channel);
+// ─── Polling ─────────────────────────────────
+// Ephemeral fair backend has no realtime service: callers poll instead.
+// Same cleanup contract as the old channel subscriptions (call the
+// returned function on unmount). Refetches on interval + on tab focus.
+export function startLeaderboardPolling(callback, ms = 5000) {
+    const timer = setInterval(callback, ms);
+    const onFocus = () => callback();
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+        clearInterval(timer);
+        window.removeEventListener('focus', onFocus);
+        document.removeEventListener('visibilitychange', onFocus);
+    };
 }

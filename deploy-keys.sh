@@ -38,8 +38,6 @@ GATEWAY_PORT="${GATEWAY_PORT:-8080}"
 
 POSTGRES_PASSWORD="$(openssl rand -hex 24)"   # alnum only: embedded in URLs
 JWT_SECRET="$(openssl rand -hex 32)"          # 64 hex chars
-SECRET_KEY_BASE="$(openssl rand -base64 48)"  # >= 64 chars (realtime)
-REALTIME_DB_ENC_KEY="$(openssl rand -hex 8)"  # exactly 16 chars (realtime)
 
 # HS256 legacy API keys, same shape as dev.sh anon key (role/iss/iat/exp).
 read -r ANON_KEY SERVICE_ROLE_KEY < <(JWT_SECRET="$JWT_SECRET" node --input-type=module -e '
@@ -62,8 +60,6 @@ POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 JWT_SECRET=$JWT_SECRET
 ANON_KEY=$ANON_KEY
 SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY
-SECRET_KEY_BASE=$SECRET_KEY_BASE
-REALTIME_DB_ENC_KEY=$REALTIME_DB_ENC_KEY
 VITE_SUPABASE_URL=$SITE_URL
 GATEWAY_PORT=$GATEWAY_PORT
 ENV

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext.jsx';
-import { getLeaderboard, subscribeToLeaderboard } from '../lib/api.js';
+import { getLeaderboard, startLeaderboardPolling } from '../lib/api.js';
 import { Trophy, Loader, Star, Medal } from 'lucide-react';
 
 export default function Leaderboard() {
@@ -22,12 +22,13 @@ export default function Leaderboard() {
     useEffect(() => {
         loadLeaderboard();
 
-        // Subscribe to realtime updates
-        const unsubscribe = subscribeToLeaderboard(() => {
+        // No realtime service in prod: poll every 5s (+ on tab focus).
+        // Gateway microcaches these reads, so the herd costs ~1 query.
+        const stop = startLeaderboardPolling(() => {
             loadLeaderboard();
         });
 
-        return () => unsubscribe();
+        return () => stop();
     }, []);
 
     const top3 = leaderboard.slice(0, 3);

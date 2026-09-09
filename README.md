@@ -8,7 +8,7 @@ A Progressive Web App (PWA) designed for university fairs, allowing attendees to
 - **Scanner**: Built-in QR scanner with manual fallback.
 - **Admin Panel**: Manage stands, generate rotating QR codes, and view stats.
 - **Security**: Time-based rotating QR codes (TOTP-style) with HMAC signatures to prevent sharing and replay attacks.
-- **Data Persistence**: Supabase backend (Postgres + PostgREST + Auth + Realtime); leaderboard/scans update live.
+- **Data Persistence**: Minimal self-hosted backend (Postgres + PostgREST + username auth); leaderboard polls every 5s.
 
 ## Tech Stack
 
@@ -16,7 +16,7 @@ A Progressive Web App (PWA) designed for university fairs, allowing attendees to
 - **Styling**: Vanilla CSS (CSS Modules/Variables)
 - **Routing**: React Router DOM
 - **Libraries**: `html5-qrcode` (Scanner), `qrcode.react` (Generator)
-- **Backend**: self-hosted minimal stack — Postgres 16 + PostgREST v12 + Realtime + a zero-dependency Node auth service (username/password, HS256 sessions), behind an nginx gateway. Game rules live in Postgres RPC (`sign_scan_code`, `validate_and_scan`, `claim_reward`, `stand_login`); RLS scopes writes to `auth.uid()`.
+- **Backend**: self-hosted minimal stack — Postgres 16 + PostgREST v12 + a zero-dependency Node auth service (username/password, HS256 sessions, 12h access + 48h refresh), behind an nginx gateway with microcache on hot reads. Game rules live in Postgres RPC (`sign_scan_code`, `validate_and_scan`, `claim_reward`, `stand_login`); RLS scopes writes to `auth.uid()`. No realtime service: the leaderboard polls every 5s (gateway collapses the herd to ~1 query).
 
 ## Development (local backend mock)
 
@@ -45,7 +45,7 @@ Never commit `.env.prod`. `POSTGRES_PASSWORD` is hex-only (URL-safe, embedded in
 docker compose --env-file .env.prod up -d --build
 ```
 
-First boot: Postgres init (`supabase/postgres-init/`: roles, schema, RLS, RPC, realtime publication) → one-shot `bootstrap` seeds stands + rewards from `./seed/*.csv` and links `auth_user_id`. Check:
+First boot: Postgres init (`supabase/postgres-init/`: roles, schema, RLS, RPC) → one-shot `bootstrap` seeds stands + rewards from `./seed/*.csv` and links `auth_user_id`. Check:
 
 ```bash
 curl -s http://localhost:8080/auth/v1/health
@@ -59,10 +59,16 @@ Forward to gateway `${GATEWAY_PORT:-8080}` as plain HTTP, preserving `Host` and 
 
 | Path | Target |
 |---|---|
-| `/rest/v1/*` | PostgREST |
-| `/auth/v1/*` | Auth service |
-| `/realtime/v1/*` | Realtime (websocket) |
+| `/rest/v1/*` | PostgREST (GET 200s microcached 5s) |
+| `/auth/v1/*` | Auth service (never cached) |
 | `/*` | App (SPA) |
+
+Microcache: hot API reads are cached 5s (stale served while revalidating, thundering herd locked). Verify:
+
+```bash
+curl -sI -H "apikey: $ANON" http://localhost:8080/rest/v1/communities?select=name | grep -i x-microcache
+# first: MISS, then: HIT
+```
 
 `VITE_SUPABASE_URL` must be the public `https://` origin — Vite bakes it at `docker build` time, so changing the domain requires `--build`.
 

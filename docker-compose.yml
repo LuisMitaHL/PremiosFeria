@@ -1,8 +1,8 @@
 # =============================================================================
-# PremiosFeria — PROD stack
-# App + minimal self-hosted Supabase (db / auth / rest / realtime) behind a
-# plain-HTTP nginx gateway. An EXTERNAL TLS proxy terminates HTTPS and
-# forwards Host + X-Forwarded-Proto to gateway:80. No certs in this file.
+# PremiosFeria — PROD stack (ephemeral fair backend: runs for hours, then off)
+# App + Postgres + PostgREST + username auth service behind a plain-HTTP
+# nginx gateway with microcache on hot reads. An EXTERNAL TLS proxy terminates
+# HTTPS and forwards Host + X-Forwarded-Proto to gateway:80. No certs here.
 #
 # Persistence: bind volumes only (./data/db, plus ro file binds). No named
 # volumes. Wipe prod DB with: docker compose --env-file .env.prod down
@@ -21,7 +21,6 @@
 services:
   db:
     image: postgres:16-alpine
-    command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=4", "-c", "max_wal_senders=4"]
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
       PGDATA: /var/lib/postgresql/data/pgdata
@@ -50,7 +49,7 @@ services:
       ANON_KEY: ${ANON_KEY:?set ANON_KEY in .env.prod}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env.prod}
       ACCESS_TTL: 43200
-      REFRESH_TTL: 7776000
+      REFRESH_TTL: 172800
       RATE_LIMIT_MAX: 20
       RATE_LIMIT_WINDOW: 300
     restart: unless-stopped
@@ -73,38 +72,6 @@ services:
       PGRST_SERVER_PORT: "3000"
     restart: unless-stopped
 
-  realtime:
-    container_name: realtime-dev.supabase-realtime
-    image: supabase/realtime:v2.34.47
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sSfL --head -o /dev/null -H \"Authorization: Bearer $${ANON_KEY}\" http://localhost:4000/api/tenants/realtime-dev/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    environment:
-      PORT: 4000
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_NAME: postgres
-      DB_AFTER_CONNECT_QUERY: SET search_path TO _realtime
-      DB_ENC_KEY: ${REALTIME_DB_ENC_KEY:?16-char key, see .env.prod.example}
-      API_JWT_SECRET: ${JWT_SECRET}
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?64+-char key, see .env.prod.example}
-      METRICS_JWT_SECRET: ${JWT_SECRET}
-      ANON_KEY: ${ANON_KEY:?set ANON_KEY in .env.prod}
-      ERL_AFLAGS: -proto_dist inet_tcp
-      DNS_NODES: "''"
-      RLIMIT_NOFILE: "10000"
-      APP_NAME: realtime
-      SEED_SELF_HOST: "true"
-      RUN_JANITOR: "true"
-    restart: unless-stopped
-
   web:
     build:
       context: .
@@ -119,7 +86,6 @@ services:
     depends_on:
       - rest
       - auth
-      - realtime
       - web
     ports:
       - "${GATEWAY_PORT:-8080}:80"
