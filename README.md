@@ -18,6 +18,11 @@ A Progressive Web App (PWA) designed for university fairs, allowing attendees to
 - **Libraries**: `html5-qrcode` (Scanner), `qrcode.react` (Generator)
 - **Backend**: self-hosted minimal stack — Postgres 16 + PostgREST v12 + a zero-dependency Node auth service (username/password, HS256 sessions, 12h access + 48h refresh); your CDN routes + microcaches hot reads (see `nginx-cdn.conf.example`). Game rules live in Postgres RPC (`sign_scan_code`, `validate_and_scan`, `claim_reward`, `stand_login`); RLS scopes writes to `auth.uid()`. No realtime service: the leaderboard polls every 5s.
 
+## Platform targets
+
+- **Node.js 24** — all images pinned to `node:24-alpine` (`Dockerfile`, `auth/Dockerfile`, `dev.sh`). Build/runtime below Node 20.19 is unsupported (Vite 8 requirement).
+- **Chrome/Chromium 83 minimum** — lowest device floor is Bromite (= Chromium 83). Enforced via `build.target: 'chrome83'` + `cssTarget: 'chrome83'` in `vite.config.js`; output must not use post-83 syntax.
+
 ## Development (local backend mock)
 
 ```bash
