@@ -1,15 +1,16 @@
--- 20_seed.sql — CSV-driven prod seed. No hardcoded accounts here.
--- Operator mounts ./seed/ (see docker-compose.yml bootstrap volumes):
---   stands.csv   header: user,pw,name
---   rewards.csv  header: stand,name,description,cost,stock,emoji  (optional)
--- bootstrap.sh skips this file when /seed/stands.csv is unreadable.
+-- 70_seed.sql — runs ONCE at Postgres init (empty ./data/db only).
+-- Reads operator CSVs mounted at /seed (see db volumes in docker-compose.yml):
+--   stands.csv   header: user,pw,name            (REQUIRED)
+--   rewards.csv  header: stand,name,description,cost,stock,emoji (REQUIRED,
+--                header-only allowed for "stands only")
+-- Missing files abort init loudly (fail-fast: a silent empty fair is worse).
+-- Reseed = down + rm -rf ./data/db + up.
 --
 -- Identity model (no GoTrue): stands log in with bare usernames against
 -- communities.password_hash (bcrypt). communities.auth_user_id = own id, so
 -- both app session paths resolve (user_metadata.community_id from the JWT,
 -- and the communities-by-auth_user_id fallback).
--- Idempotent: keyed on username / stand+name, no DELETEs. Rows with blank
--- user/pw are ignored; blank names / bad costs abort loudly (ON_ERROR_STOP).
+-- Rows with blank user/pw are ignored; blank names / bad costs abort loudly.
 
 BEGIN;
 
@@ -29,11 +30,7 @@ CREATE TEMP TABLE stage_rewards (
   stock_       TEXT,
   emoji_       TEXT
 ) ON COMMIT DROP;
--- rewards.csv is optional (bootstrap.sh sets HAS_REWARDS); a header-only
--- file seeds nothing.
-\if :HAS_REWARDS
 \copy stage_rewards FROM '/seed/rewards.csv' WITH (FORMAT csv, HEADER true)
-\endif
 
 -- 1. Communities (username = bare login name; bcrypt hash via pgcrypto) ------
 INSERT INTO communities (username, name, password_hash)
@@ -47,7 +44,6 @@ ON CONFLICT (username) DO NOTHING;
 UPDATE communities SET auth_user_id = id WHERE auth_user_id IS NULL;
 
 -- 2. Rewards (stand = username of the owning community) -----------------------
-\if :HAS_REWARDS
 INSERT INTO rewards (community_id, name, description, cost, stock, emoji)
 SELECT c.id,
        NULLIF(btrim(r.name_), ''),
@@ -63,6 +59,5 @@ WHERE NULLIF(btrim(r.stand_), '') IS NOT NULL
                   WHERE w.community_id = c.id
                     AND w.name = NULLIF(btrim(r.name_), ''))
 ON CONFLICT DO NOTHING;
-\endif
 
 COMMIT;

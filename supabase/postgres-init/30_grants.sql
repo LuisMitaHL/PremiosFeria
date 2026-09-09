@@ -1,5 +1,5 @@
 -- 30_grants.sql — API roles. anon/authenticated get app-level CRUD;
--- service_role bypasses RLS (used only by the bootstrap job / admin tasks).
+-- service_role bypasses RLS (reserved for manual admin tasks via psql).
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;

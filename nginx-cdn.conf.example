@@ -1,20 +1,29 @@
-# gateway/nginx.prod.conf — plain-HTTP front door (NO ssl directives here).
-# External TLS proxy terminates HTTPS and forwards to this gateway's port 80.
-# supabase-js talks to ONE base URL; Kong-style prefix stripping maps each
-# path to its service. CORS mirrors .dev/nginx.conf so browsers pass preflight.
+# =============================================================================
+# nginx-cdn.conf.example — deploy on YOUR CDN/proxy box (NOT used by compose).
+# Copy to /etc/nginx/conf.d/ (or equivalent), set the 3 upstream IPs below
+# to the docker host's published ports, reload nginx.
 #
-# MICROCACHE (hot read URLs): dozens of phones poll the leaderboard every 5s
-# during the fair. GET /rest/v1/* 200s are cached for 5s (one upstream query
-# per stampede), stale served while revalidating. Auth routes and writes are
-# NEVER cached. Key includes apikey+Authorization so sessions can't leak
-# across users (all SELECT RLS here is public-read anyway — belt & braces).
-# Observe: curl -I ... | grep -i x-microcache  (MISS -> HIT -> STALE?)
+# Single public origin serves everything; TLS terminates on this box too
+# (443 template at the bottom, disabled by default).
+# =============================================================================
+
+# --- upstreams: docker host IP + published compose ports --------------------
+upstream app_web  { server 10.0.0.5:8080; }  # web  (WEB_PORT)
+upstream app_rest { server 10.0.0.5:3000; }  # rest (REST_PORT)
+upstream app_auth { server 10.0.0.5:9999; }  # auth (AUTH_PORT)
+
+# --- microcache for hot reads ------------------------------------------------
+# Dozens of phones poll the leaderboard every 5s: GET /rest/v1/* 200s are
+# cached 5s (one upstream query per stampede), stale served while
+# revalidating. Auth routes and writes are NEVER cached. Key includes
+# apikey+Authorization so sessions can't leak across users.
+# Observe: curl -I ... | grep -i x-microcache  (MISS -> HIT)
 proxy_cache_path /var/cache/nginx/api levels=1:2 keys_zone=api:10m
                  max_size=100m inactive=60s use_temp_path=off;
 
 server {
     listen 80;
-    server_name _;
+    server_name feria.example.com;
 
     client_max_body_size 10m;
 
@@ -26,10 +35,10 @@ server {
             add_header Access-Control-Max-Age "86400" always;
             return 204;
         }
-        proxy_pass http://auth:9999/;
+        proxy_pass http://app_auth/;
         proxy_pass_request_headers on;
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_hide_header Access-Control-Allow-Origin;
         add_header Access-Control-Allow-Origin "*" always;
         # sessions must never be cached (default: nothing cached here)
@@ -43,11 +52,11 @@ server {
             add_header Access-Control-Max-Age "86400" always;
             return 204;
         }
-        proxy_pass http://rest:3000/;
+        proxy_pass http://app_rest/;
         proxy_pass_request_headers on;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_hide_header Access-Control-Allow-Origin;
         proxy_hide_header Access-Control-Allow-Headers;
         proxy_hide_header Access-Control-Expose-Headers;
@@ -66,10 +75,28 @@ server {
         add_header X-Microcache $upstream_cache_status always;
     }
 
+    # Optional: let the CDN itself cache hashed static assets long-term
+    # (filenames contain content hashes, safe). index.html stays fresh.
+    #location ~* ^/assets/.+\.[0-9a-f]{8}\.(js|css|png|svg|woff2)$ {
+    #    proxy_pass http://app_web;
+    #    proxy_cache api;
+    #    proxy_cache_valid 200 1h;
+    #    add_header X-Microcache $upstream_cache_status always;
+    #}
+
     location / {
-        proxy_pass http://web:80;
+        proxy_pass http://app_web;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
+
+# --- TLS template (enable if THIS box terminates HTTPS) ----------------------
+#server {
+#    listen 443 ssl;
+#    server_name feria.example.com;
+#    ssl_certificate     /etc/nginx/tls/fullchain.pem;
+#    ssl_certificate_key /etc/nginx/tls/privkey.pem;
+#    # ... same locations as above ...
+#}

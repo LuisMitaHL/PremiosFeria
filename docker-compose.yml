@@ -1,19 +1,22 @@
 # =============================================================================
 # PremiosFeria — PROD stack (ephemeral fair backend: runs for hours, then off)
-# App + Postgres + PostgREST + username auth service behind a plain-HTTP
-# nginx gateway with microcache on hot reads. An EXTERNAL TLS proxy terminates
-# HTTPS and forwards Host + X-Forwarded-Proto to gateway:80. No certs here.
+# 4 services: web (static) + Postgres + PostgREST + username auth service.
+# No gateway here: a CDN/proxy on ANOTHER system routes to the published
+# ports below (see nginx-cdn.conf.example). TLS terminates there as well.
 #
-# Persistence: bind volumes only (./data/db, plus ro file binds). No named
-# volumes. Wipe prod DB with: docker compose --env-file .env.prod down
-# then rm -rf ./data/db   (DESTRUCTIVE — init + seed re-run on next up).
+# Ports listen on ALL interfaces (the CDN box must reach them) — firewall
+# everything else. `db` is not published (admin via exec).
+#
+# Seed: ./seed/stands.csv (required) + ./seed/rewards.csv (required,
+# header-only allowed) are loaded by Postgres init on EMPTY ./data/db.
+# Reseed = down + rm -rf ./data/db + up (DESTRUCTIVE).
 #
 # Boot:
-#   cp .env.prod.example .env.prod   # then fill secrets (keygen cmds inside)
+#   SITE_URL=https://feria.example.com ./deploy-keys.sh
 #   docker compose --env-file .env.prod up -d --build
-# Check:
-#   curl -s http://localhost:8080/auth/v1/health
-#   curl -s -H "apikey: $ANON" http://localhost:8080/rest/v1/communities?select=name
+# Check (direct to published ports):
+#   curl -s http://localhost:9999/health
+#   curl -s -H "apikey: $ANON" http://localhost:3000/communities?select=name
 # psql:
 #   docker compose --env-file .env.prod exec db psql -U postgres
 # =============================================================================
@@ -27,6 +30,7 @@ services:
     volumes:
       - ./data/db:/var/lib/postgresql/data
       - ./supabase/postgres-init:/docker-entrypoint-initdb.d:ro
+      - ./seed:/seed:ro
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
       interval: 5s
@@ -36,6 +40,8 @@ services:
 
   auth:
     build: ./auth
+    ports:
+      - "${AUTH_PORT:-9999}:9999"
     depends_on:
       rest:
         condition: service_started
@@ -56,6 +62,8 @@ services:
 
   rest:
     image: postgrest/postgrest:v12.2.3
+    ports:
+      - "${REST_PORT:-3000}:3000"
     depends_on:
       db:
         condition: service_healthy
@@ -79,35 +87,6 @@ services:
         VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:?set VITE_SUPABASE_URL in .env.prod}
         VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${ANON_KEY}
     container_name: feriapoints
-    restart: unless-stopped
-
-  gateway:
-    image: nginx:alpine
-    depends_on:
-      - rest
-      - auth
-      - web
     ports:
-      - "${GATEWAY_PORT:-8080}:80"
-    volumes:
-      - ./gateway/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - "${WEB_PORT:-8080}:80"
     restart: unless-stopped
-
-  bootstrap:
-    image: postgres:16-alpine
-    command: ["sh", "/srv/bootstrap.sh"]
-    volumes:
-      - ./supabase/bootstrap:/srv:ro
-      - ./seed:/seed:ro
-    environment:
-      PGHOST: db
-      PGUSER: postgres
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-      PGDATABASE: postgres
-      AUTH_URL: http://auth:9999/health
-    depends_on:
-      db:
-        condition: service_healthy
-      auth:
-        condition: service_started
-    restart: "no"

@@ -16,7 +16,7 @@ A Progressive Web App (PWA) designed for university fairs, allowing attendees to
 - **Styling**: Vanilla CSS (CSS Modules/Variables)
 - **Routing**: React Router DOM
 - **Libraries**: `html5-qrcode` (Scanner), `qrcode.react` (Generator)
-- **Backend**: self-hosted minimal stack — Postgres 16 + PostgREST v12 + a zero-dependency Node auth service (username/password, HS256 sessions, 12h access + 48h refresh), behind an nginx gateway with microcache on hot reads. Game rules live in Postgres RPC (`sign_scan_code`, `validate_and_scan`, `claim_reward`, `stand_login`); RLS scopes writes to `auth.uid()`. No realtime service: the leaderboard polls every 5s (gateway collapses the herd to ~1 query).
+- **Backend**: self-hosted minimal stack — Postgres 16 + PostgREST v12 + a zero-dependency Node auth service (username/password, HS256 sessions, 12h access + 48h refresh); your CDN routes + microcaches hot reads (see `nginx-cdn.conf.example`). Game rules live in Postgres RPC (`sign_scan_code`, `validate_and_scan`, `claim_reward`, `stand_login`); RLS scopes writes to `auth.uid()`. No realtime service: the leaderboard polls every 5s.
 
 ## Development (local backend mock)
 
@@ -29,7 +29,7 @@ Backend files are generated under `.dev/` from the committed sources (`schema SQ
 
 ## Production deployment
 
-Compose file is prod-oriented: app + minimal Supabase behind a plain-HTTP gateway. An **external TLS proxy** terminates HTTPS and forwards to the gateway. No certs in this repo.
+Compose file is prod-oriented: 4 services (web static, Postgres, PostgREST, username auth). No gateway here — your **existing CDN system** routes to the published ports (see `nginx-cdn.conf.example`). TLS terminates there too. No certs in this repo.
 
 ### 1. Secrets
 
@@ -45,17 +45,17 @@ Never commit `.env.prod`. `POSTGRES_PASSWORD` is hex-only (URL-safe, embedded in
 docker compose --env-file .env.prod up -d --build
 ```
 
-First boot: Postgres init (`supabase/postgres-init/`: roles, schema, RLS, RPC) → one-shot `bootstrap` seeds stands + rewards from `./seed/*.csv` and links `auth_user_id`. Check:
+First boot: Postgres init loads schema + RLS + RPC + seed from `./seed/*.csv` (both files required — missing files abort init loudly). Check against published ports:
 
 ```bash
-curl -s http://localhost:8080/auth/v1/health
-curl -s -H "apikey: $ANON" http://localhost:8080/rest/v1/communities?select=name
+curl -s http://localhost:9999/health
+curl -s -H "apikey: $ANON" http://localhost:3000/communities?select=name
 docker compose --env-file .env.prod exec db psql -U postgres
 ```
 
-### 3. TLS front contract
+### 3. CDN contract (`nginx-cdn.conf.example`)
 
-Forward to gateway `${GATEWAY_PORT:-8080}` as plain HTTP, preserving `Host` and setting `X-Forwarded-Proto: https`. Same host serves all paths:
+Deploy the example on your CDN box: set the 3 upstreams to the docker host IP + published ports (`WEB/REST/AUTH_PORT`). Same public origin serves all paths (TLS also terminates there):
 
 | Path | Target |
 |---|---|
@@ -63,10 +63,10 @@ Forward to gateway `${GATEWAY_PORT:-8080}` as plain HTTP, preserving `Host` and 
 | `/auth/v1/*` | Auth service (never cached) |
 | `/*` | App (SPA) |
 
-Microcache: hot API reads are cached 5s (stale served while revalidating, thundering herd locked). Verify:
+Microcache lives in the example (5s TTL, herd lock, stale-while-revalidate, per-session keys). Verify through the CDN:
 
 ```bash
-curl -sI -H "apikey: $ANON" http://localhost:8080/rest/v1/communities?select=name | grep -i x-microcache
+curl -sI -H "apikey: $ANON" https://feria.example.com/rest/v1/communities?select=name | grep -i x-microcache
 # first: MISS, then: HIT
 ```
 
@@ -84,18 +84,14 @@ meh,Meh2024*,MEH
 ieee,Ieee2024*,IEEE
 ```
 
-`seed/rewards.csv` (optional, header `stand,name,description,cost,stock,emoji` — `stand` matches a `user` above):
+`seed/rewards.csv` (required, header-only allowed for "stands only"; header `stand,name,description,cost,stock,emoji` — `stand` matches a `user` above):
 
 ```csv
 stand,name,description,cost,stock,emoji
 meh,CuboRubik Dotnet,Premio de MEH,150,1,Box
 ```
 
-Rules: UTF-8, quote fields containing commas. Blank `user`/`pw` rows are ignored; blank `name`/`cost` abort the seed visibly. Re-running only adds missing rows (keyed on email / stand+name) — never duplicates, never wipes. If `stands.csv` is absent at boot, seeding is skipped; add files later and re-run:
-
-```bash
-docker compose --env-file .env.prod run --rm bootstrap
-```
+Rules: UTF-8, quote fields containing commas. Blank `user`/`pw` rows are ignored; blank `name`/`cost` abort the seed visibly. Seed runs once at Postgres init (empty `./data/db`); to change accounts, edit CSVs and wipe (section 6).
 
 ### 5. Stand credentials
 
@@ -107,7 +103,7 @@ SET password_hash = crypt('NewPass*', gen_salt('bf'))
 WHERE username = 'meh';
 ```
 
-(Re-running `bootstrap` with an edited CSV only ADDS missing stands — it never updates passwords.)
+(Seed CSV edits only apply on a fresh DB — rotate live passwords with the SQL above.)
 
 ### 6. Wipe / redeploy
 
@@ -134,12 +130,12 @@ This starts the full prod stack (needs `.env.prod`, see Production deployment be
 2.  Run the following command in the project root:
 
     ```bash
-    cp .env.prod.example .env.prod   # fill secrets first
+    SITE_URL=https://feria.example.com ./deploy-keys.sh   # generates .env.prod
     docker compose --env-file .env.prod up -d --build
     ```
 
 3.  Access the application at:
-    [http://localhost:8080](http://localhost:8080) (or behind your TLS proxy at `SITE_URL`)
+    [http://localhost:8080](http://localhost:8080) (or through your CDN at `VITE_SUPABASE_URL`)
 
 ### Manual Build
 
