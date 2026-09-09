@@ -343,7 +343,7 @@ services:
       db:
         condition: service_healthy
   auth:
-    image: node:20-alpine
+    image: node:24-alpine
     command: node /srv/auth-mock.mjs
     environment:
       PGRST_URL: http://rest:3000
