@@ -25,7 +25,7 @@ A Progressive Web App (PWA) designed for university fairs, allowing attendees to
 ./dev.sh --fresh    # wipe local DB volume and re-provision
 ```
 
-Backend files are generated under `.dev/` from the committed sources (`schema SQL community quest.txt`, `RLS.txt`, `RPC.txt`). API at `http://<lan-ip>:3000`, demo logins printed by the script.
+Backend files are generated under `.dev/` from the canonical prod sources (`supabase/postgres-init/{20_schema,40_rls,50_rpc}.sql`). API at `http://<lan-ip>:3000`, demo logins printed by the script. Seed: `./seed/*.csv` when present (same logins as prod), else built-in demo stands. After pulling schema changes, run `./dev.sh --fresh` once (old volumes keep the old schema).
 
 ## Production deployment
 

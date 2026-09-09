@@ -7,9 +7,9 @@
 #   - PostgREST v12 (REST API; exposed under /rest/v1 via an nginx gateway)
 # then runs the Vite dev server against it.
 #
-# The backend reproduces the app's COMMITTED schema/RLS/RPC (verbatim copies of
-# "schema SQL community quest.txt", RLS.txt, RPC.txt), so you develop against
-# the same behavior as production — including its (real, insecure) RLS posture.
+# The backend reproduces the app's canonical schema/RLS/RPC (copies of
+# supabase/postgres-init/{20_schema,40_rls,50_rpc}.sql), so you develop
+# against the same behavior as production.
 #
 # Uses:
 #   ./dev.sh            start / re-attach
@@ -54,8 +54,8 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-for f in "schema SQL community quest.txt" RLS.txt RPC.txt; do
-  [ -f "$REPO/$f" ] || { echo "✗ expected '$REPO/$f' (repo source) not found." >&2; exit 1; }
+for f in supabase/postgres-init/20_schema.sql supabase/postgres-init/40_rls.sql supabase/postgres-init/50_rpc.sql; do
+  [ -f "$REPO/$f" ] || { echo "✗ expected '$REPO/$f' (canonical source) not found." >&2; exit 1; }
 done
 
 # ---------------------------------------------------------------------------
@@ -84,19 +84,21 @@ END $$;
 GRANT anon TO authenticator;
 SQL
 
-# Schema, RLS, RPC — byte-identical to the repo's committed .txt files.
-cp "$REPO/schema SQL community quest.txt" "$SQL/20_schema.sql"
+# Schema, RLS, RPC — copies of the canonical prod sources (same behavior).
+# Deliberately NOT applied from prod: 25 (drops the password column dev
+# needs in plaintext), 26/51 (bcrypt flow), 30 (dev grants below),
+# 70 (prod CSV seed at init; dev seeds its own way further down).
+cp "$REPO/supabase/postgres-init/20_schema.sql" "$SQL/20_schema.sql"
 cat > "$SQL/30_grants.sql" <<'SQL'
 GRANT USAGE ON SCHEMA public TO anon;
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO anon;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
 SQL
-cp "$REPO/RLS.txt" "$SQL/40_rls.sql"
-cp "$REPO/RPC.txt" "$SQL/50_rpc.sql"
+cp "$REPO/supabase/postgres-init/40_rls.sql" "$SQL/40_rls.sql"
+cp "$REPO/supabase/postgres-init/50_rpc.sql" "$SQL/50_rpc.sql"
 
-# Auth compat — must run BEFORE RLS.txt (its policies call auth.uid() and
-# reference auth_user_id). Supabase provides auth.uid()/auth.jwt() and the
-# schema txt has drifted from RLS/RPC; local Postgres gets a compat layer.
+# Auth compat — must run BEFORE 40_rls.sql (its policies call auth.uid()).
+# Plain Postgres knows no auth.uid()/auth.jwt(); local gets a compat layer.
 cat > "$SQL/35_auth_compat.sql" <<'SQL'
 CREATE SCHEMA IF NOT EXISTS auth;
 CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb
@@ -109,7 +111,7 @@ LANGUAGE sql STABLE AS $$
 $$;
 GRANT USAGE ON SCHEMA auth TO PUBLIC;
 
--- pgcrypto: preinstalled in Supabase; RPC.txt uses hmac() for scan codes.
+-- pgcrypto: the RPC uses hmac() for scan codes.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS auth_user_id UUID;
@@ -135,10 +137,87 @@ cat > "$SQL/70_auth_link.sql" <<'SQL'
 UPDATE communities SET auth_user_id = id WHERE auth_user_id IS NULL;
 SQL
 
-# Dev seed: communities get plaintext username/password (the app's loginAdmin
-# reads them) so you can log in as any stand. No auth.users / auth_user_id —
-# those no longer exist in the HEAD schema.
-cat > "$SQL/60_seed.sql" <<'SQL'
+# Dev seed: communities get plaintext username/password (the mock auth reads
+# them) so you can log in as any stand. Usernames are bare (prod shape).
+# Source: ./seed/*.csv when present (same logins as prod), else built-in demo.
+cat > "$DEV/csv-seed.mjs" <<'MJS'
+// csv-seed.mjs — ./seed/*.csv (prod format) -> dev 60_seed.sql (plaintext pw).
+// Usage: node csv-seed.mjs stands.csv [rewards.csv] out.sql
+// Prints "user / pw (name)" login lines to stdout for the dev banner.
+import fs from "node:fs";
+const [standsPath, rewardsPath, outPath] = process.argv.slice(2);
+const q = (s) => `'${String(s ?? "").replace(/'/g, "''")}'`;
+function parseCSV(path) {
+  let text = fs.readFileSync(path, "utf8").replace(/^\uFEFF/, "");
+  const rows = [];
+  let row = [], field = "", inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false;
+      } else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); field = "";
+      if (row.some((v) => v !== "")) rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  row.push(field);
+  if (row.some((v) => v !== "")) rows.push(row);
+  return rows;
+}
+function table(path, want) {
+  const rows = parseCSV(path);
+  const header = (rows.shift() || []).map((h) => h.trim());
+  const idx = want.map((w) => header.indexOf(w));
+  if (idx.some((i) => i < 0)) {
+    console.error(`✗ ${path}: header must be ${want.join(",")}`);
+    process.exit(1);
+  }
+  return rows.map((r) => Object.fromEntries(want.map((w, k) => [w, (r[idx[k]] ?? "").trim()])));
+}
+const out = [];
+out.push("DELETE FROM claimed_rewards;");
+out.push("DELETE FROM rewards;");
+out.push("DELETE FROM scans;");
+out.push("DELETE FROM communities;");
+out.push("DELETE FROM participants;");
+out.push("");
+const logins = [];
+for (const s of table(standsPath, ["user", "pw", "name"])) {
+  if (!s.user || !s.pw || !s.name) { console.error(`✗ ${standsPath}: blank user/pw/name: ${JSON.stringify(s)}`); process.exit(1); }
+  out.push(`INSERT INTO communities (username, password, name) VALUES (${q(s.user)}, ${q(s.pw)}, ${q(s.name)});`);
+  logins.push(`    ${s.user}  (password: ./seed/stands.csv)`);
+}
+out.push("");
+if (rewardsPath) {
+  for (const r of table(rewardsPath, ["stand", "name", "description", "cost", "stock", "emoji"])) {
+    if (!r.stand || !r.name) { console.error(`✗ ${rewardsPath}: blank stand/name: ${JSON.stringify(r)}`); process.exit(1); }
+    const cost = Number(r.cost), stock = r.stock === "" ? 0 : Number(r.stock);
+    if (!Number.isInteger(cost) || cost < 0 || !Number.isInteger(stock) || stock < 0) {
+      console.error(`✗ ${rewardsPath}: bad cost/stock: ${JSON.stringify(r)}`); process.exit(1);
+    }
+    out.push(`INSERT INTO rewards (community_id, name, description, cost, stock, emoji) VALUES ((SELECT id FROM communities WHERE username=${q(r.stand)}), ${q(r.name)}, ${q(r.description || "")}, ${cost}, ${stock}, ${q(r.emoji || "Gift")});`);
+  }
+  out.push("");
+}
+out.push("INSERT INTO participants (id, name, points) VALUES");
+out.push("('a0000001-0000-0000-0000-000000000000', 'Participante Demo', 0);");
+fs.writeFileSync(outPath, out.join("\n") + "\n");
+console.log(logins.join("\n"));
+MJS
+
+if [ -r "$REPO/seed/stands.csv" ]; then
+  echo "▸ seeding dev DB from ./seed/*.csv (prod logins) ..."
+  if [ -r "$REPO/seed/rewards.csv" ]; then REWARDS_CSV="$REPO/seed/rewards.csv"; else REWARDS_CSV=""; fi
+  node "$DEV/csv-seed.mjs" "$REPO/seed/stands.csv" "$REWARDS_CSV" "$SQL/60_seed.sql" > "$DEV/seed-creds.txt"
+else
+  echo "▸ seeding dev DB with built-in demo stands ..."
+  cat > "$SQL/60_seed.sql" <<'SQL'
 DELETE FROM claimed_rewards;
 DELETE FROM rewards;
 DELETE FROM scans;
@@ -146,16 +225,16 @@ DELETE FROM communities;
 DELETE FROM participants;
 
 INSERT INTO communities (id, username, password, name, emoji, stand_number, visit_points, activity_points) VALUES
-('d0000001-0000-0000-0000-000000000000','cypheranviil@feria.local','Cypher2024*','CypherAnvil','Shield','1',10,25),
-('d0000002-0000-0000-0000-000000000000','meh@feria.local','Meh2024*','MEH','Cpu','2',10,25),
-('d0000003-0000-0000-0000-000000000000','ieee@feria.local','Ieee2024*','IEEE','RadioReceiver','3',10,25),
-('d0000004-0000-0000-0000-000000000000','aws.umsa@feria.local','Aws2024*','AWS','Cloud','4',10,25),
-('d0000005-0000-0000-0000-000000000000','guild@feria.local','Guild2024*','Guild','Swords','5',10,25),
-('d0000006-0000-0000-0000-000000000000','codemiaw@feria.local','Codecats2024*','Codecats','Cat','6',10,25),
-('d0000007-0000-0000-0000-000000000000','pancho@feria.local','Cpc2024*','CPC','Code','7',10,25),
-('d0000008-0000-0000-0000-000000000000','casdasd@feria.local','Ctrldev2024*','CtrlDev','Terminal','8',10,25),
-('d0000009-0000-0000-0000-000000000000','microbot@feria.local','Microbot2024*','Microsoft Umsa','LayoutGrid','9',10,25),
-('d000000a-0000-0000-0000-000000000000','trateur010@feria.local','Ciasi2024*','CIASI','Database','10',10,25);
+('d0000001-0000-0000-0000-000000000000','cypheranviil','Cypher2024*','CypherAnvil','Shield','1',10,25),
+('d0000002-0000-0000-0000-000000000000','meh','Meh2024*','MEH','Cpu','2',10,25),
+('d0000003-0000-0000-0000-000000000000','ieee','Ieee2024*','IEEE','RadioReceiver','3',10,25),
+('d0000004-0000-0000-0000-000000000000','aws.umsa','Aws2024*','AWS','Cloud','4',10,25),
+('d0000005-0000-0000-0000-000000000000','guild','Guild2024*','Guild','Swords','5',10,25),
+('d0000006-0000-0000-0000-000000000000','codemiaw','Codecats2024*','Codecats','Cat','6',10,25),
+('d0000007-0000-0000-0000-000000000000','pancho','Cpc2024*','CPC','Code','7',10,25),
+('d0000008-0000-0000-0000-000000000000','casdasd','Ctrldev2024*','CtrlDev','Terminal','8',10,25),
+('d0000009-0000-0000-0000-000000000000','microbot','Microbot2024*','Microsoft Umsa','LayoutGrid','9',10,25),
+('d000000a-0000-0000-0000-000000000000','trateur010','Ciasi2024*','CIASI','Database','10',10,25);
 
 INSERT INTO rewards (community_id, name, description, cost, stock, emoji) VALUES
 ('d0000002-0000-0000-0000-000000000000','CuboRubik Dotnet','Premio de MEH',150,1,'Box'),
@@ -166,6 +245,19 @@ INSERT INTO rewards (community_id, name, description, cost, stock, emoji) VALUES
 INSERT INTO participants (id, name, points) VALUES
 ('a0000001-0000-0000-0000-000000000000', 'Participante Demo', 0);
 SQL
+  cat > "$DEV/seed-creds.txt" <<'CREDS'
+    cypheranviil  / Cypher2024*    (CypherAnvil)
+    meh           / Meh2024*       (MEH)
+    ieee          / Ieee2024*      (IEEE)
+    aws.umsa      / Aws2024*       (AWS)
+    guild         / Guild2024*     (Guild)
+    codemiaw      / Codecats2024*  (Codecats)
+    pancho        / Cpc2024*       (CPC)
+    casdasd       / Ctrldev2024*   (CtrlDev)
+    microbot      / Microbot2024*  (Microsoft Umsa)
+    trateur010    / Ciasi2024*     (CIASI)
+CREDS
+fi
 
 # nginx gateway: maps supabase-js's /rest/v1/* onto PostgREST's root.
 # In production Supabase's Kong gateway strips /rest/v1; raw PostgREST serves at /.
@@ -314,16 +406,7 @@ echo "  API:           http://${LAN_IP}:${API_PORT}"
 echo "  DB (optional): localhost:${DB_PORT}"
 echo
 echo "  Stand demo login (username / password):"
-echo "    cypheranviil@feria.local  / Cypher2024*    (CypherAnvil)"
-echo "    meh@feria.local           / Meh2024*       (MEH)"
-echo "    ieee@feria.local          / Ieee2024*      (IEEE)"
-echo "    aws.umsa@feria.local      / Aws2024*       (AWS)"
-echo "    guild@feria.local         / Guild2024*     (Guild)"
-echo "    codemiaw@feria.local      / Codecats2024*  (Codecats)"
-echo "    pancho@feria.local        / Cpc2024*       (CPC)"
-echo "    casdasd@feria.local       / Ctrldev2024*   (CtrlDev)"
-echo "    microbot@feria.local      / Microbot2024*  (Microsoft Umsa)"
-echo "    trateur010@feria.local    / Ciasi2024*     (CIASI)"
+cat "$DEV/seed-creds.txt"
 echo "  Demo participant: a0000001-0000-0000-0000-000000000000"
 echo "  Remote camera needs HTTPS — use manual codes on other devices."
 echo "────────────────────────────────────────────────────────"

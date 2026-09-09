@@ -1,4 +1,4 @@
--- 40_rls.sql — verbatim copy of RLS.txt (repo source of truth).
+-- 40_rls.sql — canonical RLS source (policies for public tables).
 -- Participantes: cualquiera puede leer (leaderboard), insertar (registro)
 ALTER TABLE participants ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "participants_read" ON participants;

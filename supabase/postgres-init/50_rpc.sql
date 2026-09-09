@@ -1,7 +1,6 @@
--- 50_rpc.sql — verbatim copy of RPC.txt (repo source of truth).
--- Server-side QR signing + scan validation + reward claiming. SECURITY DEFINER
--- so anon callers execute with the function owner's rights; RLS scoping comes
--- from auth.uid() inside, never from client-supplied ids.
+-- 50_rpc.sql — canonical RPC source (game rules, SECURITY DEFINER:
+-- anon callers execute with owner rights; scoping via auth.uid(), never
+-- client-supplied ids).
 
 -- 1. Firmar códigos QR en el servidor (el secreto nunca sale de la base de datos)
 -- Nota de despliegue: rota el secreto UNA vez tras aplicar esta versión,
