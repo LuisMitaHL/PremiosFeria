@@ -32,7 +32,11 @@ DB_PORT="${DB_PORT:-55433}"
 API_PORT="${API_PORT:-3000}"
 # LAN IP so phones / other machines on the network reach Vite + API.
 # Plain-HTTP LAN is not a secure context: remote cameras fail, use manual codes.
-LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+# (|| true: hostname/ip variants differ per OS; never fail under set -e.)
+LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
+if [ -z "$LAN_IP" ] && command -v ip >/dev/null 2>&1; then
+  LAN_IP="$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}' || true)"
+fi
 LAN_IP="${LAN_IP:-localhost}"
 APP_URL="http://${LAN_IP}:5173"
 
