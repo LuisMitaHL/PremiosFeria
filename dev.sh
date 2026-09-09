@@ -30,7 +30,11 @@ export JWT_SECRET="dev_only_super_secret_do_not_use_in_prod"
 AUTH_PASSWORD="authenticator_dev"
 DB_PORT="${DB_PORT:-55433}"
 API_PORT="${API_PORT:-3000}"
-APP_URL="http://localhost:5173"
+# LAN IP so phones / other machines on the network reach Vite + API.
+# Plain-HTTP LAN is not a secure context: remote cameras fail, use manual codes.
+LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+LAN_IP="${LAN_IP:-localhost}"
+APP_URL="http://${LAN_IP}:5173"
 
 # ---------------------------------------------------------------------------
 # Preflight
@@ -227,14 +231,15 @@ echo "✓ API ready"
 [ -d "$REPO/node_modules" ] || { echo "▸ npm install..."; (cd "$REPO" && npm install); }
 
 cat > "$REPO/.env.local" <<ENV
-VITE_SUPABASE_URL=http://localhost:${API_PORT}
+VITE_SUPABASE_URL=http://${LAN_IP}:${API_PORT}
 VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=${ANON_KEY}
 ENV
 
 echo
 echo "────────────────────────────────────────────────────────"
-echo "  Dev instance:  ${APP_URL}"
-echo "  API:           http://localhost:${API_PORT}"
+echo "  Local:         http://localhost:5173"
+echo "  Network:       ${APP_URL}"
+echo "  API:           http://${LAN_IP}:${API_PORT}"
 echo "  DB (optional): localhost:${DB_PORT}"
 echo
 echo "  Stand demo login (username / password):"
@@ -243,10 +248,11 @@ echo "    aws.umsa@feria.local  / Aws2024*"
 echo "    casdasd@feria.local   / Ctrldev2024*"
 echo "    (+ 7 more in .dev/sql/60_seed.sql)"
 echo "  Demo participant: a0000001-0000-0000-0000-000000000000"
+echo "  Remote camera needs HTTPS — use manual codes on other devices."
 echo "────────────────────────────────────────────────────────"
 echo
 echo "  Ctrl-C stops Vite only; backend keeps running (docker compose -f .dev/docker-compose.yml stop)."
 
 cd "$REPO"
 # shellcheck disable=SC2068
-npm run dev
+npm run dev -- --host
