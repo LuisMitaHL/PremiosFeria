@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext.jsx';
-import { getCommunities, getScansForParticipant } from '../lib/api.js';
+import {
+    getCommunities,
+    getScansForParticipant,
+    getAllActivities,
+    getClaimedRewards,
+} from '../lib/api.js';
 import { MapPin, ClipboardList, ScanLine, Construction, Target, Check } from 'lucide-react';
 
 import DynamicIcon from '../components/DynamicIcon.jsx';
@@ -12,6 +17,8 @@ export default function Dashboard() {
 
     const [communities, setCommunities] = useState([]);
     const [scanLog, setScanLog] = useState([]);
+    const [activities, setActivities] = useState([]);
+    const [claimedCount, setClaimedCount] = useState(0);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -25,12 +32,16 @@ export default function Dashboard() {
 
         const load = async () => {
             try {
-                const [comms, scans] = await Promise.all([
+                const [comms, scans, activities, claimed] = await Promise.all([
                     getCommunities(),
                     getScansForParticipant(participant.id),
+                    getAllActivities(),
+                    getClaimedRewards(participant.id),
                 ]);
                 setCommunities(comms);
                 setScanLog(scans);
+                setActivities(activities);
+                setClaimedCount(claimed.length);
             } catch (err) {
                 console.error('Dashboard load error:', err);
             } finally {
@@ -46,16 +57,12 @@ export default function Dashboard() {
     const visitedStandIds = [...new Set(
         scanLog.filter(s => s.type === 'visit').map(s => s.community_id)
     )];
-    const activitiesCompletedIds = [...new Set(
-        scanLog.filter(s => s.type === 'activity').map(s => s.community_id)
-    )];
+    const activitiesCompleted = scanLog.filter(s => s.type === 'activity').length;
+    const totalActivities = activities.length;
 
     const visitedCount = visitedStandIds.length;
     const totalStands = communities.length;
-    const activitiesCount = activitiesCompletedIds.length;
 
-    // Count claimed rewards (from scans with negative points could be used, but for now use a simple count)
-    const claimedCount = 0; // Will be updated when rewards page is integrated
 
     function formatTime(ts) {
         const d = new Date(ts);
@@ -85,15 +92,11 @@ export default function Dashboard() {
                 {/* Stats */}
                 <div className="stats-grid">
                     <div className="stat-card">
-                        <div className="stat-value">{visitedCount}</div>
+                        <div className="stat-value">{visitedCount}/{totalStands}</div>
                         <div className="stat-label">Stands visitados</div>
                     </div>
                     <div className="stat-card">
-                        <div className="stat-value">{totalStands}</div>
-                        <div className="stat-label">Total Stands</div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-value">{activitiesCount}</div>
+                        <div className="stat-value">{activitiesCompleted}/{totalActivities}</div>
                         <div className="stat-label">Actividades</div>
                     </div>
                     <div className="stat-card">

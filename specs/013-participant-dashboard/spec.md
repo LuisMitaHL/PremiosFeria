@@ -175,6 +175,22 @@ Part of this ships today, in `src/pages/Dashboard.jsx`.
 - R10 introduces refreshing on a screen that has never had it. Specs 018 and 025 add their own;
   the plan should decide whether the three share a mechanism.
 
+## 10b. As built, so far
+
+Shipped alongside spec 019, because the figures it needed could not exist before activities did.
+
+- **R2 and R3 are met.** Progress now reads against a total on the same tile — "1/10 stands",
+  "1/2 actividades" — so a number means something on its own. The separate "Total Stands" tile is
+  gone: it was the same information in a second place.
+- **R3's meaning was corrected, not just its value.** The old tile counted distinct *stands* where
+  an activity had been completed, which was right when a stand had one activity and silently wrong
+  once it can have three. It now counts completions.
+- **R7 is met, and R4 partly.** The hardcoded zero — the application's one explicit TODO — is gone,
+  replaced by the real count of prizes received. The count of prizes *within reach* still needs
+  spec 021's withdrawal state and cost ceiling, so it is not built yet.
+- **R6, R10 and R12 are not built.** No summary of what is running, no refresh without reloading,
+  and the empty states are still bare zeroes.
+
 ## 11. References
 
 - Constitution: IV (identity is never a parameter).
