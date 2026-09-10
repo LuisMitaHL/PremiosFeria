@@ -27,6 +27,10 @@ export default function Register() {
             setError('El nombre debe tener al menos 2 caracteres');
             return;
         }
+        if (form.name.trim().length > 24) {
+            setError('El nombre no puede tener más de 24 caracteres');
+            return;
+        }
 
         setLoading(true);
         try {
@@ -53,11 +57,12 @@ export default function Register() {
 
                 <form onSubmit={handleSubmit} className="glass-card">
                     <div className="form-group">
-                        <label className="form-label">Nombre completo *</label>
+                        <label className="form-label">Elige tu nombre</label>
                         <input
                             className="form-input"
                             type="text"
-                            placeholder="Ej: María García"
+                            placeholder="Ej: zorro"
+                            maxLength={24}
                             value={form.name}
                             onChange={e => setForm({ ...form, name: e.target.value })}
                             autoFocus
@@ -75,8 +80,12 @@ export default function Register() {
                     </button>
                 </form>
 
-                <p style={{ textAlign: 'center', marginTop: 32, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    Tu información se guarda de forma segura en la nube
+                <p className="register-notes">
+                    Con este nombre vuelves a tu perfil si cierras la aplicación, siempre desde
+                    este mismo dispositivo. Nadie más puede usarlo.
+                </p>
+                <p className="register-notes">
+                    Elige algo apropiado: un nombre ofensivo te deja sin poder canjear premios.
                 </p>
             </div>
         </div>

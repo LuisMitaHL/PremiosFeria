@@ -5,7 +5,10 @@ DROP POLICY IF EXISTS "participants_read" ON participants;
 CREATE POLICY "participants_read" ON participants FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "participants_insert" ON participants;
-CREATE POLICY "participants_insert" ON participants FOR INSERT WITH CHECK (auth_user_id = auth.uid());
+-- Sin politica de insercion: registrarse pasa por register_or_recover (spec
+-- 001), que decide entre crear, recuperar y rechazar en un solo paso. Dejar el
+-- INSERT abierto seria dejar un camino que se salta la unicidad del nickname y
+-- la comprobacion de dispositivo.
 
 -- Comunidades: lectura pública, edición solo por su admin (vinculado vía auth_user_id)
 ALTER TABLE communities ENABLE ROW LEVEL SECURITY;

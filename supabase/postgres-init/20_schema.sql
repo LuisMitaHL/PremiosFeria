@@ -25,11 +25,22 @@ CREATE TABLE IF NOT EXISTS communities (
 -- Participantes
 CREATE TABLE IF NOT EXISTS participants (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
+  -- El nickname es tambien la llave con la que se vuelve al perfil (spec 001),
+  -- asi que tiene limites: 24 caracteres es lo que entra en una fila del
+  -- ranking proyectado, y sin tope una sola persona deforma la pantalla que
+  -- mira todo el salon.
+  name TEXT NOT NULL CHECK (char_length(btrim(name)) BETWEEN 2 AND 24),
   points INT DEFAULT 0 CHECK (points >= 0),
   fingerprint TEXT,
   registered_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Unico en todo el evento, sin distinguir mayusculas ni espacios. Es un indice
+-- y no un chequeo previo porque dos personas eligiendo el mismo nickname libre
+-- en el mismo instante no pueden ganar las dos: el costo de esa ambiguedad son
+-- los puntos de alguien.
+CREATE UNIQUE INDEX IF NOT EXISTS participants_nickname_unique
+  ON participants (lower(btrim(name)));
 
 -- Actividades (spec 019). Hasta 3 por comunidad, para todo el evento.
 --

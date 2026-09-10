@@ -83,11 +83,11 @@ export function AuthProvider({ children }) {
     // --- Participant actions ---
     const registerParticipant = async ({ name }) => {
         const fingerprint = getDeviceFingerprint();
-        const id = await apiRegister(name, fingerprint);
+        const { id, recovered } = await apiRegister(name, fingerprint);
         saveCurrentParticipantId(id);
         const p = await getParticipantById(id);
         setParticipant(p);
-        return p;
+        return { ...p, recovered };
     };
 
     const refreshParticipant = async () => {

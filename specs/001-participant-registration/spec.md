@@ -206,6 +206,24 @@ This began as a retro-spec and became a change: only part of what is written abo
   (constitution III), reached through a function rather than through table access.
 - Existing rows may already hold duplicate or over-length nicknames.
 
+## 10c. As built
+
+`register_or_recover` in `supabase/postgres-init/57_registration.sql` decides all three outcomes in
+one step: a free nickname creates a profile, the same nickname on the same device returns it, and
+somebody else's is refused. One function because it has to be atomic — split across a lookup and an
+insert, two people choosing the same free nickname would both see it free.
+
+Uniqueness is a functional unique index on `lower(btrim(name))`, so `Zorro`, `zorro` and ` zorro `
+collide without a second column to keep in step. The client's `INSERT` policy on `participants` is
+gone: there is no path left that skips the uniqueness or the device check.
+
+**Verified in the browser**, all three: registered as `zorro`, cleared the session and returned by
+typing `ZORRO` — the profile came back with its 85 points — then changed the stored device identity
+and was refused with "Ese nombre ya está en uso, elige otro."
+
+**R10b is still deferred.** The refusal deliberately does not mention the organiser's stand, because
+until spec 022 nobody there can help.
+
 ## 11. References
 
 - Constitution: III (rules in the database), IV (identity is never a parameter), VI (structural

@@ -105,6 +105,7 @@ cp "$REPO/supabase/postgres-init/53_rewards.sql" "$SQL/53_rewards.sql"
 cp "$REPO/supabase/postgres-init/54_fulfilment.sql" "$SQL/54_fulfilment.sql"
 cp "$REPO/supabase/postgres-init/55_organizer.sql" "$SQL/55_organizer.sql"
 cp "$REPO/supabase/postgres-init/56_organizer_communities.sql" "$SQL/56_organizer_communities.sql"
+cp "$REPO/supabase/postgres-init/57_registration.sql" "$SQL/57_registration.sql"
 
 # Auth compat — must run BEFORE 40_rls.sql (its policies call auth.uid()).
 # Plain Postgres knows no auth.uid()/auth.jwt(); local gets a compat layer.

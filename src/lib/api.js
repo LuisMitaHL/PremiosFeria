@@ -24,27 +24,35 @@ export const ACTIVITY_COLUMNS =
 // Registro: crea una identidad anónima de Supabase Auth y vincula el
 // participante a ella. El servidor ya nunca acepta un participant_id
 // del cliente: los RPC resuelven al participante por auth.uid().
+// Registrarse y volver son la misma acción, decidida en la base en un solo
+// paso (spec 001): el nickname libre crea un perfil, el nickname propio en el
+// mismo dispositivo lo devuelve, y el nickname ajeno se rechaza. Partido entre
+// una consulta y una inserción, dos personas eligiendo el mismo nombre a la vez
+// lo verían libre las dos.
 export async function registerParticipant(name, fingerprint) {
     // Cierra cualquier sesión anónima previa para no acumular usuarios huérfanos
     await supabase.auth.signOut();
 
     const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
     if (authError || !authData?.user) {
-        throw new Error('No se pudo crear tu sesión. Habilita "Anonymous sign-ins" en Supabase.');
+        throw new Error('No se pudo crear tu sesión. Intenta de nuevo.');
     }
 
-    const { data, error } = await supabase
-        .from('participants')
-        .insert({
-            name,
-            fingerprint: fingerprint || null,
-            auth_user_id: authData.user.id,
-        })
-        .select('id')
-        .single();
+    const { data, error } = await supabase.rpc('register_or_recover', {
+        p_name: name,
+        p_fingerprint: fingerprint || null,
+    });
 
     if (error) throw new Error(`Error al registrar: ${error.message}`);
-    return data.id;
+    if (data?.error) {
+        // La sesión anónima recién creada no sirve para nada si el registro se
+        // rechazó; dejarla abierta acumula identidades huérfanas.
+        await supabase.auth.signOut();
+        const refusal = new Error(data.error);
+        refusal.refused = true;
+        throw refusal;
+    }
+    return { id: data.participant.id, recovered: data.recovered };
 }
 
 export async function getParticipantById(id) {

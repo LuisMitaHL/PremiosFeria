@@ -1983,3 +1983,14 @@ textarea {
     background: rgba(0, 0, 0, 0.06);
     color: var(--text-muted);
 }
+
+/* Registration notes (spec 001). The nickname is also the way back, and an
+   offensive one costs the right to claim prizes -- both worth saying before
+   somebody picks one, not after. */
+.register-notes {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    text-align: center;
+    margin-top: var(--space-md);
+    line-height: 1.5;
+}
