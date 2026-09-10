@@ -52,6 +52,11 @@ SET password_hash = crypt('<organizer-password>', gen_salt('bf', 12))
 WHERE username = '<organizer-username>';
 ```
 
+The organiser signs in at its own address, `https://<origin>/#/organizador/entrar` (the app uses a
+hash router). It is deliberately not linked from any stand or attendee screen (spec 017). The stand
+login (`/#/admin/login`) accepts stand accounts only; the organiser's credentials are refused there
+with a message pointing to the organiser access.
+
 ### 2. Boot
 
 ```bash

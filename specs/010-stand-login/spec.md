@@ -84,6 +84,7 @@ it. Spec 023 takes over how these credentials come into existence; the sign-in i
 | R13 | A session MUST be renewable without the password being entered again. | Must |
 | R14 | The response to a successful sign-in MUST NOT contain the password or its hash. | Must |
 | R15 | Nothing in the sign-in path MUST reveal how many stands exist or what they are called. | Must |
+| R16 | The stand sign-in MUST refuse the organiser's credentials, close the session, and say the account belongs to the organiser. | Must |
 
 ## 5. Business rules
 
@@ -113,6 +114,7 @@ it. Spec 023 takes over how these credentials come into existence; the sign-in i
 | The database is unreachable | Refused as a failure, distinguishably from wrong credentials | a service failure, not "credenciales incorrectas" |
 | A session expires mid-event | Signing in again restores everything; nothing about the stand is lost | none |
 | An attendee's session is presented to a stand's screen | The screen may render, but nothing a stand can do will work | refusals from the rules themselves |
+| The organiser's credentials are entered on the stand login | The session is closed and the person is told it is the organiser's account; the panel's address is not shown here (spec 017, R10) | "Esta cuenta es del organizador. Ingresa desde la pantalla de organización." |
 
 ## 7. Security and integrity
 
@@ -165,6 +167,7 @@ None.
 | R9 | `auth/server.mjs` — a sliding window of 20 attempts per 5 minutes, keyed on origin and lowercased login name together. |
 | R10 | `auth/server.mjs` — `crypto.timingSafeEqual`. |
 | R12, R13 | `docker-compose.yml` — a 12-hour access token and a 48-hour refresh token, HS256. |
+| R16 | `src/lib/api.js` — `loginAdmin` closes the session when the token carries the organiser flag and returns the pointer instead of resolving a stand. |
 
 **Known deviations**
 
