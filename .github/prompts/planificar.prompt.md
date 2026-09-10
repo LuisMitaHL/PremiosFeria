@@ -1,0 +1,61 @@
+---
+mode: agent
+description: Redacta el plan tecnico de un spec ya aprobado (SDD, paso 2)
+---
+
+Argumentos: <NNN o slug del spec aprobado>
+
+Write the technical plan for a spec that has already been approved. The spec is named in the
+arguments; if none were given, ask which one.
+
+## Before you start
+
+Read `AGENTS.md`, `.specify/memory/constitution.md`, `.specify/memory/architecture.md`, and the
+spec itself.
+
+**Refuse to proceed if:**
+
+- The spec's status is not `Approved`.
+- The spec still contains a `[NEEDS CLARIFICATION]` marker.
+
+In either case, say so and stop. Do not write a plan on top of an unresolved spec.
+
+## Steps
+
+**1. Run the constitution check.**
+Fill the table in `.specify/templates/plan-template.md` honestly. Any "No" needs a written
+justification, and a permanent deviation needs an ADR in `.specify/memory/decisions/`.
+
+The traps this project sets, in order of how often they are missed:
+
+- Putting a rule in JavaScript that must live in Postgres.
+- Adding an RPC parameter that carries the caller's identity.
+- Creating a table without RLS policies.
+- Guarding the point economy with an `IF` instead of a constraint, an index, or a conditional
+  `UPDATE ... WHERE`.
+- Using syntax or a Web API newer than Chromium 83.
+
+**2. Design the approach.**
+Read the code you intend to change before proposing how to change it. Reuse what exists —
+`src/lib/api.js` is the only module that talks to the backend, and every game rule already has a
+home in `supabase/postgres-init/50_rpc.sql`. Say why you chose this approach over the obvious
+alternative.
+
+**3. Write `plan.md`** from the template, in English, into the spec's directory.
+
+Be explicit about the database. The init scripts in `supabase/postgres-init/` run **once, on an
+empty volume**. State whether the change requires `./dev.sh --fresh` locally, a wipe in
+production, and whether it can be applied while an event is running.
+
+**4. Plan the tests.**
+Every business rule in section 5 of the spec needs a SQL test in `tests/sql/`. Every path that
+awards or spends points needs a concurrency test. Frontend logic that is not a rule gets a
+Vitest test.
+
+**5. Commit.**
+`docs: 📚 planificar <lo que se planificó>`. **No AI attribution.**
+
+## Then stop
+
+Do not write `tasks.md` and do not write code. The plan has to be approved first. Report the
+approach, the constitution check result, and anything you deliberately deferred.
