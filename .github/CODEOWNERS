@@ -1,0 +1,20 @@
+# Propietarios por defecto de todo el repositorio.
+# Los usuarios listados aquí son solicitados automáticamente como revisores en cada PR.
+# Verifica que los handles de GitHub sean correctos antes de confiar en este archivo.
+
+*                           @LuisMitaHL
+
+# El sistema de especificación y las reglas de proceso: cualquier cambio aquí
+# altera cómo trabaja todo el equipo.
+/.specify/                  @LuisMitaHL
+/AGENTS.md                  @LuisMitaHL
+/specs/                     @LuisMitaHL
+
+# Reglas de negocio y seguridad: todo el antifraude del evento vive aquí.
+/supabase/postgres-init/    @LuisMitaHL
+/auth/                      @LuisMitaHL
+
+# Despliegue y secretos.
+/docker-compose.yml         @LuisMitaHL
+/deploy-keys.sh             @LuisMitaHL
+/nginx-cdn.conf.example     @LuisMitaHL
