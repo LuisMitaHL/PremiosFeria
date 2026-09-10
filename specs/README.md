@@ -85,9 +85,17 @@ Numeric order no longer matches dependency order: the new requirements introduce
 that several other specs stand on. Working numerically would mean specifying rewards against a
 points model that is about to change underneath them.
 
-The order is therefore by dependency:
+The order is therefore by dependency. Note that **023 became critical path** once the organiser
+took over creating stands: without it there are no stands, so there is no fair.
 
 ```
+017 organizer-admin-panel       <- the organiser identity and the panel shell
+ |
+ +-- 023 organizer-community-management   <- CRITICAL PATH: stands and their
+ |                                           credentials now exist only here
+ +-- 022 organizer-student-management     (delivers R10b of spec 001)
+ +-- 024 system-audit-log
+
 020 fixed-points-model          <- the points model everything else assumes
  |
  +-- 019 stand-activity-catalogue   (activities, and one QR per activity)
@@ -97,15 +105,10 @@ The order is therefore by dependency:
  |
  +-- 021 stand-reward-management    (a stand registers its own rewards and their cost)
        |
-       +-- 018 in-person-reward-fulfilment   (personal code, stand confirms, points deducted)
+       +-- 018 in-person-reward-fulfilment   (single-use code, the stand confirms,
+                                              points and stock spent together)
 
-017 organizer-admin-panel       <- the panel these three live inside
- |
- +-- 022 organizer-student-management   (delivers R10b of spec 001)
- +-- 023 organizer-community-management
- +-- 024 system-audit-log
-
-Independent of the above: 002, 003, 004, 007, 010, 012, 013, 015, 016, 026
+Independent of the above: 002, 003, 004, 007, 013, 015, 016, 026
 ```
 
 Spec 001 is already drafted and is not blocked by any of them.
