@@ -32,7 +32,7 @@ Retro-specs, documenting the system as built. They carry *As-built notes* and no
 | 002 | [`camera-qr-scan`](002-camera-qr-scan/spec.md) | Participant | Implemented |
 | 003 | [`manual-code-fallback`](003-manual-code-fallback/spec.md) | Participant | Implemented |
 | 007 | [`live-leaderboard`](007-live-leaderboard/spec.md) | Participant | In review |
-| 010 | `stand-login` | Stand admin | Not started |
+| 010 | [`stand-login`](010-stand-login/spec.md) | Stand admin | Implemented |
 | 015 | `pwa-shell` | Participant | Not started |
 
 ## Changes to behaviour that ships
