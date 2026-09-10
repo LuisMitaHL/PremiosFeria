@@ -81,6 +81,10 @@ BEGIN
     RETURN jsonb_build_object('error', 'No autorizado');
   END IF;
 
+  IF v_comm.is_withdrawn THEN
+    RETURN jsonb_build_object('error', 'Tu comunidad ya no está activa.');
+  END IF;
+
   -- An activity code names its activity, and may only be produced while that
   -- activity is running (spec 011, R10). Projecting a code that awards nothing
   -- produces a queue of people being refused, and the stand finds out from the
@@ -246,6 +250,12 @@ BEGIN
 
   IF v_type NOT IN ('visit', 'activity') THEN
     RETURN jsonb_build_object('valid', false, 'reason', 'Tipo de código inválido.');
+  END IF;
+
+  -- Un stand retirado deja de otorgar puntos, incluso con un código que ya
+  -- estaba dando vueltas (spec 023, R16).
+  IF v_community.is_withdrawn THEN
+    RETURN jsonb_build_object('valid', false, 'reason', 'Este stand ya no está participando.');
   END IF;
 
   -- =========================================================================

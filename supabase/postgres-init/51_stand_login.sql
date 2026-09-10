@@ -11,6 +11,9 @@ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
   FROM communities c
   WHERE lower(c.username) = lower(btrim(p_username))
     AND c.password_hash = crypt(p_password, c.password_hash)
+    -- Una comunidad retirada no inicia sesion (spec 023, R15). Se comprueba
+    -- aca y no en la pantalla: su admin ya tiene un token en la mano.
+    AND NOT c.is_withdrawn
 $$;
 
 GRANT EXECUTE ON FUNCTION stand_login(TEXT, TEXT) TO anon;

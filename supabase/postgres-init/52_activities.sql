@@ -56,9 +56,12 @@ CREATE TRIGGER activities_limit
 
 -- ---------------------------------------------------------------------------
 -- Resolve the calling stand. Identity is never a parameter (constitution IV).
+-- Una comunidad retirada no resuelve (spec 023, R15 y R16). Filtrarlo acá, en
+-- vez de en cada función, es lo que hace que valga para todas a la vez: crear y
+-- iniciar actividades, registrar premios, reponer stock y confirmar entregas.
 CREATE OR REPLACE FUNCTION calling_community() RETURNS UUID
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $fn$
-  SELECT id FROM communities WHERE auth_user_id = auth.uid()
+  SELECT id FROM communities WHERE auth_user_id = auth.uid() AND NOT is_withdrawn
 $fn$;
 
 -- ---------------------------------------------------------------------------

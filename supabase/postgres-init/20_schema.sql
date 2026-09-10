@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS communities (
   emoji TEXT DEFAULT 'BookOpen',
   stand_number TEXT,
   description TEXT,
+  -- Retirada del evento por el organizador (spec 023). No se elimina nunca:
+  -- los escaneos y canjes la referencian, y borrarla se llevaria el historial
+  -- de todos los que pasaron por ella. Retirar es un estado; borrar, no.
+  is_withdrawn BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -36,7 +40,7 @@ CREATE TABLE IF NOT EXISTS participants (
 -- tiene que ir a actualizar. Ver activity_state() en 52_activities.sql.
 CREATE TABLE IF NOT EXISTS activities (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  community_id UUID REFERENCES communities(id) ON DELETE CASCADE NOT NULL,
+  community_id UUID REFERENCES communities(id) ON DELETE RESTRICT NOT NULL,
   name TEXT NOT NULL CHECK (char_length(btrim(name)) BETWEEN 3 AND 40),
   description TEXT NOT NULL CHECK (char_length(btrim(description)) BETWEEN 1 AND 100),
   estimated_start TIME NOT NULL,
@@ -65,9 +69,11 @@ CREATE INDEX IF NOT EXISTS activities_community_idx ON activities (community_id)
 
 -- Escaneos
 CREATE TABLE IF NOT EXISTS scans (
+  -- RESTRICT en todo lo que referencia historia: nada se elimina en este
+  -- sistema. Con CASCADE la promesa dependia de que nadie escribiera un DELETE.
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  participant_id UUID REFERENCES participants(id) ON DELETE CASCADE NOT NULL,
-  community_id UUID REFERENCES communities(id) ON DELETE CASCADE NOT NULL,
+  participant_id UUID REFERENCES participants(id) ON DELETE RESTRICT NOT NULL,
+  community_id UUID REFERENCES communities(id) ON DELETE RESTRICT NOT NULL,
   -- RESTRICT, no CASCADE: una actividad no se elimina nunca (spec 019, R5) y
   -- los puntos otorgados no se retiran jamás (spec 020, R11). Con CASCADE esa
   -- promesa dependía de que nadie escribiera un DELETE; así la base se niega.
@@ -100,7 +106,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS scans_one_completion_per_activity
 -- escriba.
 CREATE TABLE IF NOT EXISTS rewards (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  community_id UUID REFERENCES communities(id) ON DELETE CASCADE NOT NULL,
+  community_id UUID REFERENCES communities(id) ON DELETE RESTRICT NOT NULL,
   name TEXT NOT NULL CHECK (char_length(btrim(name)) BETWEEN 3 AND 40),
   description TEXT CHECK (description IS NULL OR char_length(btrim(description)) <= 100),
   cost INT NOT NULL CHECK (cost BETWEEN 0 AND 300),
@@ -141,7 +147,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS claim_codes_open_code_unique
 -- Premios reclamados
 CREATE TABLE IF NOT EXISTS claimed_rewards (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  participant_id UUID REFERENCES participants(id) ON DELETE CASCADE NOT NULL,
+  participant_id UUID REFERENCES participants(id) ON DELETE RESTRICT NOT NULL,
   reward_id UUID REFERENCES rewards(id) ON DELETE RESTRICT NOT NULL,
   -- Qué stand entregó. Un canje confirmado tiene que poder decir quién lo hizo
   -- (spec 024), y el premio no se borra nunca, así que la referencia resuelve.
