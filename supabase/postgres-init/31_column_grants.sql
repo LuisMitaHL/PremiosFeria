@@ -28,9 +28,10 @@
 -- grant exists (30_grants.sql issues one). The table grant has to be revoked
 -- and the permitted columns granted back, which is what this does.
 --
--- The column lists are computed rather than written out, so this file works
--- against both the production schema and the dev one, which deliberately
--- differ. SECURITY DEFINER functions run as the owner and are unaffected:
+-- The column lists AND the role list are computed rather than written out, so
+-- this file works against both the production schema and the dev one, which
+-- deliberately differ: dev keeps a plaintext password column and creates only
+-- the anon role. SECURITY DEFINER functions run as the owner and are unaffected:
 -- stand_login still compares hashes, and the RPC still read what they need.
 --
 -- ADDING A COLUMN THAT HOLDS A SECRET? Add it to the list below, and add an
@@ -41,7 +42,21 @@ DECLARE
   v_table   TEXT;
   v_secret  TEXT[];
   v_columns TEXT;
+  v_roles   TEXT;
 BEGIN
+  -- Only the API roles that actually exist here. Production has anon and
+  -- authenticated; the dev stack creates only anon.
+  SELECT string_agg(quote_ident(rolname), ', ' ORDER BY rolname)
+  INTO v_roles
+  FROM pg_roles
+  WHERE rolname IN ('anon', 'authenticated');
+
+  IF v_roles IS NULL THEN
+    RAISE EXCEPTION
+      'Neither anon nor authenticated exists, so column privileges cannot be set. '
+      'Secrets would be readable by every client role.';
+  END IF;
+
   FOREACH v_table IN ARRAY ARRAY['participants', 'communities'] LOOP
     v_secret := CASE v_table
       WHEN 'participants' THEN ARRAY['fingerprint']
@@ -55,7 +70,7 @@ BEGIN
       AND table_name = v_table
       AND NOT (column_name = ANY (v_secret));
 
-    EXECUTE format('REVOKE SELECT ON public.%I FROM anon, authenticated', v_table);
-    EXECUTE format('GRANT SELECT (%s) ON public.%I TO anon, authenticated', v_columns, v_table);
+    EXECUTE format('REVOKE SELECT ON public.%I FROM %s', v_table, v_roles);
+    EXECUTE format('GRANT SELECT (%s) ON public.%I TO %s', v_columns, v_table, v_roles);
   END LOOP;
 END $$;
