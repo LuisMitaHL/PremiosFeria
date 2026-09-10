@@ -58,7 +58,7 @@ WHERE username = '<organizer-username>';
 docker compose --env-file .env.prod up -d --build
 ```
 
-First boot: Postgres init loads schema + RLS + RPC + seed from `./seed/*.csv` (both files required — copy the tracked `.example` files, see section 4). Init scripts run in numeric order, so a seed that aborts also stops the organiser account from being created. A completion marker is written only after the whole chain succeeds, and the `db` healthcheck requires it: if init aborted, the database stays `unhealthy` and the API is never started against an empty database. Read the database logs before trusting the first boot. Check against published ports:
+First boot: Postgres init loads schema + RLS + RPC, and pre-loads accounts from `./seed/*.csv` when present (both files optional — copy the tracked `.example` files, see section 4). With an empty `./seed`, only the organiser account is created and stands are added from the panel. Init scripts run in numeric order, so a malformed seed that aborts also stops the organiser account from being created. A completion marker is written only after the whole chain succeeds, and the `db` healthcheck requires it: if init aborted, the database stays `unhealthy` and the API is never started against an empty database. Read the database logs before trusting the first boot. Check against published ports:
 
 ```bash
 curl -s http://localhost:9999/health
@@ -87,9 +87,11 @@ curl -sI -H "apikey: $ANON" https://feria.example.com/rest/v1/communities?select
 
 ### 4. Seed accounts from CSV
 
-Both files must exist before the first boot. Copy the tracked examples and edit the
-copies: `seed/*.csv` is git-ignored because it holds plaintext passwords, so only the
-`.example` files are committed.
+The two files are optional: with an empty `./seed` the first boot creates only the
+organiser account, and stands and rewards are added from the panel afterwards. To
+pre-load them, copy the tracked examples and edit the copies: `seed/*.csv` is
+git-ignored because it holds plaintext passwords, so only the `.example` files are
+committed.
 
 ```bash
 cp seed/stands.csv.example seed/stands.csv
@@ -100,7 +102,7 @@ chmod 600 seed/stands.csv
 
 No accounts are hardcoded in SQL.
 
-`seed/stands.csv` (required, header `user,pw,name`):
+`seed/stands.csv` (optional, header `user,pw,name`):
 
 ```csv
 user,pw,name
@@ -108,14 +110,14 @@ meh,Meh2024*,MEH
 ieee,Ieee2024*,IEEE
 ```
 
-`seed/rewards.csv` (required, header-only allowed for "stands only"; header `stand,name,description,cost,stock,emoji` — `stand` matches a `user` above):
+`seed/rewards.csv` (optional, header-only allowed for "stands only"; header `stand,name,description,cost,stock,emoji` — `stand` matches a `user` above):
 
 ```csv
 stand,name,description,cost,stock,emoji
 meh,CuboRubik Dotnet,Premio de MEH,150,1,Box
 ```
 
-Rules: UTF-8, quote fields containing commas. Blank `user`/`pw` rows are ignored; blank `name`/`cost` abort the seed visibly. The files are read once, at Postgres init on an empty `./data/db` — they provision a **new deployment only**. To create or change accounts on a running instance, use the organizer panel (or the SQL rotation in section 5); never wipe a live database to re-seed it (section 6).
+Rules: UTF-8, quote fields containing commas. Blank `user`/`pw` rows are ignored; blank `name`/`cost` abort the seed visibly. The files are read once, at Postgres init on an empty `./data/db` — they provision a **new deployment only**; an empty `./seed` is valid and leaves only the organiser account. To create or change accounts on a running instance, use the organizer panel (or the SQL rotation in section 5); never wipe a live database to re-seed it (section 6).
 
 ### 5. Stand credentials
 

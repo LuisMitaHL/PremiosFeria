@@ -15,13 +15,13 @@
 
 ## 1. Purpose
 
-An operator stands the system up for a fair. The first initialization reads the stand and
-reward accounts from files the operator supplies. When those files are missing or malformed,
-initialization stops — but the database has already been created, so the container restarts
-and serves a system that looks healthy and has no accounts at all. The operator finds out at
-the login screen, on the day of the event. This spec makes that failure visible at start-up
-and gives the operator versioned templates to fill in, so a first boot either completes or
-refuses to pretend that it did.
+An operator stands the system up for a fair. The first initialization may read the stand and
+reward accounts from files the operator supplies; supplying none is valid, and is the normal
+case for a fair whose stands will be created from the panel. When a supplied file is
+malformed, initialization stops — but the database has already been created, so the container
+restarts and serves a system that looks healthy and has no accounts at all. The operator
+finds out at the login screen, on the day of the event. This spec makes that failure visible
+at start-up, gives the operator versioned templates to fill in, and makes the files optional.
 
 ## 2. Scope
 
@@ -34,6 +34,8 @@ refuses to pretend that it did.
 - Interpreting an operator-supplied credential identically in every environment.
 - Recording that the files are a first-initialization convenience for new deployments, not an
   ongoing management path.
+- Confirming that an empty seed directory is a valid first boot that creates only the
+  organiser account.
 
 **Out of scope**
 
@@ -53,12 +55,12 @@ refuses to pretend that it did.
 **Then** they copy the tracked templates, fill them in, and the first boot creates the
 accounts those files describe.
 
-### 3.2 The seed inputs are missing
+### 3.2 No seed inputs are supplied
 
-**Given** a first boot with no seed files present
+**Given** a first boot with an empty seed directory
 **When** initialization runs
-**Then** it stops, the database never reports ready, the API is never started, and the
-operator sees the failure instead of an empty login screen.
+**Then** it completes, the database reports ready, and the only account that exists is the
+organiser's. The organiser creates the stands from the panel.
 
 ### 3.3 The container restarts after a failed initialization
 
@@ -76,9 +78,9 @@ operator sees the failure instead of an empty login screen.
 
 | ID | Requirement | Priority |
 |---|---|---|
-| R1 | The repository MUST ship versioned example seed files for both required inputs. | Must |
+| R1 | The repository MUST ship versioned example seed files for both optional inputs. | Must |
 | R2 | The operator documentation MUST instruct the operator to copy and edit those examples before the first boot. | Must |
-| R3 | Both required seed inputs MUST exist for the first initialization to proceed. | Must |
+| R3 | Seed inputs MUST be optional: an initialization that is given none MUST complete and leave only the organiser account. | Must |
 | R4 | An initialization that stops early MUST leave the database not ready, and the services that depend on it MUST NOT start. | Must |
 | R5 | A restart after a failed initialization MUST NOT report the database ready. | Must |
 | R6 | The database MUST NOT report ready until initialization has completely finished, access restrictions included. | Must |
@@ -92,7 +94,7 @@ operator sees the failure instead of an empty login screen.
 
 | Rule | Value | Rationale |
 |---|---|---|
-| Both inputs required | Always, even if one carries only a header | The initialization reads them unconditionally; a missing file is the most common operator mistake, and a silent empty fair is worse than a refused boot. |
+| Inputs are optional | Always | Supplying no files is a legitimate first boot: only the organiser account is created and stands are added from the panel. A file that is present is loaded as given. |
 | Ready means fully initialized | Only after the last structural step | A database that reports ready before its access restrictions are in place would serve credentials it is about to hide. |
 | Whitespace around a credential is not significant | Always | The two paths that load credentials must hash the same input. A password that works locally and not in production is a bug the operator cannot see. |
 | Examples are placeholders | Always | Anything committed is public. An example that works as written is a credential in the repository. |
@@ -102,7 +104,7 @@ operator sees the failure instead of an empty login screen.
 
 | Situation | Expected behaviour | What the operator sees |
 |---|---|---|
-| A required input file is missing | Initialization stops | The database container reports unhealthy; the log names the missing file |
+| No input file is supplied | Initialization completes; no stands are loaded | The stack starts normally with only the organiser account |
 | An input file is malformed (bad header, blank name, non-numeric cost) | Initialization stops | The database container reports unhealthy; the log carries the cause |
 | An input file carries a header only | Initialization succeeds with no rows for it | The stack starts normally |
 | The container restarts after a failed initialization | It stays not ready | The database remains unhealthy; the API never starts |
@@ -126,7 +128,8 @@ operator sees the failure instead of an empty login screen.
 
 - [ ] Two tracked example seed files exist and contain only placeholder values.
 - [ ] The deployment documentation tells the operator to copy and edit them.
-- [ ] A first boot with a missing seed file leaves the database unhealthy and the API unstarted.
+- [ ] A first boot with an empty seed directory reports healthy and leaves only the organiser account.
+- [ ] A first boot with a malformed seed file leaves the database unhealthy and the API unstarted.
 - [ ] A container restart after that failure keeps the database unhealthy.
 - [ ] A successful first boot reports the database healthy and starts the API.
 - [ ] A credential written with surrounding spaces signs in with the visible value.
@@ -162,6 +165,9 @@ is considered wrong.
 - The provisioning decision is settled (R10, R11): the files provision a new deployment
   only, and the organiser owns management afterwards. Spec 012 is retired; this is how its
   intent is realised without removing the first-boot convenience.
+- An absent input file is not a failure: only a file that is supplied and malformed stops
+  initialization. An empty seed directory is the normal case for a fair managed from the
+  panel.
 - A change of secrets while a database volume already exists remains a documented manual
   procedure, not something this spec guards. It is out of scope here.
 

@@ -19,9 +19,9 @@ cd "$(dirname "$0")/../.."
 PSQL_CMD="${PSQL_CMD:-docker compose -f .dev/docker-compose.yml exec -T db psql -U postgres}"
 TEST_DB="${TEST_DB:-community_quest_test}"
 
-# 11_passwords.sh is a container entrypoint hook, and 70_seed.sql needs operator
-# CSVs that are deliberately absent from the repository. Everything else is the
-# real definition and must be loaded verbatim.
+# 11_passwords.sh is a container entrypoint hook, and 70_seed.sql reads optional
+# operator CSVs from /seed, which the test database does not mount. Everything
+# else is the real definition and must be loaded verbatim.
 SCHEMA_FILES=(
   supabase/postgres-init/10_roles.sql
   supabase/postgres-init/15_extensions.sql
