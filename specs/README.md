@@ -44,7 +44,7 @@ Part retro-spec, part change. Each opens with what exists today and why it is be
 |---|---|---|---|
 | 001 | [`participant-registration`](001-participant-registration/spec.md) | Participant | Draft |
 | 011 | `qr-projection` | Stand admin | Not started |
-| 013 | `participant-dashboard` | Participant | Not started |
+| 013 | [`participant-dashboard`](013-participant-dashboard/spec.md) | Participant | Draft |
 | 016 | `naming-and-hygiene-cleanup` | — | Not started |
 
 ## New capabilities
