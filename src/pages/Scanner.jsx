@@ -3,8 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { scanQR } from '../lib/api.js';
 import { decodeQRPayload } from '../lib/qrSecurity.js';
-import { ScanLine, Loader, PartyPopper, Frown, Home, CheckCircle, Lock, Camera, Keyboard, MapPin, XCircle } from 'lucide-react';
+import { ScanLine, Loader, PartyPopper, Frown, Clock, Home, CheckCircle, Lock, Camera, Keyboard } from 'lucide-react';
 import DynamicIcon from '../components/DynamicIcon.jsx';
+
+// Refusals that are the attendee's situation rather than a mistake. They are
+// told what happened, not that something went wrong (spec 020, R13).
+const EXPECTED_REFUSALS = [
+    'Ya visitaste este stand',
+    'Ya participaste en esta actividad',
+    'Esta actividad ya terminó',
+    'Esta actividad todavía no ha iniciado',
+];
+
+function isExpectedRefusal(reason) {
+    return EXPECTED_REFUSALS.some((phrase) => (reason || '').startsWith(phrase));
+}
 
 export default function Scanner() {
     const navigate = useNavigate();
@@ -109,10 +122,11 @@ export default function Scanner() {
             } else {
                 setScanResult({
                     success: false,
+                    expected: isExpectedRefusal(result.reason),
                     message: result.reason,
                     points: 0,
                     groupName: '',
-                    groupEmoji: '❌',
+                    groupEmoji: '',
                 });
             }
         } catch (err) {
@@ -161,12 +175,12 @@ export default function Scanner() {
         return (
             <div className="page">
                 <div className="container" style={{ paddingTop: 60 }}>
-                    <div className={`scan-result ${scanResult.success ? 'success' : 'error'}`}>
+                    <div className={`scan-result ${scanResult.success ? 'success' : scanResult.expected ? 'neutral' : 'error'}`}>
                         <div className="result-icon">
-                            {scanResult.success ? <PartyPopper size={48} /> : <Frown size={48} />}
+                            {scanResult.success ? <PartyPopper size={48} /> : scanResult.expected ? <Clock size={48} /> : <Frown size={48} />}
                         </div>
                         <div className="result-title">
-                            {scanResult.success ? '¡Éxito!' : 'Error'}
+                            {scanResult.success ? '¡Éxito!' : scanResult.expected ? 'Nada que sumar' : 'Error'}
                         </div>
 
                         {scanResult.success && (

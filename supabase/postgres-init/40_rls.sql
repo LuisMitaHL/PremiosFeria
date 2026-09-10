@@ -17,7 +17,13 @@ CREATE POLICY "communities_update" ON communities FOR UPDATE
   USING (auth_user_id = auth.uid())
   WITH CHECK (auth_user_id = auth.uid());
 
--- Scans: lectura pública, insert via RPC únicamente
+-- Actividades: lectura publica (el estudiante ve las de toda la feria); toda
+-- escritura pasa por RPC, igual que scans
+ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "activities_read" ON activities;
+CREATE POLICY "activities_read" ON activities FOR SELECT USING (true);
+
+-- Scans: lectura publica, insert via RPC unicamente
 ALTER TABLE scans ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "scans_read" ON scans;
 CREATE POLICY "scans_read" ON scans FOR SELECT USING (true);

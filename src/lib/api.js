@@ -9,7 +9,15 @@ import { supabase } from '../supabaseClient.js';
 // Kept in one place so the two cannot drift apart.
 export const PARTICIPANT_COLUMNS = 'id, name, points, registered_at';
 export const COMMUNITY_COLUMNS =
-    'id, username, name, emoji, stand_number, description, visit_points, activity_points, auth_user_id, created_at';
+    'id, username, name, emoji, stand_number, description, auth_user_id, created_at';
+
+// Activities carry a derived state -- activity_state() in the database, exposed
+// by PostgREST as a computed column. The screens must read that rather than
+// working it out from started_at and a duration: a phone with a wrong clock
+// would otherwise show a finished activity as open and send someone across the
+// hall for nothing (spec 025, R11).
+export const ACTIVITY_COLUMNS =
+    'id, community_id, name, description, estimated_start, duration_min, is_main_event, started_at, finished_at, activity_state';
 
 // ─── Participants ────────────────────────────
 
@@ -83,13 +91,6 @@ export async function getMyCommunity(communityId) {
 }
 
 export async function updateCommunity(communityId, updates) {
-    if (updates.visit_points !== undefined && updates.visit_points > 30) {
-        throw new Error('El límite máximo de puntos por visita es 30.');
-    }
-    if (updates.activity_points !== undefined && updates.activity_points > 100) {
-        throw new Error('El límite máximo de puntos por actividad es 100.');
-    }
-
     const { data, error } = await supabase
         .from('communities')
         .update(updates)
@@ -247,13 +248,76 @@ export async function getSession() {
     };
 }
 
+// ─── Activities ──────────────────────────────
+
+export async function getActivitiesForCommunity(communityId) {
+    const { data, error } = await supabase
+        .from('activities')
+        .select(ACTIVITY_COLUMNS)
+        .eq('community_id', communityId)
+        .order('created_at', { ascending: true });
+
+    if (error) throw new Error(`Error al obtener actividades: ${error.message}`);
+    return data;
+}
+
+export async function getAllActivities() {
+    const { data, error } = await supabase
+        .from('activities')
+        .select(`${ACTIVITY_COLUMNS}, communities(name, emoji, stand_number)`)
+        .order('estimated_start', { ascending: true });
+
+    if (error) throw new Error(`Error al obtener actividades: ${error.message}`);
+    return data;
+}
+
+// These four return { activity } or { error: 'reason' }. The reason is written
+// for the stand admin to act on, so it is shown as-is.
+export async function createActivity(fields) {
+    const { data, error } = await supabase.rpc('create_activity', {
+        p_name: fields.name,
+        p_description: fields.description,
+        p_estimated_start: fields.estimated_start,
+        p_duration_min: fields.duration_min,
+        p_is_main_event: fields.is_main_event,
+    });
+    if (error) throw new Error(`Error al crear actividad: ${error.message}`);
+    return data;
+}
+
+export async function updateActivity(id, fields) {
+    const { data, error } = await supabase.rpc('update_activity', {
+        p_id: id,
+        p_name: fields.name,
+        p_description: fields.description,
+        p_estimated_start: fields.estimated_start,
+        p_duration_min: fields.duration_min,
+        p_is_main_event: fields.is_main_event,
+    });
+    if (error) throw new Error(`Error al actualizar actividad: ${error.message}`);
+    return data;
+}
+
+export async function startActivity(id) {
+    const { data, error } = await supabase.rpc('start_activity', { p_id: id });
+    if (error) throw new Error(`Error al iniciar actividad: ${error.message}`);
+    return data;
+}
+
+export async function finishActivity(id) {
+    const { data, error } = await supabase.rpc('finish_activity', { p_id: id });
+    if (error) throw new Error(`Error al terminar actividad: ${error.message}`);
+    return data;
+}
+
 // ─── QR Signing (server-side) ────────────────
 
 // Firma el código QR rotativo en el servidor (el secreto nunca sale de la BD).
-export async function getSignedScanCode(communityId, type) {
+export async function getSignedScanCode(communityId, type, activityId = null) {
     const { data, error } = await supabase.rpc('sign_scan_code', {
         p_community_id: communityId,
         p_type: type,
+        p_activity_id: activityId,
     });
 
     if (error) throw new Error(`Error al firmar código: ${error.message}`);

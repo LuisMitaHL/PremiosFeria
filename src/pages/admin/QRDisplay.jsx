@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../../lib/AuthContext.jsx';
 import { getMyCommunity, getSignedScanCode } from '../../lib/api.js';
@@ -9,14 +9,21 @@ import DynamicIcon from '../../components/DynamicIcon.jsx';
 
 export default function QRDisplay() {
     const { groupId } = useParams();
+    // Which code to project. An activity's code is reached from that activity,
+    // so it is never ambiguous which one is on screen (spec 011, R3).
+    const [searchParams] = useSearchParams();
+    const activityId = searchParams.get('activity');
     const navigate = useNavigate();
     const { adminUser, adminLoading } = useAuth();
 
     const [community, setCommunity] = useState(null);
-    const [qrType, setQrType] = useState('visit');
+    const [qrType, setQrType] = useState(activityId ? 'activity' : 'visit');
+    const [signError, setSignError] = useState('');
     const [qrData, setQrData] = useState('');
     const [shortCode, setShortCode] = useState('');
     const [timeLeft, setTimeLeft] = useState(15);
+    const [activityName, setActivityName] = useState('');
+    const [pointsLabel, setPointsLabel] = useState(null);
     const [loading, setLoading] = useState(true);
 
     // Redirect if not authenticated
@@ -46,18 +53,31 @@ export default function QRDisplay() {
     const refreshQR = useCallback(async () => {
         if (!community) return;
         try {
-            const result = await getSignedScanCode(community.id, qrType);
+            const result = await getSignedScanCode(
+                community.id,
+                qrType,
+                qrType === 'activity' ? activityId : null
+            );
+            // The server refuses to sign an activity that is not running. Say so
+            // and stop showing a code, rather than leaving the last one on
+            // screen looking valid (spec 011, R11).
             if (result.error) {
-                console.error('QR sign error:', result.error);
+                setSignError(result.error);
+                setQrData('');
+                setShortCode('');
                 return;
             }
+            setSignError('');
             setQrData(encodeQRPayload(result.payload));
             setShortCode(result.shortCode);
+            setActivityName(result.payload?.activityName || '');
+            setPointsLabel(result.points);
             setTimeLeft(getTimeUntilRotation());
-        } catch (err) {
-            console.error('QR sign error:', err);
+        } catch {
+            setSignError('No se pudo actualizar el código. Revisa la conexión.');
+            setQrData('');
         }
-    }, [community, qrType]);
+    }, [community, qrType, activityId]);
 
     // Generate QR on mount and on type/community change
     useEffect(() => {
@@ -139,11 +159,25 @@ export default function QRDisplay() {
                         </div>
                         <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{community.name}</h2>
                         <p style={{ color: 'var(--text-secondary)' }}>
-                            Stand {community.stand_number} · {qrType === 'visit' ? `${community.visit_points || 10} pts por visita` : `${community.activity_points || 25} pts por actividad`}
+                            Stand {community.stand_number}
+                            {pointsLabel !== null && ` · ${pointsLabel} pts`}
+                            {qrType === 'activity' && activityName && ` · ${activityName}`}
                         </p>
                     </div>
 
-                    {/* QR Code */}
+                    {/* A refusal replaces the code. The dangerous failure is a
+                        screen that keeps showing the last code it received,
+                        because it looks exactly like a working one to everybody
+                        in the room (spec 011). */}
+                    {signError ? (
+                        <div className="empty-state">
+                            <p>{signError}</p>
+                            <p className="empty-hint">
+                                Este código ya no otorga puntos.
+                            </p>
+                        </div>
+                    ) : (
+                    <>
                     <div className="qr-wrapper" style={{ animation: timeLeft <= 5 ? 'pulse 0.5s ease-in-out infinite' : 'none' }}>
                         <QRCodeSVG
                             value={qrData || 'loading'}
@@ -182,6 +216,8 @@ export default function QRDisplay() {
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: 300, textAlign: 'center' }}>
                         <Lock size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> El código QR se renueva cada 15 segundos para evitar uso indebido. Muestra esta pantalla a los visitantes.
                     </p>
+                    </>
+                    )}
                 </div>
             </div>
         </div>

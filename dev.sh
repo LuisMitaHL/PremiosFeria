@@ -8,7 +8,7 @@
 # then runs the Vite dev server against it.
 #
 # The backend reproduces the app's canonical schema/RLS/RPC (copies of
-# supabase/postgres-init/{20_schema,40_rls,50_rpc,80_column_grants}.sql), so you develop
+# supabase/postgres-init/{20_schema,40_rls,50_rpc,52_activities,80_column_grants}.sql), so you develop
 # against the same behavior as production.
 #
 # Uses:
@@ -54,7 +54,7 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-for f in supabase/postgres-init/20_schema.sql supabase/postgres-init/80_column_grants.sql supabase/postgres-init/40_rls.sql supabase/postgres-init/50_rpc.sql; do
+for f in supabase/postgres-init/20_schema.sql supabase/postgres-init/40_rls.sql supabase/postgres-init/50_rpc.sql supabase/postgres-init/52_activities.sql supabase/postgres-init/80_column_grants.sql; do
   [ -f "$REPO/$f" ] || { echo "✗ expected '$REPO/$f' (canonical source) not found." >&2; exit 1; }
 done
 
@@ -96,6 +96,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
 SQL
 cp "$REPO/supabase/postgres-init/40_rls.sql" "$SQL/40_rls.sql"
 cp "$REPO/supabase/postgres-init/50_rpc.sql" "$SQL/50_rpc.sql"
+cp "$REPO/supabase/postgres-init/52_activities.sql" "$SQL/52_activities.sql"
 
 # Auth compat — must run BEFORE 40_rls.sql (its policies call auth.uid()).
 # Plain Postgres knows no auth.uid()/auth.jwt(); local gets a compat layer.
@@ -240,17 +241,17 @@ DELETE FROM scans;
 DELETE FROM communities;
 DELETE FROM participants;
 
-INSERT INTO communities (id, username, password, name, emoji, stand_number, visit_points, activity_points) VALUES
-('d0000001-0000-0000-0000-000000000000','cypheranviil','Cypher2024*','CypherAnvil','Shield','1',10,25),
-('d0000002-0000-0000-0000-000000000000','meh','Meh2024*','MEH','Cpu','2',10,25),
-('d0000003-0000-0000-0000-000000000000','ieee','Ieee2024*','IEEE','RadioReceiver','3',10,25),
-('d0000004-0000-0000-0000-000000000000','aws.umsa','Aws2024*','AWS','Cloud','4',10,25),
-('d0000005-0000-0000-0000-000000000000','guild','Guild2024*','Guild','Swords','5',10,25),
-('d0000006-0000-0000-0000-000000000000','codemiaw','Codecats2024*','Codecats','Cat','6',10,25),
-('d0000007-0000-0000-0000-000000000000','pancho','Cpc2024*','CPC','Code','7',10,25),
-('d0000008-0000-0000-0000-000000000000','casdasd','Ctrldev2024*','CtrlDev','Terminal','8',10,25),
-('d0000009-0000-0000-0000-000000000000','microbot','Microbot2024*','Microsoft Umsa','LayoutGrid','9',10,25),
-('d000000a-0000-0000-0000-000000000000','trateur010','Ciasi2024*','CIASI','Database','10',10,25);
+INSERT INTO communities (id, username, password, name, emoji, stand_number) VALUES
+('d0000001-0000-0000-0000-000000000000','cypheranviil','Cypher2024*','CypherAnvil','Shield','1'),
+('d0000002-0000-0000-0000-000000000000','meh','Meh2024*','MEH','Cpu','2'),
+('d0000003-0000-0000-0000-000000000000','ieee','Ieee2024*','IEEE','RadioReceiver','3'),
+('d0000004-0000-0000-0000-000000000000','aws.umsa','Aws2024*','AWS','Cloud','4'),
+('d0000005-0000-0000-0000-000000000000','guild','Guild2024*','Guild','Swords','5'),
+('d0000006-0000-0000-0000-000000000000','codemiaw','Codecats2024*','Codecats','Cat','6'),
+('d0000007-0000-0000-0000-000000000000','pancho','Cpc2024*','CPC','Code','7'),
+('d0000008-0000-0000-0000-000000000000','casdasd','Ctrldev2024*','CtrlDev','Terminal','8'),
+('d0000009-0000-0000-0000-000000000000','microbot','Microbot2024*','Microsoft Umsa','LayoutGrid','9'),
+('d000000a-0000-0000-0000-000000000000','trateur010','Ciasi2024*','CIASI','Database','10');
 
 INSERT INTO rewards (community_id, name, description, cost, stock, emoji) VALUES
 ('d0000002-0000-0000-0000-000000000000','CuboRubik Dotnet','Premio de MEH',150,1,'Box'),

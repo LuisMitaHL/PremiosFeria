@@ -4,6 +4,9 @@
 -- (audit F2: credentials move to communities.password_hash + auth service).
 
 -- Comunidades (antes "groups")
+-- Los puntos ya no se configuran por comunidad: son constantes del evento
+-- (spec 020). Una visita vale lo mismo en todos los stands, y una actividad
+-- vale según sea o no el evento principal de su stand.
 CREATE TABLE IF NOT EXISTS communities (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
@@ -12,8 +15,6 @@ CREATE TABLE IF NOT EXISTS communities (
   emoji TEXT DEFAULT 'BookOpen',
   stand_number TEXT,
   description TEXT,
-  visit_points INT DEFAULT 10 CHECK (visit_points BETWEEN 0 AND 30),
-  activity_points INT DEFAULT 25 CHECK (activity_points BETWEEN 0 AND 100),
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -26,19 +27,62 @@ CREATE TABLE IF NOT EXISTS participants (
   registered_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Actividades (spec 019). Hasta 3 por comunidad, para todo el evento.
+--
+-- El estado NO se guarda: se deriva de started_at y finished_at, porque nada
+-- en este stack corre en segundo plano. Una actividad que nadie cierra tiene
+-- que terminarse sola al vencer su duración, y eso solo es cierto si el estado
+-- es una pregunta que se responde en el momento, no una columna que alguien
+-- tiene que ir a actualizar. Ver activity_state() en 52_activities.sql.
+CREATE TABLE IF NOT EXISTS activities (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  community_id UUID REFERENCES communities(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL CHECK (char_length(btrim(name)) BETWEEN 3 AND 40),
+  description TEXT NOT NULL CHECK (char_length(btrim(description)) BETWEEN 1 AND 100),
+  estimated_start TIME NOT NULL,
+  duration_min INT NOT NULL CHECK (duration_min BETWEEN 1 AND 60),
+  is_main_event BOOLEAN NOT NULL DEFAULT false,
+  started_at TIMESTAMPTZ,
+  finished_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  -- No se puede terminar lo que nunca empezó.
+  CONSTRAINT activities_finished_implies_started
+    CHECK (finished_at IS NULL OR started_at IS NOT NULL)
+);
+
+-- Un solo evento principal por comunidad. Sin esto, todas las actividades se
+-- marcarían como principales: no hay ningún costo en hacerlo (spec 020, R7).
+CREATE UNIQUE INDEX IF NOT EXISTS activities_one_main_event_per_community
+  ON activities (community_id) WHERE is_main_event;
+
+-- Una sola actividad en curso por comunidad. El stand proyecta un código a la
+-- vez y atiende una cosa a la vez, y así "en curso" es inequívoco para el
+-- estudiante (spec 019, R13).
+CREATE UNIQUE INDEX IF NOT EXISTS activities_one_running_per_community
+  ON activities (community_id) WHERE started_at IS NOT NULL AND finished_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS activities_community_idx ON activities (community_id);
+
 -- Escaneos
 CREATE TABLE IF NOT EXISTS scans (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   participant_id UUID REFERENCES participants(id) ON DELETE CASCADE NOT NULL,
   community_id UUID REFERENCES communities(id) ON DELETE CASCADE NOT NULL,
+  activity_id UUID REFERENCES activities(id) ON DELETE CASCADE,
   points INT NOT NULL CHECK (points >= 0),
   type TEXT CHECK (type IN ('visit', 'activity')) DEFAULT 'visit',
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  -- Una actividad siempre identifica cuál; una visita nunca.
+  CONSTRAINT scans_activity_id_matches_type
+    CHECK ((type = 'activity') = (activity_id IS NOT NULL))
 );
 
--- Actividades: una sola vez por stand y participante (las visitas siguen siendo repetibles tras su cooldown)
-CREATE UNIQUE INDEX IF NOT EXISTS scans_one_activity_per_stand
-  ON scans (participant_id, community_id) WHERE (type = 'activity');
+-- Cada actividad se completa una sola vez por participante. Antes la regla era
+-- una actividad por stand; con hasta 3 por stand la garantía se muda a la
+-- actividad concreta (spec 020, R8). Sigue siendo un índice, no un IF: es lo
+-- que sostiene cuando dos escaneos llegan en el mismo instante.
+CREATE UNIQUE INDEX IF NOT EXISTS scans_one_completion_per_activity
+  ON scans (participant_id, activity_id) WHERE (activity_id IS NOT NULL);
 
 -- Premios
 CREATE TABLE IF NOT EXISTS rewards (

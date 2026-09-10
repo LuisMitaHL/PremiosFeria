@@ -1520,3 +1520,160 @@ textarea {
   max-width: 400px;
   transform: rotate(45deg);
 }
+/* ============================================
+   Activities (spec 019)
+   ============================================
+   Built from the tokens above rather than inline styles, so the sections the
+   newer specs add look like the screens that were already here.
+   ============================================ */
+
+.section-tabs {
+    display: flex;
+    gap: var(--space-xs);
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: var(--radius-full);
+    padding: var(--space-xs);
+    margin-bottom: var(--space-lg);
+}
+
+.section-tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.section-tab.is-active {
+    background: #ffffff;
+    color: var(--accent-purple);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.activity-card {
+    margin-bottom: var(--space-md);
+    border-left: 3px solid transparent;
+}
+
+.activity-card.is-running {
+    border-left-color: var(--accent-emerald);
+}
+
+.activity-card.is-finished {
+    opacity: 0.6;
+}
+
+.activity-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-sm);
+}
+
+.activity-name {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+}
+
+.activity-meta,
+.activity-description {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-top: var(--space-xs);
+}
+
+.activity-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+    flex-wrap: wrap;
+}
+
+.activity-closed {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 3px var(--space-sm);
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+}
+
+.badge-scheduled {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text-secondary);
+}
+
+.badge-running {
+    background: var(--gradient-success);
+    color: #ffffff;
+}
+
+.badge-finished {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text-secondary);
+}
+
+.badge-main {
+    background: var(--gradient-warn);
+    color: #ffffff;
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.form-hint,
+.empty-hint {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    margin-top: var(--space-xs);
+}
+
+.form-error {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--accent-rose);
+    font-size: 0.85rem;
+    margin-bottom: var(--space-md);
+}
+
+.form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+/* A refusal the attendee could not have avoided is not a failure: the cooldown
+   has not elapsed, they already took part, the activity is over. Colouring it
+   like an error sends them back to the stand to complain about something that
+   is working correctly (spec 020, R13). */
+.scan-result.neutral .result-icon {
+    color: var(--text-secondary);
+}
+
+.scan-result.neutral .result-title {
+    color: var(--text-primary);
+}

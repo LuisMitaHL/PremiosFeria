@@ -9,6 +9,7 @@ import {
 } from '../../lib/api.js';
 import { Settings, LogOut, Loader, MapPin, Target, QrCode, Pencil, AlertTriangle, ClipboardList, Save, BookOpen, Monitor, Zap, Bot, Globe, Palette, FlaskConical, TestTube, Ruler, Gamepad2, Sprout, Music, Dumbbell, Camera, Rocket, Brain } from 'lucide-react';
 import DynamicIcon from '../../components/DynamicIcon.jsx';
+import ActivitiesSection from './ActivitiesSection.jsx';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -21,8 +22,10 @@ export default function AdminDashboard() {
     const [showModal, setShowModal] = useState(false);
     const [form, setForm] = useState({
         name: '', emoji: 'BookOpen', stand_number: '', description: '',
-        visit_points: 10, activity_points: 25
     });
+    // The console has three sections (spec 019, R28). Rewards and claims arrive
+    // with specs 021 and 018.
+    const [section, setSection] = useState('actividades');
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -64,8 +67,6 @@ export default function AdminDashboard() {
             emoji: community.emoji,
             stand_number: community.stand_number || '',
             description: community.description || '',
-            visit_points: community.visit_points || 10,
-            activity_points: community.activity_points || 25,
         });
         setShowModal(true);
     }
@@ -73,15 +74,6 @@ export default function AdminDashboard() {
     async function handleSubmit(e) {
         e.preventDefault();
         if (!form.name.trim() || !community) return;
-
-        if (form.visit_points > 30) {
-            alert('El límite de puntos por visita es 30.');
-            return;
-        }
-        if (form.activity_points > 100) {
-            alert('El límite de puntos por actividad es 100.');
-            return;
-        }
 
         try {
             const updated = await updateCommunity(community.id, form);
@@ -184,8 +176,9 @@ export default function AdminDashboard() {
                         </p>
                     )}
                     <div className="group-points-config">
-                        <div className="point-tag"><MapPin size={12} /> Visita: {community.visit_points || 10} pts</div>
-                        <div className="point-tag"><Target size={12} /> Actividad: {community.activity_points || 25} pts</div>
+                        <div className="point-tag"><MapPin size={12} /> Visita: 10 pts</div>
+                        <div className="point-tag"><Target size={12} /> Evento principal: 30 pts</div>
+                        <div className="point-tag"><Target size={12} /> Otras actividades: 10 pts</div>
                     </div>
                     <div className="group-actions">
                         <button
@@ -209,6 +202,46 @@ export default function AdminDashboard() {
                     <div className="empty-icon"><AlertTriangle size={40} /></div>
                     <p>No tienes una comunidad asignada. Contacta al organizador.</p>
                 </div>
+            )}
+
+            {/* The console's three sections (spec 019, R28). Rewards and claims are
+                placeholders until specs 021 and 018. */}
+            {community && (
+                <>
+                    <div className="section-tabs">
+                        {[
+                            ['actividades', 'Actividades'],
+                            ['premios', 'Premios'],
+                            ['canjes', 'Canjes'],
+                        ].map(([key, label]) => (
+                            <button
+                                key={key}
+                                className={`section-tab ${section === key ? 'is-active' : ''}`}
+                                onClick={() => setSection(key)}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {section === 'actividades' && (
+                        <ActivitiesSection communityId={community.id} />
+                    )}
+
+                    {section === 'premios' && (
+                        <div className="empty-state">
+                            <p>Todavía no puedes registrar premios desde aquí.</p>
+                            <p className="empty-hint">Llega con el spec 021.</p>
+                        </div>
+                    )}
+
+                    {section === 'canjes' && (
+                        <div className="empty-state">
+                            <p>Todavía no puedes registrar canjes desde aquí.</p>
+                            <p className="empty-hint">Llega con el spec 018.</p>
+                        </div>
+                    )}
+                </>
             )}
 
             {/* Recent Scans */}
@@ -306,37 +339,6 @@ export default function AdminDashboard() {
                                     onChange={e => setForm({ ...form, description: e.target.value })}
                                     placeholder="Breve descripción del grupo"
                                 />
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                <div className="form-group">
-                                    <label className="form-label">Pts por Visita</label>
-                                    <input
-                                        className="form-input"
-                                        type="number"
-                                        min="1"
-                                        max="30"
-                                        value={form.visit_points}
-                                        onChange={e => {
-                                            const val = parseInt(e.target.value) || 10;
-                                            setForm({ ...form, visit_points: val > 30 ? 30 : val });
-                                        }}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Pts por Actividad</label>
-                                    <input
-                                        className="form-input"
-                                        type="number"
-                                        min="1"
-                                        max="100"
-                                        value={form.activity_points}
-                                        onChange={e => {
-                                            const val = parseInt(e.target.value) || 25;
-                                            setForm({ ...form, activity_points: val > 100 ? 100 : val });
-                                        }}
-                                    />
-                                </div>
                             </div>
 
                             <button type="submit" className="btn btn-primary btn-full">
