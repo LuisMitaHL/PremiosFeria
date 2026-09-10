@@ -1,0 +1,44 @@
+# Definition of Done
+
+Every pull request must satisfy all of it. The reviewer checks it; the author runs it first.
+
+## Specification
+
+- [ ] The work maps to an approved spec, and the PR links to it.
+- [ ] Nothing was built that no requirement asked for.
+- [ ] The spec was updated if reality diverged from it during implementation.
+- [ ] Every acceptance criterion in the spec is checked off.
+
+## Quality gates
+
+- [ ] `npm run lint` passes with no errors and no new warnings.
+- [ ] `npm test` passes.
+- [ ] `npm run test:sql` passes against a database started with `./dev.sh`.
+- [ ] CI is green on the pull request.
+
+`npm run build` is a release step, not a gate. Do not use it to verify a change.
+
+## Code
+
+- [ ] No secret, credential or real seed data was added to a tracked file.
+- [ ] No business rule was moved from Postgres into the client.
+- [ ] No RPC accepts a caller identity as a parameter.
+- [ ] New tables have RLS enabled and explicit policies.
+- [ ] No syntax or Web API newer than Chromium 83 was introduced.
+- [ ] No emoji in source code identifiers, comments or logs.
+- [ ] Dead code was removed, not commented out.
+
+## Database
+
+- [ ] If the schema changed, the PR states whether a wipe is required and whether the change is
+      safe to apply during a live event.
+- [ ] Changes to `supabase/postgres-init/` were verified with `./dev.sh --fresh`.
+
+## Repository hygiene
+
+- [ ] Commits follow the Spanish conventional format with emoji (`AGENTS.md`).
+- [ ] **No commit message, PR description, comment or file credits, mentions or links an AI
+      model or assistant.** No `Co-Authored-By` naming a model, no "Generated with" footer, no
+      session links.
+- [ ] The branch is named after its spec (`NNN-slug`).
+- [ ] Documentation touched by the change was updated in the same PR.
