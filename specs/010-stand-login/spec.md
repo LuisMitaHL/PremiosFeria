@@ -19,12 +19,10 @@ once and then forgotten; the session lasts longer than the event. And because si
 stand means being able to award points, the small surface it presents has to hold up against
 somebody with a phone and an afternoon.
 
-## 2. Purpose of this document
+This documents behaviour that already ships, recorded so its reasoning survives the changes around
+it. Spec 023 takes over how these credentials come into existence; the sign-in itself is unchanged.
 
-Behaviour that already ships, recorded so its reasoning survives the changes around it. Spec 023
-takes over how these credentials come into existence; the sign-in itself is unchanged.
-
-## 3. Scope
+## 2. Scope
 
 **In scope**
 
@@ -41,33 +39,33 @@ takes over how these credentials come into existence; the sign-in itself is unch
 - The organiser's sign-in, which is separate and must stay separate. Spec 017.
 - The attendee's session, which has no password at all. Spec 001.
 
-## 4. User scenarios
+## 3. User scenarios
 
-### 4.1 A stand signs in
+### 3.1 A stand signs in
 
 **Given** a stand admin holding the slip they were given
 **When** they enter their login name and password
 **Then** they reach their console and stay signed in for the rest of the fair.
 
-### 4.2 A password typed wrong
+### 3.2 A password typed wrong
 
 **Given** a stand admin mistyping in a hurry
 **When** they submit
 **Then** they are told the credentials are wrong, without being told which half.
 
-### 4.3 Somebody guessing
+### 3.3 Somebody guessing
 
 **Given** someone trying passwords against a login name they saw
 **When** they have tried a number of times in a few minutes
 **Then** they are refused for a while regardless of what they type.
 
-### 4.4 Somebody fishing for stand names
+### 3.4 Somebody fishing for stand names
 
 **Given** someone trying login names to see which exist
 **When** they submit any of them
 **Then** every response is identical. Nothing distinguishes a real stand from an invented one.
 
-## 5. Requirements
+## 4. Requirements
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -87,7 +85,7 @@ takes over how these credentials come into existence; the sign-in itself is unch
 | R14 | The response to a successful sign-in MUST NOT contain the password or its hash. | Must |
 | R15 | Nothing in the sign-in path MUST reveal how many stands exist or what they are called. | Must |
 
-## 6. Business rules
+## 5. Business rules
 
 | Rule | Value | Rationale |
 |---|---|---|
@@ -100,7 +98,7 @@ takes over how these credentials come into existence; the sign-in itself is unch
 | Session length | Longer than an event | A stand signing in again halfway through the afternoon, on a phone with a slip they may have lost, is a failure mode worth avoiding more than the exposure of a long session on a device they are holding. |
 | Password recovery | None | There is no address to send anything to. Recovery is a person at the organiser's desk issuing a new one (spec 023). |
 
-## 7. Edge cases and failure modes
+## 6. Edge cases and failure modes
 
 | Situation | Expected behaviour | Message shown |
 |---|---|---|
@@ -116,7 +114,7 @@ takes over how these credentials come into existence; the sign-in itself is unch
 | A session expires mid-event | Signing in again restores everything; nothing about the stand is lost | none |
 | An attendee's session is presented to a stand's screen | The screen may render, but nothing a stand can do will work | refusals from the rules themselves |
 
-## 8. Security and integrity
+## 7. Security and integrity
 
 Signing in as a stand is the ability to award points, so this is a real target.
 
@@ -138,7 +136,7 @@ Signing in as a stand is the ability to award points, so this is a real target.
   the alternative — a stand locked out mid-fair with no way back — is the worse failure. It is
   paired with the organiser's ability to withdraw a stand (spec 023) as the way to end one early.
 
-## 9. Acceptance criteria
+## 8. Acceptance criteria
 
 - [ ] A stand signs in with a login name and password and reaches its console.
 - [ ] The login name is accepted in any case and with surrounding whitespace.
@@ -150,6 +148,10 @@ Signing in as a stand is the ability to award points, so this is a real target.
 - [ ] A successful sign-in produces a session that later rules resolve the stand from.
 - [ ] The session outlasts a full event and can be renewed without the password.
 - [ ] Nothing in the sign-in path reveals which stands exist.
+
+## 9. Open questions
+
+None.
 
 ## 10. As-built notes
 
