@@ -69,13 +69,13 @@ to be deleted. The numbers stay retired rather than being reused.
 
 | # | Was going to be | Replaced by | Why |
 |---|---|---|---|
+| 004 | `visit-cooldown-rules` | 020 | The cooldown it would have documented (5 minutes) is replaced by 30 minutes, and spec 020 owns the rule |
 | 005 | `activity-once-per-stand` | 019, 020 | One activity per stand becomes up to three, each a real entity with its own identity |
 | 006 | `points-ceiling-enforcement` | 020 | Per-stand configurable ceilings become fixed event-wide values |
 | 008 | `rewards-catalog` | 021, 018 | The catalogue stops being seed-only and becomes something a stand manages |
 | 009 | `reward-claiming` | 018 | Claiming in the app is replaced by in-person fulfilment confirmed by the stand |
-| 014 | `stand-admin-console` | 019, 021 | Its point configuration disappears; what remains is activity and reward management |
 | 012 | `csv-provisioning` | 017, 023, 021 | Seeding stands and rewards from CSV disappears: the organiser creates stands, and stands register their own rewards |
-| 004 | `visit-cooldown-rules` | 020 | The cooldown it would have documented (5 minutes) is replaced by 30 minutes, and spec 020 owns the rule |
+| 014 | `stand-admin-console` | 019, 021 | Its point configuration disappears; what remains is activity and reward management |
 
 ---
 
