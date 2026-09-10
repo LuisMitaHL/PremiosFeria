@@ -6,7 +6,7 @@
 | **Branch** | `020-fixed-points-model` |
 | **Actors** | Participant, Stand admin |
 | **Created** | 2026-09-10 |
-| **Last updated** | 2026-09-10 |
+| **Last updated** | 2026-09-10 (amended after spec 022) |
 
 ## 1. Purpose
 
@@ -91,7 +91,8 @@ balance does not change.
 | R8 | An attendee MUST be able to be awarded points for a given activity at most once, for the whole event. | Must |
 | R9 | A repeated attempt at an already completed activity MUST be refused with a message saying the attendee already took part in it, identically whether it arrives by camera or by manual code. | Must |
 | R10 | The amount awarded MUST be determined by the system at the moment of the award, and MUST NOT be read from anything the client supplied. | Must |
-| R11 | Points already awarded MUST NOT be withdrawn when the activity or stand that awarded them is renamed, edited or deleted. | Must |
+| R11 | Points already awarded MUST NOT be withdrawn as a side effect of anything: renaming, editing, withdrawing or removing the activity, stand or participant involved. | Must |
+| R11a | The only permitted change to a balance other than earning and claiming is a deliberate adjustment by the organiser, which requires a reason and is recorded. See spec 022, R23 to R27. | Must |
 | R12 | A balance MUST never be negative. | Must |
 | R13 | The refusals in R4 and R9 MUST NOT be reported as errors: the attendee did nothing wrong, and the message MUST say what happened and, for R4, when they can return. | Should |
 
@@ -107,7 +108,7 @@ balance does not change.
 | Main events per stand | At most 1 | Without a limit, every stand marks all three activities as main events and the distinction disappears — there is no cost to doing so. One per stand also caps a stand's activity value at 50 points (30 + 10 + 10), which keeps stands comparable. |
 | Completions per activity | 1 per attendee, for the event | An activity has a schedule and a duration; doing it twice is not a thing that happens. Repeating it is farming. |
 | Award values are constants | Change requires a deployment | These values define the economy that reward costs are set against. Changing them mid-event would silently revalue every prize and every position on the leaderboard. |
-| Points already awarded | Never withdrawn | A leaderboard that moves backwards destroys trust in it faster than any other failure. Editing a typo in an activity name must never cost anyone a place. |
+| Points already awarded | Never withdrawn as a side effect | A leaderboard that moves backwards destroys trust in it faster than any other failure. Editing a typo in an activity name must never cost anyone a place. A deliberate, reasoned, recorded adjustment by the organiser is a different act and is permitted; spec 022 bounds it. |
 
 ### What the economy is worth
 
