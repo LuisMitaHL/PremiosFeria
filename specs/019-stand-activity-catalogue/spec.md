@@ -98,6 +98,8 @@ another.
 |---|---|---|
 | R1 | A stand MUST be able to create at most 3 activities for the entire event. | Must |
 | R2 | Creating an activity MUST require all of: a name, a description, an estimated start time, a duration, and whether it is the stand's main event. | Must |
+| R2a | A name MUST be between 3 and 40 characters, a description MUST be at most 100 characters, and a duration MUST be between 1 and 60 whole minutes. | Must |
+| R2b | These limits MUST be enforced where the data is stored, not only in the form. | Must |
 | R3 | A stand MUST be able to have no activities at all. | Must |
 | R4 | A stand MUST have at most one main event, as required by spec 020. | Must |
 | R5 | An activity MUST NOT be deleted, ever. | Must |
@@ -159,6 +161,9 @@ another.
 | Editable window | While scheduled only | The alternative allows two attendees to earn different amounts for the same activity, which is indefensible to the one who earned less. |
 | Deletion | Never; finishing is the only ending | A deleted activity would take its history with it, and R11 of spec 020 says awards are never withdrawn. |
 | Reopening | Never | Closing early is how a stand says "this is over". If it could be undone, an attendee who was told they were too late might find out they were not. |
+| Name length | 3 to 40 characters | Fits "Taller de introducción a Rust" while still rendering in a card and in the attendee's list without truncating. |
+| Description length | Up to 100 characters | Forces stands to be concise and keeps every card the same height, so the attendee's list stays scannable. |
+| Duration | 1 to 60 minutes | In practice activities are not expected to exceed 30 minutes; the cap is set at 60 so the rule is not the constraint. The upper bound exists so a mistyped duration cannot leave an activity open past the end of the fair. |
 
 ## 6. Edge cases and failure modes
 
@@ -177,6 +182,9 @@ another.
 | A stand edits an activity that is running | Refused | "No puedes editar una actividad que ya inició." (stand) |
 | The estimated start time passes without the activity starting | Nothing changes: still scheduled, still startable | attendee sees it as not yet started |
 | A duration of zero or negative | Refused at creation | "La duración debe ser de al menos un minuto." (stand) |
+| A duration above 60 minutes | Refused at creation | "La duración no puede superar los 60 minutos." (stand) |
+| A name shorter than 3 or longer than 40 characters | Refused at creation | "El nombre debe tener entre 3 y 40 caracteres." (stand) |
+| A description longer than 100 characters | Refused at creation | "La descripción no puede superar los 100 caracteres." (stand) |
 | A stand has no activities | The attendee sees that stand with no activities, without it looking broken | none |
 
 ## 7. Security and integrity
@@ -225,18 +233,13 @@ An activity is a gate on awarding points, so its state is part of the point econ
 - [ ] Two simultaneous start actions produce exactly one running activity.
 - [ ] Two simultaneous creations at the limit produce exactly three activities, not four.
 - [ ] A scan arriving as the duration elapses either awards once or is refused, never both.
+- [ ] A 41-character name, a 101-character description and a 61-minute duration are each refused.
+- [ ] Those three limits are still refused when submitted directly to the API, bypassing the form.
 
 ## 9. Open questions
 
-The three limits below are **proposed, not decided**. They are presentation limits rather than
-game rules, but they are still values, and this spec cannot be approved until they are confirmed.
-
-- `[NEEDS CLARIFICATION: activity name length]` — proposed 3 to 40 characters. Long enough for
-  "Taller de introducción a Rust", short enough for a card and for the attendee's list.
-- `[NEEDS CLARIFICATION: description length]` — proposed up to 200 characters. Enough to say what
-  it is and who it is for, short enough that the list stays scannable.
-- `[NEEDS CLARIFICATION: duration bounds]` — proposed 1 to 240 minutes. The upper bound exists
-  only so a mistyped duration cannot leave an activity open past the end of the fair.
+None. The three presentation limits raised during the interview — name length, description length
+and duration bounds — were confirmed and moved into section 5.
 
 ## 10. Current behaviour and the gap
 
