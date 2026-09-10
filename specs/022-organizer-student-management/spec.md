@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `022-organizer-student-management` |
 | **Actors** | Event operator, Participant |
 | **Created** | 2026-09-10 |
@@ -257,6 +257,45 @@ Nothing in this spec exists. There is no organiser, and therefore no desk.
 - Attaching a profile to a new device changes the identity a session resolves from, which is the
   one thing every other rule treats as immutable. It needs its own guarded path, and nothing else
   may reuse it.
+
+## 10b. As built
+
+The desk lives in `supabase/postgres-init/58_organizer_students.sql` — five functions, each of
+which refuses a caller that `calling_organizer()` cannot resolve. The panel area is
+`src/pages/organizer/StudentsArea.jsx`. Two new tables carry the parts that were not derivable:
+`recovery_codes` and `point_adjustments`, both with RLS enabled and no policy at all, so no client
+reads either one; the organiser sees them through `participant_detail()`.
+
+**Recovery is an account takeover performed on purpose**, so every safeguard sits on the code
+rather than on the screen that shows it. One open code per attendee (partial unique index), ten
+minutes of life derived from `issued_at` instead of a stored status, single use, and an alphabet
+without `O`, `0`, `I`, `1` or `L` because the code is dictated out loud across a noisy hall.
+Issuing a second code closes the first: two live codes for one profile is two chances to walk off
+with somebody's afternoon.
+
+**Detaching the old device turned out to have two halves.** The database half was already right —
+`redeem_recovery_code` moves `auth_user_id` and the fingerprint, so the old phone can neither scan
+nor type the nickname to take the profile back. The client half was not: `AuthContext` fell back
+to the `localStorage` cache whenever the session resolved to no profile, so the old phone kept
+displaying a balance it no longer owned until a scan failed with a confusing message. The cache is
+now consulted only when there is no session at all. R7 is a promise the organiser makes out loud
+while handing over the code, and it has to be true on both phones, not just in the ledger.
+
+**The two sanctions are checked where the decision is made**, not on the stand's screen: barred is
+checked in `confirm_handover`, removed in `validate_and_scan` and `confirm_handover` both. Each
+returns the real reason. Telling a stand that an attendee is short on points when they are actually
+barred sends them to argue with the wrong person.
+
+**An adjustment is the only change to a balance that did not happen in the hall**, so it carries a
+mandatory reason, cannot be zero, cannot drive a balance below zero, and lands in its own table.
+That last part is what lets a balance be decomposed into earned, spent and granted, which is the
+only way to answer whether a leaderboard position was earned.
+
+**Dev stopped diverging on auth.** The local stack ran its own mock, whose `GET /user` accepted
+only a stand token; an attendee's `getUser()` therefore always failed in dev, which is what made
+recovery appear broken after the profile had in fact moved correctly. The stack now runs the same
+`auth/server.mjs` production runs, and the mock is gone. This is the third bug that came out of
+dev and production disagreeing, and the second in the auth path.
 
 ## 11. References
 

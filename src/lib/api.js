@@ -70,6 +70,11 @@ export async function getLeaderboard() {
     const { data, error } = await supabase
         .from('participants')
         .select('id, name, points')
+        // Quien fue retirado del evento ya no participa, y dejarlo ocupando un
+        // lugar en una pantalla proyectada al salon desdiria el acto
+        // (spec 007, R2a). A quien tiene el canje bloqueado no le pasa nada
+        // aca: la sancion es sobre gastar, no sobre ganar.
+        .eq('is_removed', false)
         .order('points', { ascending: false });
 
     if (error) throw new Error(`Error al obtener leaderboard: ${error.message}`);
@@ -209,7 +214,7 @@ export async function loginAdmin(email, password) {
     }
 
     // The auth session carries the linked community in user_metadata (set by
-    // Supabase Auth in prod and by the dev auth mock). Fall back to resolving
+    // the auth service). Fall back to resolving
     // via communities.auth_user_id for sessions without that metadata.
     let comm = data.user.user_metadata?.community_id
         ? { id: data.user.user_metadata.community_id }
@@ -257,6 +262,83 @@ export async function loginOrganizer(username, password) {
         success: true,
         user: { id: data.user.id, username: data.user.user_metadata.username, organizer: true },
     };
+}
+
+// ─── Organizer: students (spec 022) ──────────
+
+export async function organizerIssueRecoveryCode(participantId) {
+    const { data, error } = await supabase.rpc('issue_recovery_code', {
+        p_participant_id: participantId,
+    });
+    if (error) throw new Error(`Error al generar el código: ${error.message}`);
+    return data;
+}
+
+export async function organizerParticipantDetail(participantId) {
+    const { data, error } = await supabase.rpc('participant_detail', {
+        p_participant_id: participantId,
+    });
+    if (error) throw new Error(`Error al obtener el detalle: ${error.message}`);
+    return data;
+}
+
+export async function organizerRenameParticipant(participantId, name) {
+    const { data, error } = await supabase.rpc('organizer_rename_participant', {
+        p_participant_id: participantId,
+        p_name: name,
+    });
+    if (error) throw new Error(`Error al renombrar: ${error.message}`);
+    return data;
+}
+
+export async function organizerSetParticipantFlags(participantId, { claimsBarred, removed }) {
+    const { data, error } = await supabase.rpc('organizer_set_participant_flags', {
+        p_participant_id: participantId,
+        p_claims_barred: claimsBarred ?? null,
+        p_removed: removed ?? null,
+    });
+    if (error) throw new Error(`Error al cambiar el estado: ${error.message}`);
+    return data;
+}
+
+export async function organizerAdjustPoints(participantId, amount, reason) {
+    const { data, error } = await supabase.rpc('organizer_adjust_points', {
+        p_participant_id: participantId,
+        p_amount: Number(amount),
+        p_reason: reason,
+    });
+    if (error) throw new Error(`Error al ajustar los puntos: ${error.message}`);
+    return data;
+}
+
+// El organizador ve a todos, incluidos los retirados: el ranking los esconde,
+// el mostrador no.
+export async function organizerListParticipants() {
+    const { data, error } = await supabase
+        .from('participants')
+        .select('id, name, points, is_removed, claims_barred, registered_at')
+        .order('name', { ascending: true });
+    if (error) throw new Error(`Error al obtener estudiantes: ${error.message}`);
+    return data;
+}
+
+// El estudiante escribe en su teléfono nuevo el código que le dictaron.
+export async function redeemRecoveryCode(code, fingerprint) {
+    await supabase.auth.signOut();
+    const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+    if (authError || !authData?.user) {
+        throw new Error('No se pudo crear tu sesión. Intenta de nuevo.');
+    }
+    const { data, error } = await supabase.rpc('redeem_recovery_code', {
+        p_code: code,
+        p_fingerprint: fingerprint || null,
+    });
+    if (error) throw new Error(`Error al recuperar: ${error.message}`);
+    if (data?.error) {
+        await supabase.auth.signOut();
+        throw new Error(data.error);
+    }
+    return data.participant;
 }
 
 // ─── Organizer: communities (spec 023) ───────

@@ -192,6 +192,19 @@ BEGIN
 
   SELECT * INTO v_participant FROM participants WHERE id = v_row.participant_id FOR UPDATE;
 
+  -- Las dos sanciones del spec 022, comprobadas donde se decide el canje y no
+  -- en la pantalla del stand. El motivo real se dice tal cual: decirle a un
+  -- stand que faltan puntos cuando en realidad esta bloqueado lo manda a
+  -- discutir con la persona equivocada.
+  IF v_participant.is_removed THEN
+    RETURN jsonb_build_object('success', false,
+      'reason', 'Este estudiante ya no participa en el evento.');
+  END IF;
+  IF v_participant.claims_barred THEN
+    RETURN jsonb_build_object('success', false,
+      'reason', 'Este estudiante no puede canjear premios.');
+  END IF;
+
   IF EXISTS (SELECT 1 FROM claimed_rewards
              WHERE participant_id = v_participant.id AND reward_id = p_reward_id) THEN
     RETURN jsonb_build_object('success', false,

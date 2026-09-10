@@ -170,6 +170,10 @@ BEGIN
     RETURN jsonb_build_object('valid', false, 'reason', 'Regístrate para participar.');
   END IF;
 
+  IF (SELECT is_removed FROM participants WHERE id = v_participant_id) THEN
+    RETURN jsonb_build_object('valid', false, 'reason', 'Tu perfil ya no está activo.');
+  END IF;
+
   v_json := p_encoded_payload::JSONB;
   SELECT value INTO v_secret FROM settings WHERE key = 'hmac_secret';
   v_current_ts := EXTRACT(EPOCH FROM NOW())::BIGINT / 15;

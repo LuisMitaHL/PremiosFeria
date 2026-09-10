@@ -51,8 +51,10 @@ BEGIN
 
     -- Mismo nombre, otro dispositivo. No se puede distinguir a quien cambió de
     -- teléfono de quien quiere el perfil ajeno, así que se rechaza: el error
-    -- caro es el otro. El spec 022 le da salida a quien de verdad lo perdió.
-    RETURN jsonb_build_object('error', 'Ese nombre ya está en uso, elige otro.');
+    -- caro es el otro. Desde el spec 022 hay salida para quien de verdad lo
+    -- perdió, y el mensaje ya puede prometerla (spec 001, R10b).
+    RETURN jsonb_build_object('error',
+      'Ese nombre ya está en uso. Si es tuyo y cambiaste de dispositivo, acércate al stand de organización para recuperarlo.');
   END IF;
 
   BEGIN

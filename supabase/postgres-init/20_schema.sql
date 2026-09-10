@@ -32,8 +32,43 @@ CREATE TABLE IF NOT EXISTS participants (
   name TEXT NOT NULL CHECK (char_length(btrim(name)) BETWEEN 2 AND 24),
   points INT DEFAULT 0 CHECK (points >= 0),
   fingerprint TEXT,
+  -- Sanciones del organizador (spec 022). Retirado no participa en nada;
+  -- bloqueado sigue jugando y sumando, pero no canjea: es la sancion que el
+  -- registro anuncia para un nombre ofensivo. Ninguna borra nada.
+  is_removed BOOLEAN NOT NULL DEFAULT false,
+  claims_barred BOOLEAN NOT NULL DEFAULT false,
   registered_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Ajustes manuales de saldo (spec 022). Es el unico cambio de puntos que no
+-- viene de escanear ni de canjear, y por eso lleva motivo: un numero sin
+-- motivo no se distingue de un favor. Van en su propia tabla para que un saldo
+-- pueda descomponerse en ganado y otorgado.
+CREATE TABLE IF NOT EXISTS point_adjustments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  participant_id UUID REFERENCES participants(id) ON DELETE RESTRICT NOT NULL,
+  amount INT NOT NULL CHECK (amount <> 0),
+  reason TEXT NOT NULL CHECK (char_length(btrim(reason)) BETWEEN 3 AND 200),
+  adjusted_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Codigos de recuperacion (spec 022). Los emite el organizador cuando decide,
+-- mirando a la persona, que el reclamo es genuino. El sistema no puede
+-- distinguir a quien cambio de telefono de quien quiere el perfil ajeno; una
+-- persona si.
+CREATE TABLE IF NOT EXISTS recovery_codes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  participant_id UUID REFERENCES participants(id) ON DELETE RESTRICT NOT NULL,
+  code TEXT NOT NULL,
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  closed_at TIMESTAMPTZ,
+  closed_reason TEXT CHECK (closed_reason IN ('used', 'replaced'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS recovery_codes_one_open_per_participant
+  ON recovery_codes (participant_id) WHERE closed_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS recovery_codes_open_code_unique
+  ON recovery_codes (code) WHERE closed_at IS NULL;
 
 -- Unico en todo el evento, sin distinguir mayusculas ni espacios. Es un indice
 -- y no un chequeo previo porque dos personas eligiendo el mismo nickname libre

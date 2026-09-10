@@ -38,6 +38,14 @@ CREATE POLICY "scans_read" ON scans FOR SELECT USING (
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "settings_read" ON settings;
 
+-- Codigos de recuperacion y ajustes de puntos: RLS activa y SIN politicas.
+-- Un codigo de recuperacion legible es la capacidad de quedarse con el perfil
+-- de otro; los ajustes los lee el organizador por funciones SECURITY DEFINER.
+ALTER TABLE recovery_codes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "recovery_codes_read" ON recovery_codes;
+ALTER TABLE point_adjustments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "point_adjustments_read" ON point_adjustments;
+
 -- Rewards: lectura pública
 ALTER TABLE rewards ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "rewards_read" ON rewards;

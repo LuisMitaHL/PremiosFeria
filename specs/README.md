@@ -55,7 +55,7 @@ Part retro-spec, part change. Each opens with what exists today and why it is be
 | 019 | [`stand-activity-catalogue`](019-stand-activity-catalogue/spec.md) | Stand admin | Implemented |
 | 020 | [`fixed-points-model`](020-fixed-points-model/spec.md) | Participant, Stand admin | Implemented |
 | 021 | [`stand-reward-management`](021-stand-reward-management/spec.md) | Stand admin | Implemented |
-| 022 | [`organizer-student-management`](022-organizer-student-management/spec.md) | Event operator | Draft |
+| 022 | [`organizer-student-management`](022-organizer-student-management/spec.md) | Event operator | Implemented |
 | 023 | [`organizer-community-management`](023-organizer-community-management/spec.md) | Event operator | Implemented |
 | 024 | [`system-audit-log`](024-system-audit-log/spec.md) | Event operator | Draft |
 | 025 | [`participant-activity-progress`](025-participant-activity-progress/spec.md) | Participant | Implemented |

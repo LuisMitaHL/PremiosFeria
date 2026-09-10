@@ -42,7 +42,12 @@ export function AuthProvider({ children }) {
                         .maybeSingle();
                     p = data;
                 }
-                if (!p) {
+                // El localStorage es cache de visualizacion, y solo vale cuando
+                // todavia no hay sesion. Si la hay y ningun perfil cuelga de
+                // ella, este telefono dejo de ser el duenio: se lo recuperaron
+                // (spec 022, R7). Seguir mostrando el saldo viejo no se lo
+                // devuelve, solo retrasa la noticia hasta que falle un escaneo.
+                if (!p && !user) {
                     const id = getCurrentParticipantId();
                     if (id) p = await getParticipantById(id);
                 }
@@ -88,6 +93,18 @@ export function AuthProvider({ children }) {
         const p = await getParticipantById(id);
         setParticipant(p);
         return { ...p, recovered };
+    };
+
+    // Recuperar es cambiar la identidad de la sesion, asi que el contexto se
+    // actualiza aca en vez de recargar la pagina: una recarga corre contra la
+    // escritura del token nuevo y a veces la gana, dejando al estudiante en la
+    // pantalla de registro con su perfil ya recuperado.
+    const recoverParticipant = async (code) => {
+        const { redeemRecoveryCode } = await import('./api.js');
+        const p = await redeemRecoveryCode(code, getDeviceFingerprint());
+        saveCurrentParticipantId(p.id);
+        setParticipant(p);
+        return p;
     };
 
     const refreshParticipant = async () => {
@@ -143,6 +160,7 @@ export function AuthProvider({ children }) {
         participant,
         participantLoading,
         registerParticipant,
+        recoverParticipant,
         refreshParticipant,
         logoutParticipant,
         // Admin
@@ -168,7 +186,7 @@ export function useAuth() {
 }
 
 // --- Device Fingerprint (moved from old storage.js) ---
-function getDeviceFingerprint() {
+export function getDeviceFingerprint() {
     const nav = navigator;
     const screen = window.screen;
     const raw = [

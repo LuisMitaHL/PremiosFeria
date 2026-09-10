@@ -39,6 +39,7 @@ SCHEMA_FILES=(
   supabase/postgres-init/55_organizer.sql
   supabase/postgres-init/56_organizer_communities.sql
   supabase/postgres-init/57_registration.sql
+  supabase/postgres-init/58_organizer_students.sql
   supabase/postgres-init/80_column_grants.sql
 )
 

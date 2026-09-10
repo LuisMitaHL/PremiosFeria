@@ -94,7 +94,7 @@ able to claim prizes.
 | R8 | When the nickname is in use **and the request comes from the device that profile was registered on**, the system MUST return the attendee to that existing profile with all of its accumulated state, and MUST NOT create a second profile. | Must |
 | R9 | When the nickname is in use **and the request does not come from that device**, the system MUST refuse it, MUST NOT create a profile, and MUST NOT alter the existing one. | Must |
 | R10 | The refusal in R9 MUST tell the attendee that the nickname is already taken and ask them to choose another. | Must |
-| R10b | Once spec 017 ships, the refusal MUST additionally tell the attendee that a profile can be restored at the organiser's stand. **Deferred: not implemented with this spec.** | Must (deferred) |
+| R10b | Once recovery exists, the refusal MUST additionally tell the attendee that a profile can be restored at the organiser's stand. **Delivered by spec 022.** | Must |
 | R11 | The registration screen MUST state, before submission, that an offensive nickname forfeits the ability to claim prizes. | Must |
 | R12 | The system MUST NOT automatically reject a nickname for its content. | Must |
 | R13 | A participant MUST begin with a balance of zero. | Must |
@@ -123,7 +123,7 @@ able to claim prizes.
 | More than 24 characters | Refused, or prevented at the input | "El nombre no puede tener más de 24 caracteres" |
 | Whitespace only | Refused as empty | "Ingresa tu nombre" |
 | Same nickname, same device | Existing profile restored, silently and immediately | none — they land on their dashboard |
-| Same nickname, different device | Refused, existing profile untouched | "Ese nombre ya está en uso, elige otro." (R10b extends this once 017 ships) |
+| Same nickname, different device | Refused, existing profile untouched | "Ese nombre ya está en uso. Si es tuyo y cambiaste de dispositivo, acércate al stand de organización para recuperarlo." (R10b, delivered by 022) |
 | Same nickname differing only in case or spacing | Treated as the same nickname | as above, per device match |
 | Two attendees submit the same free nickname at the same instant | Exactly one profile is created; the loser is refused as in R9 | as above |
 | The device identity cannot be determined | The attendee can still register; recovery on that device is simply unavailable | none |
@@ -192,7 +192,7 @@ This began as a retro-spec and became a change: only part of what is written abo
 | R5, R6 | **Missing.** Nicknames are free-form and may repeat; nothing compares them. |
 | R7 | Partially met. A profile is always created — `src/lib/api.js:12-33` signs out, opens an anonymous session and inserts the row — but *unconditionally*, with no check for an existing nickname. |
 | R8, R9, R10 | **Missing.** There is no recovery path at all. A device that loses `localStorage` loses the profile permanently, and re-registering produces a second profile with the same name and zero points. |
-| R10b | **Deferred to spec 017.** |
+| R10b | **Deferred at the time; delivered by spec 022.** |
 | R11, R12 | R12 is met by omission — no filter exists. R11 is **missing**: the screen currently reassures the attendee that "tu información se guarda de forma segura en la nube", which is close to the opposite of the warning R11 asks for. |
 | R14 | Met in spirit. A device fingerprint is collected at `src/lib/AuthContext.jsx:74` and stored on the participant, but **nothing reads it** — it affects no decision today. This spec is what gives it a purpose. |
 | R16 | **Missing.** The field is labelled "Nombre completo *" and shows "Ej: María García", inviting exactly the real names R5 will now refuse. |
@@ -221,15 +221,17 @@ gone: there is no path left that skips the uniqueness or the device check.
 typing `ZORRO` — the profile came back with its 85 points — then changed the stored device identity
 and was refused with "Ese nombre ya está en uso, elige otro."
 
-**R10b is still deferred.** The refusal deliberately does not mention the organiser's stand, because
-until spec 022 nobody there can help.
+**R10b was deferred and is now delivered.** The refusal deliberately said nothing about the
+organiser's stand while nobody there could help. Spec 022 gave the desk a recovery code to hand
+out, so the message now names it: promising help that does not exist is worse than refusing
+plainly, and so is withholding help that does.
 
 ## 11. References
 
 - Constitution: III (rules in the database), IV (identity is never a parameter), VI (structural
   guarantees); `AGENTS.md` section 8.
 - Glossary: *Participant*, *Points*.
-- Spec 017 — `event-organizer-role`, which owns cross-device recovery, renaming and removal.
-  **001 ships without referring to it** (R10b is deferred), so until 017 lands an attendee whose
-  device identity changed has no recovery path at all.
+- Spec 022 — `organizer-student-management`, which owns cross-device recovery, renaming and
+  removal. **001 shipped without referring to it** (R10b was deferred); with 022 in place the
+  refusal now points an attendee whose device identity changed at the organiser's stand.
 - Spec 007 — `live-leaderboard`, which is why the 24-character cap has the value it has.
