@@ -9,7 +9,7 @@ import { supabase } from '../supabaseClient.js';
 // Kept in one place so the two cannot drift apart.
 export const PARTICIPANT_COLUMNS = 'id, name, points, registered_at';
 export const COMMUNITY_COLUMNS =
-    'id, username, name, emoji, stand_number, description, auth_user_id, created_at';
+    'id, username, name, emoji, stand_number, description, is_withdrawn, auth_user_id, created_at';
 
 // Activities carry a derived state -- activity_state() in the database, exposed
 // by PostgREST as a computed column. The screens must read that rather than
@@ -251,6 +251,75 @@ export async function loginOrganizer(username, password) {
     };
 }
 
+// ─── Organizer: communities (spec 023) ───────
+
+export async function organizerCreateCommunity(fields) {
+    const { data, error } = await supabase.rpc('create_community', {
+        p_name: fields.name,
+        p_username: fields.username,
+        p_stand_number: fields.stand_number,
+        p_emoji: fields.emoji,
+        p_description: fields.description || null,
+    });
+    if (error) throw new Error(`Error al crear la comunidad: ${error.message}`);
+    return data;
+}
+
+export async function organizerUpdateCommunity(id, fields) {
+    const { data, error } = await supabase.rpc('update_community_profile', {
+        p_id: id,
+        p_name: fields.name,
+        p_stand_number: fields.stand_number,
+        p_emoji: fields.emoji,
+        p_description: fields.description || null,
+    });
+    if (error) throw new Error(`Error al actualizar la comunidad: ${error.message}`);
+    return data;
+}
+
+// Devuelve la contraseña UNA sola vez. Después solo queda el hash.
+export async function organizerResetPassword(id) {
+    const { data, error } = await supabase.rpc('reset_community_password', { p_id: id });
+    if (error) throw new Error(`Error al restablecer la contraseña: ${error.message}`);
+    return data;
+}
+
+export async function organizerSetCommunityWithdrawn(id, withdrawn) {
+    const { data, error } = await supabase.rpc('set_community_withdrawn', {
+        p_id: id,
+        p_withdrawn: withdrawn,
+    });
+    if (error) throw new Error(`Error al cambiar el estado: ${error.message}`);
+    return data;
+}
+
+export async function organizerSetRewardCost(rewardId, cost) {
+    const { data, error } = await supabase.rpc('set_reward_cost', {
+        p_reward_id: rewardId,
+        p_cost: Number(cost),
+    });
+    if (error) throw new Error(`Error al cambiar el costo: ${error.message}`);
+    return data;
+}
+
+export async function organizerSetRewardStock(rewardId, stock) {
+    const { data, error } = await supabase.rpc('set_reward_stock', {
+        p_reward_id: rewardId,
+        p_stock: Number(stock),
+    });
+    if (error) throw new Error(`Error al cambiar el stock: ${error.message}`);
+    return data;
+}
+
+export async function organizerSetRewardWithdrawn(rewardId, withdrawn) {
+    const { data, error } = await supabase.rpc('set_reward_withdrawn', {
+        p_reward_id: rewardId,
+        p_withdrawn: withdrawn,
+    });
+    if (error) throw new Error(`Error al cambiar el estado del premio: ${error.message}`);
+    return data;
+}
+
 export async function getEventOverview() {
     const { data, error } = await supabase.rpc('event_overview');
     if (error) throw new Error(`Error al obtener el resumen: ${error.message}`);
@@ -312,7 +381,10 @@ export async function getActivitiesForCommunity(communityId) {
 export async function getAllActivities() {
     const { data, error } = await supabase
         .from('activities')
-        .select(`${ACTIVITY_COLUMNS}, communities(name, emoji, stand_number)`)
+        // is_withdrawn viaja con el stand porque la pantalla del estudiante
+        // tiene que mostrar sus actividades como no disponibles en vez de
+        // esconderlas (spec 025, R10).
+        .select(`${ACTIVITY_COLUMNS}, communities(name, emoji, stand_number, is_withdrawn)`)
         .order('estimated_start', { ascending: true });
 
     if (error) throw new Error(`Error al obtener actividades: ${error.message}`);

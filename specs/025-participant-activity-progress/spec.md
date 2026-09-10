@@ -177,6 +177,26 @@ Nothing in this spec exists, because activities do not exist. Spec 019 creates t
 - Ordering by state means the order changes underneath the attendee as activities start and
   finish. That has to be handled without a row moving under a finger.
 
+## 10b. As built
+
+`src/pages/Activities.jsx`, a fifth destination in the attendee's navigation. Three groups in a
+fixed order — running, then upcoming by estimated time, then finished — plus a fourth for the
+activities of a withdrawn community. The state always comes from `activity_state`, computed in the
+database: a phone with a wrong clock would otherwise show a finished activity as open and send
+somebody across the hall for nothing.
+
+**A process deviation worth recording.** This was implemented from an approved spec with **no
+`plan.md`**, and the work was delegated. The rule written a few hours earlier says a plan is
+optional only when one person does the work in one sitting; this was neither. The spec was detailed
+enough that nothing was lost, but the exemption was applied where it did not hold.
+
+**A gap the work exposed.** The acceptance criterion "one attendee cannot see which activities
+another has completed" was **not met**, and could not be met from the screen: `scans` carried
+`USING (true)`, so anyone holding the publishable key could read any attendee's whole route — where
+they went, when, and what they took part in. Fixed by scoping the policy to the scan's own
+participant and the stand that awarded it, with an assertion in `tests/sql/06` that goes red
+without it.
+
 ## 11. References
 
 - Constitution: III (rules in the database), IV (identity is never a parameter).

@@ -218,4 +218,49 @@ BEGIN
 END;
 $test$;
 
+-- A scan is one person's history: where they went, at what time, which
+-- activities they took part in. Reading somebody else's is reading their
+-- afternoon.
+DO $test$
+DECLARE
+  v_mine   UUID := 'bbbb0006-0000-4000-8000-000000000001';
+  v_theirs UUID := 'bbbb0006-0000-4000-8000-000000000002';
+  v_stand  UUID := 'aaaa0006-0000-4000-8000-000000000001';
+  v_rows   INT;
+BEGIN
+  INSERT INTO scans (participant_id, community_id, points, type)
+  VALUES (v_theirs, v_stand, 10, 'visit');
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_mine, 'role', 'authenticated')::text, true);
+
+  SELECT count(*) INTO v_rows FROM scans WHERE participant_id = v_theirs;
+  RESET ROLE;
+  IF v_rows <> 0 THEN
+    RAISE EXCEPTION 'One attendee read % of another attendee''s scans. Anyone with the publishable key could reconstruct where every person went and when', v_rows;
+  END IF;
+
+  -- Y el suyo si lo ve.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_mine, 'role', 'authenticated')::text, true);
+  SELECT count(*) INTO v_rows FROM scans WHERE participant_id = v_mine;
+  RESET ROLE;
+  IF v_rows = 0 THEN
+    RAISE EXCEPTION 'An attendee cannot read their own scans; their dashboard would be empty';
+  END IF;
+
+  -- El stand ve los suyos: los necesita para su lista de escaneos recientes.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_stand, 'role', 'authenticated')::text, true);
+  SELECT count(*) INTO v_rows FROM scans WHERE community_id = v_stand;
+  RESET ROLE;
+  IF v_rows = 0 THEN
+    RAISE EXCEPTION 'A stand cannot read the scans it awarded; its console would show nothing';
+  END IF;
+END;
+$test$;
+
 ROLLBACK;

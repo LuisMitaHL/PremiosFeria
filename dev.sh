@@ -85,10 +85,13 @@ GRANT anon TO authenticator;
 SQL
 
 # Schema, RLS, RPC — copies of the canonical prod sources (same behavior).
-# Deliberately NOT applied from prod: 25 (drops the password column dev
-# needs in plaintext), 26/51 (bcrypt flow), 30 (dev grants below),
-# 70 (prod CSV seed at init; dev seeds its own way further down).
+# Deliberately NOT applied from prod: 30 (dev grants below) y 70 (siembra por
+# CSV en produccion; dev siembra a su manera mas abajo). Las credenciales YA NO
+# divergen: dev aplica 25/26/51 igual que produccion y guarda bcrypt, porque una
+# divergencia en el camino de credenciales es donde mas caro sale equivocarse.
 cp "$REPO/supabase/postgres-init/20_schema.sql" "$SQL/20_schema.sql"
+cp "$REPO/supabase/postgres-init/25_auth_columns.sql" "$SQL/25_auth_columns.sql"
+cp "$REPO/supabase/postgres-init/26_password_hash.sql" "$SQL/26_password_hash.sql"
 cat > "$SQL/30_grants.sql" <<'SQL'
 GRANT USAGE ON SCHEMA public TO anon;
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO anon;
@@ -96,6 +99,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
 SQL
 cp "$REPO/supabase/postgres-init/40_rls.sql" "$SQL/40_rls.sql"
 cp "$REPO/supabase/postgres-init/50_rpc.sql" "$SQL/50_rpc.sql"
+cp "$REPO/supabase/postgres-init/51_stand_login.sql" "$SQL/51_stand_login.sql"
 cp "$REPO/supabase/postgres-init/52_activities.sql" "$SQL/52_activities.sql"
 cp "$REPO/supabase/postgres-init/53_rewards.sql" "$SQL/53_rewards.sql"
 cp "$REPO/supabase/postgres-init/54_fulfilment.sql" "$SQL/54_fulfilment.sql"
@@ -147,21 +151,6 @@ INSERT INTO organizers (username, password_hash)
 VALUES ('organizador', crypt('Organiza2024*', gen_salt('bf', 12)))
 ON CONFLICT (username) DO NOTHING;
 
--- Mirror of prod's stand_login (51_stand_login.sql), against dev's plaintext
--- password column. It exists so the dev auth mock verifies credentials the way
--- prod does -- inside the database, SECURITY DEFINER -- instead of reading the
--- credential column out over the API with the anon key. 80_column_grants.sql
--- revokes that column from anon exactly as it revokes the hash in prod, so the
--- shortcut is not available here either.
-CREATE OR REPLACE FUNCTION stand_login(p_username TEXT, p_password TEXT)
-RETURNS TABLE (id UUID, username TEXT, name TEXT, emoji TEXT, stand_number TEXT)
-LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $fn$
-  SELECT c.id, c.username, c.name, c.emoji, c.stand_number
-  FROM communities c
-  WHERE lower(c.username) = lower(btrim(p_username))
-    AND c.password = p_password
-$fn$;
-GRANT EXECUTE ON FUNCTION stand_login(TEXT, TEXT) TO anon;
 SQL
 
 # Dev seed: communities get plaintext username/password (the mock auth reads
@@ -251,23 +240,23 @@ DELETE FROM scans;
 DELETE FROM communities;
 DELETE FROM participants;
 
-INSERT INTO communities (id, username, password, name, emoji, stand_number) VALUES
-('d0000001-0000-0000-0000-000000000000','cypheranviil','Cypher2024*','CypherAnvil','Shield','1'),
-('d0000002-0000-0000-0000-000000000000','meh','Meh2024*','MEH','Cpu','2'),
-('d0000003-0000-0000-0000-000000000000','ieee','Ieee2024*','IEEE','RadioReceiver','3'),
-('d0000004-0000-0000-0000-000000000000','aws.umsa','Aws2024*','AWS','Cloud','4'),
-('d0000005-0000-0000-0000-000000000000','guild','Guild2024*','Guild','Swords','5'),
-('d0000006-0000-0000-0000-000000000000','codemiaw','Codecats2024*','Codecats','Cat','6'),
-('d0000007-0000-0000-0000-000000000000','pancho','Cpc2024*','CPC','Code','7'),
-('d0000008-0000-0000-0000-000000000000','casdasd','Ctrldev2024*','CtrlDev','Terminal','8'),
-('d0000009-0000-0000-0000-000000000000','microbot','Microbot2024*','Microsoft Umsa','LayoutGrid','9'),
-('d000000a-0000-0000-0000-000000000000','trateur010','Ciasi2024*','CIASI','Database','10');
+INSERT INTO communities (id, username, password_hash, name, emoji, stand_number) VALUES
+('d0000001-0000-0000-0000-000000000000','cypheranviil',crypt('Cypher2024*', gen_salt('bf', 12)),'CypherAnvil','Shield','1'),
+('d0000002-0000-0000-0000-000000000000','meh',crypt('Meh2024*', gen_salt('bf', 12)),'MEH','Cpu','2'),
+('d0000003-0000-0000-0000-000000000000','ieee',crypt('Ieee2024*', gen_salt('bf', 12)),'IEEE','RadioReceiver','3'),
+('d0000004-0000-0000-0000-000000000000','aws.umsa',crypt('Aws2024*', gen_salt('bf', 12)),'AWS','Cloud','4'),
+('d0000005-0000-0000-0000-000000000000','guild',crypt('Guild2024*', gen_salt('bf', 12)),'Guild','Swords','5'),
+('d0000006-0000-0000-0000-000000000000','codemiaw',crypt('Codecats2024*', gen_salt('bf', 12)),'Codecats','Cat','6'),
+('d0000007-0000-0000-0000-000000000000','pancho',crypt('Cpc2024*', gen_salt('bf', 12)),'CPC','Code','7'),
+('d0000008-0000-0000-0000-000000000000','casdasd',crypt('Ctrldev2024*', gen_salt('bf', 12)),'CtrlDev','Terminal','8'),
+('d0000009-0000-0000-0000-000000000000','microbot',crypt('Microbot2024*', gen_salt('bf', 12)),'Microsoft Umsa','LayoutGrid','9'),
+('d000000a-0000-0000-0000-000000000000','trateur010',crypt('Ciasi2024*', gen_salt('bf', 12)),'CIASI','Database','10');
 
 INSERT INTO rewards (community_id, name, description, cost, stock, emoji) VALUES
-('d0000002-0000-0000-0000-000000000000','CuboRubik Dotnet','Premio de MEH',150,1,'Box'),
-('d0000004-0000-0000-0000-000000000000','Polera Community Day XL','Premio de la comunidad AWS Umsa',200,1,'Shirt'),
-('d0000008-0000-0000-0000-000000000000','1 mes vps','Servicio cloud de CtrlDev',250,1,'Server'),
-('d0000009-0000-0000-0000-000000000000','Pelotitas Antiestres','Premio de Microsoft',50,1,'Circle');
+('d0000002-0000-0000-0000-000000000000','CuboRubik Dotnet',crypt('Premio de MEH', gen_salt('bf', 12)),150,1,'Box'),
+('d0000004-0000-0000-0000-000000000000','Polera Community Day XL',crypt('Premio de la comunidad AWS Umsa', gen_salt('bf', 12)),200,1,'Shirt'),
+('d0000008-0000-0000-0000-000000000000','1 mes vps',crypt('Servicio cloud de CtrlDev', gen_salt('bf', 12)),250,1,'Server'),
+('d0000009-0000-0000-0000-000000000000','Pelotitas Antiestres',crypt('Premio de Microsoft', gen_salt('bf', 12)),50,1,'Circle');
 
 INSERT INTO participants (id, name, points) VALUES
 ('a0000001-0000-0000-0000-000000000000', 'Participante Demo', 0);

@@ -1,12 +1,13 @@
 import React from 'react';
 import { Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
-import { Compass, Home, Trophy, ScanLine, Gift, Star } from 'lucide-react';
+import { CalendarClock, Home, Trophy, ScanLine, Gift, Star } from 'lucide-react';
 
 // Pages
 import Welcome from './pages/Welcome.jsx';
 import Register from './pages/Register.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import Activities from './pages/Activities.jsx';
 import Scanner from './pages/Scanner.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
 import Rewards from './pages/Rewards.jsx';
@@ -63,19 +64,23 @@ function AppLayout({ children }) {
                 <div className="nav-items">
                     <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <span className="nav-icon"><Home size={20} /></span>
-                        <span>Inicio</span>
+                        <span className="nav-label">Inicio</span>
                     </NavLink>
-                    <NavLink to="/leaderboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        <span className="nav-icon"><Trophy size={20} /></span>
-                        <span>Ranking</span>
+                    <NavLink to="/activities" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                        <span className="nav-icon"><CalendarClock size={20} /></span>
+                        <span className="nav-label">Actividades</span>
                     </NavLink>
                     <NavLink to="/scan" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <span className="nav-icon"><ScanLine size={22} /></span>
-                        <span>Scan</span>
+                        <span className="nav-label">Scan</span>
+                    </NavLink>
+                    <NavLink to="/leaderboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                        <span className="nav-icon"><Trophy size={20} /></span>
+                        <span className="nav-label">Ranking</span>
                     </NavLink>
                     <NavLink to="/rewards" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <span className="nav-icon"><Gift size={20} /></span>
-                        <span>Premios</span>
+                        <span className="nav-label">Premios</span>
                     </NavLink>
                 </div>
             </nav>
@@ -98,6 +103,7 @@ function AppRoutes() {
                 <Route path="/" element={<Welcome />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+                <Route path="/activities" element={<RequireAuth><Activities /></RequireAuth>} />
                 <Route path="/scan" element={<RequireAuth><Scanner /></RequireAuth>} />
                 <Route path="/leaderboard" element={<RequireAuth><Leaderboard /></RequireAuth>} />
                 <Route path="/rewards" element={<RequireAuth><Rewards /></RequireAuth>} />

@@ -250,6 +250,25 @@ here rather than left implicit:
 - The stand console loses its profile section entirely, leaving the three sections spec 019
   introduced.
 
+## 10b. As built
+
+`supabase/postgres-init/56_organizer_communities.sql`, with the panel area in
+`src/pages/organizer/CommunitiesArea.jsx`. Passwords are generated, hashed at cost 12, and returned
+exactly once — the screen says so plainly, because there is no way back to them.
+
+`calling_community()` stopped resolving a withdrawn community. That one change is what makes R15
+and R16 hold everywhere at once: creating and starting activities, registering prizes, restocking
+and confirming handovers all go through it, and a token issued before the withdrawal is no longer
+enough. Signing codes and awarding points check it separately, since those resolve differently.
+
+**Dev stopped diverging on credentials.** It used to keep plaintext passwords so its seed could
+print them; it now stores bcrypt like production and prints them anyway. Two bugs had already come
+out of that divergence, and the credential path is the worst place to have one.
+
+**A hole the tests found.** Deleting a community cascaded to its scans — the record of what every
+attendee did there. Every reference to history is now `RESTRICT`, so "nothing is deleted" is the
+database's rule rather than a convention.
+
 ## 11. References
 
 - Constitution: III (rules in the database), IV (identity is never a parameter), V (secrets never

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext.jsx';
 import { getEventOverview } from '../../lib/api.js';
 import { LogOut, Loader, AlertTriangle, Activity, TrendingUp } from 'lucide-react';
+import CommunitiesArea from './CommunitiesArea.jsx';
 
 const AREAS = [
     ['inicio', 'Inicio'],
@@ -169,12 +170,13 @@ export default function OrganizerPanel() {
                     </>
                 )}
 
-                {area !== 'inicio' && (
+                {area === 'comunidades' && <CommunitiesArea />}
+
+                {area !== 'inicio' && area !== 'comunidades' && (
                     <div className="empty-state">
                         <p>Esta sección todavía no está construida.</p>
                         <p className="empty-hint">
                             {area === 'estudiantes' && 'Llega con el spec 022.'}
-                            {area === 'comunidades' && 'Llega con el spec 023.'}
                             {area === 'premios' && 'Llega con el spec 023.'}
                             {area === 'registro' && 'Llega con el spec 024.'}
                         </p>

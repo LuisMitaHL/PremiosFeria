@@ -26,7 +26,10 @@ CREATE POLICY "activities_read" ON activities FOR SELECT USING (true);
 -- Scans: lectura publica, insert via RPC unicamente
 ALTER TABLE scans ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "scans_read" ON scans;
-CREATE POLICY "scans_read" ON scans FOR SELECT USING (true);
+CREATE POLICY "scans_read" ON scans FOR SELECT USING (
+  participant_id IN (SELECT id FROM participants WHERE auth_user_id = auth.uid())
+  OR community_id IN (SELECT id FROM communities WHERE auth_user_id = auth.uid())
+);
 
 -- Settings: sin acceso público; solo funciones SECURITY DEFINER leen el secreto
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
@@ -47,4 +50,7 @@ DROP POLICY IF EXISTS "claim_codes_read" ON claim_codes;
 -- Claimed rewards: lectura pública, insert via RPC
 ALTER TABLE claimed_rewards ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "claimed_rewards_read" ON claimed_rewards;
-CREATE POLICY "claimed_rewards_read" ON claimed_rewards FOR SELECT USING (true);
+CREATE POLICY "claimed_rewards_read" ON claimed_rewards FOR SELECT USING (
+  participant_id IN (SELECT id FROM participants WHERE auth_user_id = auth.uid())
+  OR confirmed_by IN (SELECT id FROM communities WHERE auth_user_id = auth.uid())
+);
