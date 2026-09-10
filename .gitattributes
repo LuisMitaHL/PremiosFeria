@@ -1,0 +1,14 @@
+# The whole stack runs on Linux: Docker images, the Postgres init scripts, the
+# CI runners. A CRLF line ending in a shell script makes it fail there with an
+# error that reads like nothing to do with line endings, so normalise on commit
+# and check out LF everywhere regardless of the developer's platform.
+* text=auto eol=lf
+
+# Never touch these.
+*.png binary
+*.jpg binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
