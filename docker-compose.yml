@@ -37,10 +37,17 @@ services:
       - ./supabase/postgres-init:/docker-entrypoint-initdb.d:ro
       - ./seed:/seed:ro
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      # Healthy only once Postgres answers AND the whole init chain finished
+      # (99_init_complete.sh). Without the second condition, an init aborted by
+      # a missing/malformed seed CSV is masked by the restart policy: the db
+      # comes back "healthy" with empty tables and every login fails with
+      # invalid_credentials. The marker path is PGDATA + /.init_complete; keep
+      # it in sync with PGDATA above if that ever changes.
+      test: ["CMD-SHELL", "pg_isready -U postgres -h localhost && test -f /var/lib/postgresql/data/pgdata/.init_complete"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 20s
     restart: unless-stopped
 
   auth:

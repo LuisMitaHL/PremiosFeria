@@ -34,10 +34,13 @@ CREATE TEMP TABLE stage_rewards (
 
 -- 1. Communities (username = bare login name; bcrypt hash via pgcrypto) ------
 INSERT INTO communities (username, name, password_hash)
-SELECT btrim(user_), NULLIF(btrim(name_), ''), crypt(pw_, gen_salt('bf', 12))
+-- btrim on the password too: dev's csv-seed.mjs trims every field, and a padded
+-- value here would store a hash of the padding while the stand types the visible
+-- password. Same input must hash the same in both paths.
+SELECT btrim(user_), NULLIF(btrim(name_), ''), crypt(btrim(pw_), gen_salt('bf', 12))
 FROM stage_stands
 WHERE NULLIF(btrim(user_), '') IS NOT NULL
-  AND NULLIF(pw_, '') IS NOT NULL
+  AND NULLIF(btrim(pw_), '') IS NOT NULL
 ON CONFLICT (username) DO NOTHING;
 
 -- Link each stand to its own id (auth_user_id = JWT sub for stand sessions).
