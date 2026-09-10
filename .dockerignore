@@ -1,0 +1,33 @@
+# Keep the Postgres bind-mount data out of every build context.
+# ./data/db/pgdata is owned by the postgres container user (0700); without this,
+# BuildKit's context sender (running as the invoking user) is denied on rebuild.
+data
+
+# Local / generated state
+.dev
+node_modules
+dist
+coverage
+
+# Secrets and operator-only inputs (never needed by the image build)
+.env.prod
+.env.local
+seed
+
+# VCS / tooling metadata
+.git
+.github
+.claude
+.cursor
+.gemini
+.specify
+.vscode
+
+# Docs, specs and tests are not part of the app build
+specs
+tests
+docs
+*.md
+
+# Not copied by the Dockerfile
+nginx-cdn.conf.example
