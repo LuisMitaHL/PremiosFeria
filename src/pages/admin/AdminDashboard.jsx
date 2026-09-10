@@ -11,6 +11,7 @@ import { Settings, LogOut, Loader, MapPin, Target, QrCode, Pencil, AlertTriangle
 import DynamicIcon from '../../components/DynamicIcon.jsx';
 import ActivitiesSection from './ActivitiesSection.jsx';
 import RewardsSection from './RewardsSection.jsx';
+import ClaimsSection from './ClaimsSection.jsx';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -234,10 +235,7 @@ export default function AdminDashboard() {
                     )}
 
                     {section === 'canjes' && (
-                        <div className="empty-state">
-                            <p>Todavía no puedes registrar canjes desde aquí.</p>
-                            <p className="empty-hint">Llega con el spec 018.</p>
-                        </div>
+                        <ClaimsSection communityId={community.id} />
                     )}
                 </>
             )}

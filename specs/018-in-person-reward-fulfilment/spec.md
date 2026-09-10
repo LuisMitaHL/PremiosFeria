@@ -92,7 +92,9 @@ release.
 | R1 | An attendee MUST be able to obtain a claim code from within the app at any time. | Must |
 | R2 | A claim code MUST be short enough to read aloud and type without error, and MUST avoid characters that are easily confused with one another. | Must |
 | R3 | A claim code MUST be usable exactly once. | Must |
-| R4 | An attendee MUST have at most one live claim code. Obtaining a new one MUST invalidate the previous one immediately. | Must |
+| R4 | An attendee MUST have at most one live claim code. | Must |
+| R4a | While a code is live, asking for one again MUST return that same code rather than issuing another. | Must |
+| R4b | A code that is no longer live MUST be replaced when a new one is asked for, and the old one MUST NOT start working again. | Must |
 | R5 | A claim code MUST stop working when it is used, when the attendee closes the screen showing it, or when that screen stops being watched. | Must |
 | R6 | A claim code MUST NOT commit, reserve or hold anything: no points, no stock, no reward. | Must |
 | R7 | A claim code MUST NOT be guessable from another code, from the attendee's identity, or from when it was created. | Must |
@@ -137,6 +139,7 @@ release.
 | Claim code length | 6 characters | Long enough that codes live at the same time cannot collide in practice at this scale, short enough to read off a phone screen and type on another one. Matches the length of the manual scan code, which the stands are already used to. |
 | Claim code alphabet | Uppercase letters and digits, excluding `O`, `0`, `I`, `1` and `L` | These are the characters people get wrong when reading a screen across a table. Every excluded pair costs a failed attempt and a retry in front of a queue. |
 | Codes live per attendee | Exactly one | Two live codes let an attendee stand at two stands and have both confirmed against a balance that only covers one. The loser would be refused correctly, but only after the prize had been handed over. |
+| Asking again while one is live | Returns the same code | Amended after implementation. Issuing a fresh one on every request looked equivalent, and is not: two requests that cross — a screen that remounts, a double tap — issued two codes, and the one left open was not necessarily the one on screen. The attendee would then show a stand a code that had already been replaced. Returning the live one also means reopening the screen does not invalidate a code somebody is already looking at. |
 | Code lifetime | Until used, until the attendee closes the screen, or 60 seconds after that screen stops asking about it | Derived, not stated: see section 9. A code that outlives the screen showing it is a code somebody photographed and can still use. Sixty seconds is long enough to survive a phone locking and being woken, short enough that a closed browser does not leave a usable code behind. |
 | What a code commits | Nothing | There is no reservation. Two attendees may both walk to a stand for the last unit and one will be disappointed. The alternative — holding stock for someone who may never arrive — makes a prize unavailable to the person actually standing there. |
 | Moment of payment | Confirmation of handover | The only moment the system can be sure the prize was given. Charging earlier charges for prizes that were never collected. |
@@ -194,7 +197,9 @@ stolen.
 ## 8. Acceptance criteria
 
 - [ ] An attendee can obtain a claim code, and it contains none of `O`, `0`, `I`, `1` or `L`.
-- [ ] Generating a second code makes the first stop working immediately.
+- [ ] Asking for a code while one is live returns the same code, not a second one.
+- [ ] Asking for a code after the previous one expired returns a new one, and the expired one stays dead.
+- [ ] Two requests arriving together produce one live code, and it is the one returned to both.
 - [ ] A confirmed handover deducts exactly the reward's cost and exactly one unit of stock,
       together.
 - [ ] After a confirmed handover the same code is refused.

@@ -1705,3 +1705,128 @@ textarea {
     color: var(--accent-purple);
     background: rgba(129, 0, 255, 0.08);
 }
+
+/* ============================================
+   In-person fulfilment (spec 018)
+   ============================================ */
+
+.claim-modal {
+    text-align: center;
+    max-width: 340px;
+}
+
+.claim-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    margin-bottom: var(--space-xs);
+}
+
+.claim-sub {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    margin-bottom: var(--space-lg);
+}
+
+/* Read across a table by somebody else, then typed. Large, spaced and
+   monospaced so a character is never in doubt. */
+.claim-code {
+    font-family: monospace;
+    font-size: 2.6rem;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    padding: var(--space-md) 0;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.claim-done {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--accent-emerald);
+}
+
+.claim-done .claim-title,
+.claim-done .claim-sub {
+    color: var(--text-primary);
+}
+
+.claim-balance {
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    margin-top: var(--space-sm);
+}
+
+.claim-code-input {
+    font-family: monospace;
+    font-size: 1.5rem;
+    letter-spacing: 0.15em;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.claim-confirmed {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    color: var(--accent-emerald);
+    margin-bottom: var(--space-md);
+}
+
+.claim-confirmed div {
+    color: var(--text-primary);
+}
+
+.reward-choices {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.reward-choice {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    text-align: left;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: var(--radius-md);
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.reward-choice.is-active {
+    border-color: var(--accent-purple);
+    background: rgba(129, 0, 255, 0.08);
+}
+
+.reward-choice:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.reward-choice-name {
+    flex: 1;
+    font-weight: 600;
+}
+
+.reward-choice-meta {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+.reward-locked {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    flex-shrink: 0;
+}

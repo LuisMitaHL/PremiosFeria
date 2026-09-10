@@ -109,11 +109,43 @@ CREATE TABLE IF NOT EXISTS rewards (
   is_withdrawn BOOLEAN NOT NULL DEFAULT false
 );
 
+-- Códigos de canje (spec 018).
+--
+-- El código es lo único que el sistema acepta como identificador de una
+-- persona, así que todas las defensas viven sobre él: un solo uso, vida corta,
+-- uno vivo por participante, e impredecible. Una foto del modal no vale nada
+-- un momento después.
+--
+-- La vigencia se DERIVA, como el estado de una actividad: un código está vivo
+-- mientras no se haya cerrado y su pantalla siga preguntando por él. Nada barre
+-- nada; "¿este código sirve?" se responde cuando se presenta.
+CREATE TABLE IF NOT EXISTS claim_codes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  participant_id UUID REFERENCES participants(id) ON DELETE CASCADE NOT NULL,
+  code TEXT NOT NULL,
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  closed_at TIMESTAMPTZ,
+  closed_reason TEXT CHECK (closed_reason IN ('used', 'replaced'))
+);
+
+-- Un solo código abierto por participante. Dos vivos dejarían al estudiante
+-- parado en dos stands con un saldo que solo alcanza para uno.
+CREATE UNIQUE INDEX IF NOT EXISTS claim_codes_one_open_per_participant
+  ON claim_codes (participant_id) WHERE closed_at IS NULL;
+
+-- Y ningún código abierto puede repetirse entre participantes.
+CREATE UNIQUE INDEX IF NOT EXISTS claim_codes_open_code_unique
+  ON claim_codes (code) WHERE closed_at IS NULL;
+
 -- Premios reclamados
 CREATE TABLE IF NOT EXISTS claimed_rewards (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   participant_id UUID REFERENCES participants(id) ON DELETE CASCADE NOT NULL,
-  reward_id UUID REFERENCES rewards(id) ON DELETE CASCADE NOT NULL,
+  reward_id UUID REFERENCES rewards(id) ON DELETE RESTRICT NOT NULL,
+  -- Qué stand entregó. Un canje confirmado tiene que poder decir quién lo hizo
+  -- (spec 024), y el premio no se borra nunca, así que la referencia resuelve.
+  confirmed_by UUID REFERENCES communities(id) ON DELETE RESTRICT,
   claimed_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(participant_id, reward_id)
 );

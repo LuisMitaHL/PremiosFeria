@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext.jsx';
-import { getRewards, getClaimedRewards, claimReward } from '../lib/api.js';
-import { Gift, Star, Lock, Loader, CheckCircle, XCircle } from 'lucide-react';
+import { getRewards, getClaimedRewards } from '../lib/api.js';
+import ClaimCodeModal from '../components/ClaimCodeModal.jsx';
+import { Gift, Star, Lock, Loader, QrCode } from 'lucide-react';
 import DynamicIcon from '../components/DynamicIcon.jsx';
 
 export default function Rewards() {
     const { participant, refreshParticipant } = useAuth();
     const [rewards, setRewards] = useState([]);
     const [claimedIds, setClaimedIds] = useState([]);
-    const [toast, setToast] = useState(null);
+    const [showCode, setShowCode] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -31,21 +32,12 @@ export default function Rewards() {
         load();
     }, [participant]);
 
-    async function handleClaim(rewardId) {
-        try {
-            const result = await claimReward(rewardId);
-            if (result.success) {
-                await refreshParticipant();
-                setClaimedIds([...claimedIds, rewardId]);
-                setToast({ type: 'success', message: '¡Premio reclamado exitosamente!' });
-            } else {
-                setToast({ type: 'error', message: result.reason });
-            }
-        } catch (err) {
-            setToast({ type: 'error', message: err.message || 'Error al canjear premio' });
-        }
-
-        setTimeout(() => setToast(null), 3000);
+    async function handleClaimed() {
+        await refreshParticipant();
+        const claimed = await getClaimedRewards(participant.id);
+        setClaimedIds(claimed);
+        const fresh = await getRewards();
+        setRewards(fresh);
     }
 
     if (!participant) return null;
@@ -66,7 +58,7 @@ export default function Rewards() {
             <div className="container">
                 <div className="page-header">
                     <h1><Gift size={24} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} />Premios</h1>
-                    <p>Canjea tus puntos por recompensas</p>
+                    <p>Elige tu premio, acércate al stand y muestra tu código</p>
                 </div>
 
                 {/* Points balance */}
@@ -78,7 +70,21 @@ export default function Rewards() {
                         {participant.points}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>puntos disponibles</div>
+                    <button
+                        className="btn btn-primary btn-full"
+                        style={{ marginTop: 16 }}
+                        onClick={() => setShowCode(true)}
+                    >
+                        <QrCode size={16} /> Mostrar mi código de canje
+                    </button>
                 </div>
+
+                {showCode && (
+                    <ClaimCodeModal
+                        onClose={() => setShowCode(false)}
+                        onClaimed={handleClaimed}
+                    />
+                )}
 
                 {/* Rewards Grid */}
                 <div className="rewards-grid">
@@ -113,15 +119,11 @@ export default function Rewards() {
                                         <Star size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 2 }} /> {reward.cost} pts
                                     </div>
                                 </div>
-                                {!claimed && (
-                                    <button
-                                        className={`btn ${canClaim ? 'btn-primary' : 'btn-outline'}`}
-                                        onClick={() => canClaim && handleClaim(reward.id)}
-                                        disabled={!canClaim}
-                                        style={{ flexShrink: 0, fontSize: '0.8rem', padding: '8px 16px' }}
-                                    >
-                                        {canClaim ? 'Canjear' : <Lock size={14} />}
-                                    </button>
+                                {!claimed && !canClaim && (
+                                    <span className="reward-locked">
+                                        <Lock size={14} />
+                                        {!canAfford && `Faltan ${reward.cost - participant.points}`}
+                                    </span>
                                 )}
                             </div>
                         );
@@ -129,15 +131,6 @@ export default function Rewards() {
                 </div>
             </div>
 
-            {/* Toast */}
-            {toast && (
-                <div className="toast-container">
-                    <div className={`toast ${toast.type}`}>
-                        <div className="toast-icon">{toast.type === 'success' ? <CheckCircle size={20} /> : <XCircle size={20} />}</div>
-                        <div className="toast-message">{toast.message}</div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

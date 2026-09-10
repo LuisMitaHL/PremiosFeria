@@ -166,13 +166,29 @@ export async function getClaimedRewards(participantId) {
     return data.map(r => r.reward_id);
 }
 
-export async function claimReward(rewardId) {
-    const { data, error } = await supabase.rpc('claim_reward', {
+// El canje lo confirma el stand al entregar el premio (spec 018). El estudiante
+// pide un código, lo muestra, y su pantalla pregunta hasta que se confirme.
+export async function issueClaimCode() {
+    const { data, error } = await supabase.rpc('issue_claim_code');
+    if (error) throw new Error(`Error al generar el código: ${error.message}`);
+    return data;
+}
+
+// Pregunta por el código propio, resuelto desde la sesión: nunca se envía un
+// identificador. Cada consulta renueva la tolerancia que lo mantiene vivo.
+export async function pollMyClaimCode() {
+    const { data, error } = await supabase.rpc('poll_my_claim_code');
+    if (error) throw new Error(`Error al consultar el código: ${error.message}`);
+    return data;
+}
+
+export async function confirmHandover(code, rewardId) {
+    const { data, error } = await supabase.rpc('confirm_handover', {
+        p_code: code,
         p_reward_id: rewardId,
     });
-
-    if (error) throw new Error(`Error al canjear premio: ${error.message}`);
-    return data; // { success, newPoints } or { success: false, reason }
+    if (error) throw new Error(`Error al confirmar la entrega: ${error.message}`);
+    return data;
 }
 
 // ─── Auth (Admin) ────────────────────────────
