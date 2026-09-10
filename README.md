@@ -44,13 +44,21 @@ SITE_URL=https://feria.example.com ./deploy-keys.sh   # generates .env.prod (mod
 
 Never commit `.env.prod`. `POSTGRES_PASSWORD` is hex-only (URL-safe, embedded in connection strings). Re-run with `--force` to rotate (then `down` + wipe `./data/db`, since the DB password is baked at init).
 
+`deploy-keys.sh` also generates the organiser login (`ORGANIZER_USERNAME` / `ORGANIZER_PASSWORD`), written to the database **only on the first boot of an empty `./data/db`**. Regenerating `.env.prod` while the volume exists leaves the printed password unusable — the panel answers *"Credenciales incorrectas"*. To apply new credentials, wipe `./data/db` (section 6) or update the stored hash:
+
+```sql
+UPDATE organizers
+SET password_hash = crypt('<organizer-password>', gen_salt('bf', 12))
+WHERE username = '<organizer-username>';
+```
+
 ### 2. Boot
 
 ```bash
 docker compose --env-file .env.prod up -d --build
 ```
 
-First boot: Postgres init loads schema + RLS + RPC + seed from `./seed/*.csv` (both files required — missing files abort init loudly). Check against published ports:
+First boot: Postgres init loads schema + RLS + RPC + seed from `./seed/*.csv` (both files required — missing files abort init loudly). Init scripts run in numeric order, so a seed that aborts also stops the organiser account from being created; if the container then restarts against that half-initialised volume, init is skipped and the organiser never exists. Read the database logs before trusting the first boot. Check against published ports:
 
 ```bash
 curl -s http://localhost:9999/health
@@ -116,6 +124,8 @@ WHERE username = 'meh';
 docker compose --env-file .env.prod down
 rm -rf ./data/db   # DESTRUCTIVE: init + seed re-run on next up
 ```
+
+A wipe re-creates the organiser from the current `ORGANIZER_*` in `.env.prod` and re-runs the CSV seed.
 
 DB data lives in `./data/db` (bind mount, git-ignored).
 

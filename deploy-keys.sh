@@ -78,6 +78,16 @@ ORGANIZER_PASSWORD=$ORGANIZER_PASSWORD
 ENV
 chmod 600 "$OUT"
 
+if [ -d "./data/db" ] && [ -n "$(ls -A ./data/db 2>/dev/null)" ]; then
+  echo "⚠ ./data/db is not empty." >&2
+  echo "  POSTGRES_PASSWORD and ORGANIZER_* are written into the database on the FIRST" >&2
+  echo "  boot only. Changing .env.prod now does not update them, so the API cannot" >&2
+  echo "  authenticate and the organiser login fails. To apply the new secrets:" >&2
+  echo "    docker compose --env-file $OUT down && rm -rf ./data/db && \\" >&2
+  echo "      docker compose --env-file $OUT up -d --build" >&2
+  echo "  Or, to keep the data, update the roles in SQL (see README section 1)." >&2
+fi
+
 echo "✓ wrote $OUT (mode 600)."
 echo "  Organiser login: $ORGANIZER_USERNAME / $ORGANIZER_PASSWORD"
 echo "  Hand it over securely. It is not recoverable: only a hash is stored."
