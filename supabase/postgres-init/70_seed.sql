@@ -1,9 +1,13 @@
 -- 70_seed.sql — runs ONCE at Postgres init (empty ./data/db only).
 -- Reads operator CSVs mounted at /seed (see db volumes in docker-compose.yml):
---   stands.csv   header: user,pw,name            (REQUIRED)
---   rewards.csv  header: stand,name,description,cost,stock,emoji (REQUIRED,
+--   stands.csv   header: user,pw,name            (OPTIONAL)
+--   rewards.csv  header: stand,name,description,cost,stock,emoji (OPTIONAL,
 --                header-only allowed for "stands only")
--- Missing files abort init loudly (fail-fast: a silent empty fair is worse).
+-- Both inputs are optional. An empty ./seed is the normal case for a brand-new
+-- fair: no stands are loaded, only the organiser account (71) is created, and
+-- every stand is then created from the panel. A file that is present but
+-- malformed still aborts loudly, because a half-seeded fair is worse than a
+-- refused boot.
 -- Reseed = down + rm -rf ./data/db + up.
 --
 -- Identity model (no GoTrue): stands log in with bare usernames against
@@ -20,7 +24,12 @@ CREATE TEMP TABLE stage_stands (
   pw_   TEXT,
   name_ TEXT
 ) ON COMMIT DROP;
+-- \copy is client-side, so SQL cannot test for the file. A backtick \set asks the
+-- shell and \if skips the load when the operator supplied nothing.
+\set stands_file `test -f /seed/stands.csv && echo true || echo false`
+\if :stands_file
 \copy stage_stands FROM '/seed/stands.csv' WITH (FORMAT csv, HEADER true)
+\endif
 
 CREATE TEMP TABLE stage_rewards (
   stand_       TEXT,
@@ -30,7 +39,10 @@ CREATE TEMP TABLE stage_rewards (
   stock_       TEXT,
   emoji_       TEXT
 ) ON COMMIT DROP;
+\set rewards_file `test -f /seed/rewards.csv && echo true || echo false`
+\if :rewards_file
 \copy stage_rewards FROM '/seed/rewards.csv' WITH (FORMAT csv, HEADER true)
+\endif
 
 -- 1. Communities (username = bare login name; bcrypt hash via pgcrypto) ------
 INSERT INTO communities (username, name, password_hash)
