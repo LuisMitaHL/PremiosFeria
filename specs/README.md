@@ -31,7 +31,6 @@ Retro-specs, documenting the system as built. They carry *As-built notes* and no
 |---|---|---|---|
 | 002 | `camera-qr-scan` | Participant | Not started |
 | 003 | `manual-code-fallback` | Participant | Not started |
-| 004 | `visit-cooldown-rules` | Participant | Not started |
 | 007 | `live-leaderboard` | Participant | Not started |
 | 010 | `stand-login` | Stand admin | Not started |
 | 015 | `pwa-shell` | Participant | Not started |
@@ -60,7 +59,7 @@ Part retro-spec, part change. Each opens with what exists today and why it is be
 | 023 | [`organizer-community-management`](023-organizer-community-management/spec.md) | Event operator | Draft |
 | 024 | [`system-audit-log`](024-system-audit-log/spec.md) | Event operator | Draft |
 | 025 | [`participant-activity-progress`](025-participant-activity-progress/spec.md) | Participant | Draft |
-| 026 | `project-documentation` | — | Not started |
+| 026 | [`project-documentation`](026-project-documentation/spec.md) | — | Draft |
 
 ## Numbers retired before they were written
 
@@ -76,6 +75,7 @@ to be deleted. The numbers stay retired rather than being reused.
 | 009 | `reward-claiming` | 018 | Claiming in the app is replaced by in-person fulfilment confirmed by the stand |
 | 014 | `stand-admin-console` | 019, 021 | Its point configuration disappears; what remains is activity and reward management |
 | 012 | `csv-provisioning` | 017, 023, 021 | Seeding stands and rewards from CSV disappears: the organiser creates stands, and stands register their own rewards |
+| 004 | `visit-cooldown-rules` | 020 | The cooldown it would have documented (5 minutes) is replaced by 30 minutes, and spec 020 owns the rule |
 
 ---
 
@@ -108,7 +108,7 @@ took over creating stands: without it there are no stands, so there is no fair.
        +-- 018 in-person-reward-fulfilment   (single-use code, the stand confirms,
                                               points and stock spent together)
 
-Independent of the above: 002, 003, 004, 007, 013, 015, 016, 026
+Independent of the above: 002, 003, 007, 010, 015, 016, 026
 ```
 
 Spec 001 is already drafted and is not blocked by any of them.
