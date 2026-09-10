@@ -29,7 +29,7 @@ Retro-specs, documenting the system as built. They carry *As-built notes* and no
 
 | # | Spec | Actor | Status |
 |---|---|---|---|
-| 002 | `camera-qr-scan` | Participant | Not started |
+| 002 | [`camera-qr-scan`](002-camera-qr-scan/spec.md) | Participant | Implemented |
 | 003 | `manual-code-fallback` | Participant | Not started |
 | 007 | `live-leaderboard` | Participant | Not started |
 | 010 | `stand-login` | Stand admin | Not started |
