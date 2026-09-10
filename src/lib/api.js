@@ -213,6 +213,16 @@ export async function loginAdmin(email, password) {
         return { success: false, error: 'Credenciales incorrectas' };
     }
 
+    // An organiser authenticates through the same endpoint (spec 017), but this
+    // is the stand console. Without this guard the lookup below finds no
+    // community and surfaces a raw PGRST116. Close the session and say so; the
+    // organiser's own address is not printed here (spec 017, R10 keeps the panel
+    // unlinked from every stand screen).
+    if (data.user.user_metadata?.organizer) {
+        await supabase.auth.signOut();
+        return { success: false, error: 'Esta cuenta es del organizador. Ingresa desde la pantalla de organización.' };
+    }
+
     // The auth session carries the linked community in user_metadata (set by
     // the auth service). Fall back to resolving
     // via communities.auth_user_id for sessions without that metadata.
