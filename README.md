@@ -58,7 +58,7 @@ WHERE username = '<organizer-username>';
 docker compose --env-file .env.prod up -d --build
 ```
 
-First boot: Postgres init loads schema + RLS + RPC + seed from `./seed/*.csv` (both files required — missing files abort init loudly). Init scripts run in numeric order, so a seed that aborts also stops the organiser account from being created; if the container then restarts against that half-initialised volume, init is skipped and the organiser never exists. Read the database logs before trusting the first boot. Check against published ports:
+First boot: Postgres init loads schema + RLS + RPC + seed from `./seed/*.csv` (both files required — copy the tracked `.example` files, see section 4). Init scripts run in numeric order, so a seed that aborts also stops the organiser account from being created. A completion marker is written only after the whole chain succeeds, and the `db` healthcheck requires it: if init aborted, the database stays `unhealthy` and the API is never started against an empty database. Read the database logs before trusting the first boot. Check against published ports:
 
 ```bash
 curl -s http://localhost:9999/health
@@ -87,7 +87,18 @@ curl -sI -H "apikey: $ANON" https://feria.example.com/rest/v1/communities?select
 
 ### 4. Seed accounts from CSV
 
-Drop two files in `./seed/` (git-ignored, operator-only). No accounts are hardcoded in SQL.
+Both files must exist before the first boot. Copy the tracked examples and edit the
+copies: `seed/*.csv` is git-ignored because it holds plaintext passwords, so only the
+`.example` files are committed.
+
+```bash
+cp seed/stands.csv.example seed/stands.csv
+cp seed/rewards.csv.example seed/rewards.csv
+chmod 600 seed/stands.csv
+# then edit both files
+```
+
+No accounts are hardcoded in SQL.
 
 `seed/stands.csv` (required, header `user,pw,name`):
 
