@@ -20,6 +20,9 @@
 --   communities.password       the same thing in plaintext. Dropped in prod by
 --                              25_auth_columns.sql; still present in the dev
 --                              schema, which is why it is listed here.
+--   organizers.password_hash   the most powerful credential in the system. The
+--                              table has RLS on with no policy as well, so this
+--                              is the second lock on the same door.
 --   participants.fingerprint   the device a participant registered from. After
 --                              spec 001 it is half of the key that recovers a
 --                              profile, so publishing it publishes half a
@@ -67,10 +70,11 @@ BEGIN
       'Secrets would be readable by every client role.';
   END IF;
 
-  FOREACH v_table IN ARRAY ARRAY['participants', 'communities'] LOOP
+  FOREACH v_table IN ARRAY ARRAY['participants', 'communities', 'organizers'] LOOP
     v_secret := CASE v_table
       WHEN 'participants' THEN ARRAY['fingerprint']
       WHEN 'communities'  THEN ARRAY['password_hash', 'password']
+      WHEN 'organizers'   THEN ARRAY['password_hash']
     END;
 
     SELECT string_agg(quote_ident(column_name), ', ' ORDER BY ordinal_position)

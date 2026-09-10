@@ -13,6 +13,8 @@ import Rewards from './pages/Rewards.jsx';
 import AdminLogin from './pages/admin/AdminLogin.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import QRDisplay from './pages/admin/QRDisplay.jsx';
+import OrganizerLogin from './pages/organizer/OrganizerLogin.jsx';
+import OrganizerPanel from './pages/organizer/OrganizerPanel.jsx';
 
 function BackgroundDecorations() {
     return (
@@ -28,8 +30,12 @@ function AppLayout({ children }) {
     const { participant } = useAuth();
     const location = useLocation();
 
-    // Don't show nav on welcome, register, admin, or QR display pages
-    const hideNav = ['/', '/register'].includes(location.pathname) || location.pathname.startsWith('/admin');
+    // La barra del estudiante no aparece en bienvenida, registro, ni en los
+    // paneles de stand y organizador.
+    const hideNav =
+        ['/', '/register'].includes(location.pathname) ||
+        location.pathname.startsWith('/admin') ||
+        location.pathname.startsWith('/organizador');
 
     if (hideNav) return <>{children}</>;
 
@@ -98,6 +104,14 @@ function AppRoutes() {
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/qr/:groupId" element={<QRDisplay />} />
+                {/* El panel del organizador vive en la misma aplicación, en su
+                    propia dirección, y NO se enlaza desde ninguna pantalla del
+                    estudiante ni del stand (spec 017, R10). Eso no es el
+                    control de acceso -- lo es la base de datos -- solo evita
+                    que trescientas personas encuentren una pantalla que no es
+                    para ellas. */}
+                <Route path="/organizador/entrar" element={<OrganizerLogin />} />
+                <Route path="/organizador" element={<OrganizerPanel />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </AppLayout>

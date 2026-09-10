@@ -1830,3 +1830,12 @@ textarea {
     font-size: 0.78rem;
     flex-shrink: 0;
 }
+
+/* Organizer panel (spec 017) */
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-lg) 0 var(--space-md);
+}

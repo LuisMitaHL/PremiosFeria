@@ -25,6 +25,7 @@ export function AuthProvider({ children }) {
     // --- Admin (Supabase Auth) ---
     const [adminUser, setAdminUser] = useState(null);
     const [adminLoading, setAdminLoading] = useState(true);
+    const [organizerUser, setOrganizerUser] = useState(null);
 
     // Load participant on mount: prefiere la fila vinculada a la sesión de
     // Supabase Auth; localStorage solo es caché de visualización.
@@ -64,7 +65,16 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         import('./api.js').then(({ getSession }) => {
             getSession().then(session => {
-                setAdminUser(session?.user ?? null);
+                // Una sola sesión a la vez: el cliente de auth es uno. Se
+                // encamina según lo que diga el token, pero cada pantalla del
+                // panel vuelve a comprobarlo contra la base.
+                if (session?.user?.organizer) {
+                    setOrganizerUser(session.user);
+                    setAdminUser(null);
+                } else {
+                    setAdminUser(session?.user ?? null);
+                    setOrganizerUser(null);
+                }
                 setAdminLoading(false);
             });
         });
@@ -106,6 +116,22 @@ export function AuthProvider({ children }) {
         return result;
     };
 
+    const loginOrganizer = async (username, password) => {
+        const { loginOrganizer: apiLoginOrganizer } = await import('./api.js');
+        const result = await apiLoginOrganizer(username, password);
+        if (result.success) {
+            setOrganizerUser(result.user);
+            setAdminUser(null);
+        }
+        return result;
+    };
+
+    const logoutOrganizer = async () => {
+        const { logoutAdmin: apiLogoutAdmin } = await import('./api.js');
+        await apiLogoutAdmin();
+        setOrganizerUser(null);
+    };
+
     const logoutAdmin = async () => {
         const { logoutAdmin: apiLogoutAdmin } = await import('./api.js');
         await apiLogoutAdmin();
@@ -124,6 +150,10 @@ export function AuthProvider({ children }) {
         adminLoading,
         loginAdmin,
         logoutAdmin,
+        // Organizer
+        organizerUser,
+        loginOrganizer,
+        logoutOrganizer,
     };
 
     return (

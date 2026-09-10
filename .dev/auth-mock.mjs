@@ -33,7 +33,9 @@ function issueSession(community) {
       iat: now,
       exp,
       app_metadata: { provider: "email", providers: ["email"] },
-      user_metadata: { community_id: community.id, name: community.name, username: community.username },
+      user_metadata: community.organizer
+        ? { organizer: true, username: community.username }
+        : { community_id: community.id, name: community.name, username: community.username },
     })
   );
   const access_token = `${header}.${payload}.${sign(header + "." + payload)}`;
@@ -50,7 +52,9 @@ function issueSession(community) {
       email: community.username,
       email_confirmed_at: new Date(now * 1000).toISOString(),
       app_metadata: { provider: "email", providers: ["email"] },
-      user_metadata: { community_id: community.id, name: community.name, username: community.username },
+      user_metadata: community.organizer
+        ? { organizer: true, username: community.username }
+        : { community_id: community.id, name: community.name, username: community.username },
       created_at: new Date(now * 1000).toISOString(),
       updated_at: new Date(now * 1000).toISOString(),
     },
@@ -87,6 +91,24 @@ async function lookupCommunity(username) {
 // is not an option -- which is the point of mirroring prod's shape.
 async function verifyStand(username, password) {
   const res = await fetch(`${PGRST_URL}/rpc/stand_login`, {
+    method: "POST",
+    headers: {
+      apikey: ANON_KEY,
+      Authorization: `Bearer ${ANON_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ p_username: username, p_password: password }),
+  });
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
+}
+
+// El organizador tiene su propia tabla y su propia función, igual que en
+// producción (spec 017). Dos caminos separados es lo que impide que un stand se
+// autentique como organizador o al revés.
+async function verifyOrganizer(username, password) {
+  const res = await fetch(`${PGRST_URL}/rpc/organizer_login`, {
     method: "POST",
     headers: {
       apikey: ANON_KEY,
@@ -138,6 +160,20 @@ async function handleToken(req, res, query) {
   const email = String(body.email || "");
   const password = String(body.password || "");
   const community = await verifyStand(email, password);
+  if (!community) {
+    // Se prueba el organizador solo si no era un stand, y la respuesta al
+    // fallar es idéntica: un nombre de organizador no puede distinguirse del de
+    // un stand por lo que devuelve el servicio.
+    const organizer = await verifyOrganizer(email, password);
+    if (organizer) {
+      return send(res, 200, issueSession({
+        id: organizer.id,
+        username: organizer.username,
+        name: organizer.username,
+        organizer: true,
+      }));
+    }
+  }
   if (!community) {
     return send(res, 400, {
       error: "invalid_credentials",

@@ -50,7 +50,7 @@ Part retro-spec, part change. Each opens with what exists today and why it is be
 
 | # | Spec | Actor | Status |
 |---|---|---|---|
-| 017 | [`organizer-admin-panel`](017-organizer-admin-panel/spec.md) | Event operator | Draft |
+| 017 | [`organizer-admin-panel`](017-organizer-admin-panel/spec.md) | Event operator | Implemented |
 | 018 | [`in-person-reward-fulfilment`](018-in-person-reward-fulfilment/spec.md) | Participant, Stand admin | Implemented |
 | 019 | [`stand-activity-catalogue`](019-stand-activity-catalogue/spec.md) | Stand admin | Implemented |
 | 020 | [`fixed-points-model`](020-fixed-points-model/spec.md) | Participant, Stand admin | Implemented |

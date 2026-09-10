@@ -39,6 +39,14 @@ WEB_PORT="${WEB_PORT:-8080}"
 POSTGRES_PASSWORD="$(openssl rand -hex 24)"   # alnum only: embedded in URLs
 JWT_SECRET="$(openssl rand -hex 32)"          # 64 hex chars
 
+# Organiser account (spec 017). Nobody inside the system can create the account
+# that creates everyone else, so it is generated here and loaded at first boot.
+# The password is generated rather than chosen: ten stands provisioned in a
+# hurry the morning of the fair is exactly the situation that produces a weak
+# one, and this is the most powerful credential in the system.
+ORGANIZER_USERNAME="${ORGANIZER_USERNAME:-organizador}"
+ORGANIZER_PASSWORD="$(openssl rand -base64 18 | tr -d '/+=' | cut -c1-20)"
+
 # HS256 legacy API keys, same shape as dev.sh anon key (role/iss/iat/exp).
 read -r ANON_KEY SERVICE_ROLE_KEY < <(JWT_SECRET="$JWT_SECRET" node --input-type=module -e '
 import crypto from "node:crypto";
@@ -62,8 +70,16 @@ ANON_KEY=$ANON_KEY
 SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY
 VITE_SUPABASE_URL=$SITE_URL
 WEB_PORT=$WEB_PORT
+
+# Hand these to whoever runs the event, over a secure channel. They are not
+# recoverable from the system: the database stores only a hash.
+ORGANIZER_USERNAME=$ORGANIZER_USERNAME
+ORGANIZER_PASSWORD=$ORGANIZER_PASSWORD
 ENV
 chmod 600 "$OUT"
 
-echo "✓ wrote $OUT (mode 600). Next:"
+echo "✓ wrote $OUT (mode 600)."
+echo "  Organiser login: $ORGANIZER_USERNAME / $ORGANIZER_PASSWORD"
+echo "  Hand it over securely. It is not recoverable: only a hash is stored."
+echo "Next:"
 echo "  docker compose --env-file $OUT up -d --build"

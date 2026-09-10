@@ -215,6 +215,30 @@ Nothing in this spec exists. There is no organiser in the system at all.
 - The maximum-achievable figure depends on spec 020's constants and on what stands have published,
   so it is computed, never stored.
 
+## 10b. As built
+
+A separate table, `organizers`, with RLS on and no policy — and no client grant either, so a stand
+asking for it gets "permission denied" rather than an empty result. `organizer_login` mirrors
+`stand_login` against its own table: two functions, each looking at one table, is what stops a
+stand ever authenticating as an organiser or the reverse. Both were asserted in both directions.
+
+`event_overview()` computes every figure in one read. The reachable maximum is derived from spec
+020's constants and what stands have published, never stored.
+
+The account is created at deployment: `deploy-keys.sh` generates the username and a strong
+password into the secrets file, and `71_organizer_seed.sh` loads it at first boot. **The boot fails
+loudly if the variables are unset** — an event that starts and cannot be administered is a worse
+failure than one that does not start, because it is discovered on the day.
+
+**Verified in the browser**: the organiser signs in at an address nothing links to, and the home
+screen shows the six figures, what is running, and the economy check — which immediately earned its
+place by flagging that the most expensive published prize (250) was above what anyone could earn
+(100). A stand's session calling the same endpoint gets "No autorizado" and cannot read the table
+at all.
+
+**Not built.** The four areas are placeholders: students (022), communities and reward powers
+(023), and the log (024).
+
 ## 11. References
 
 - Constitution: IV (identity is never a parameter), V (secrets never reach the client), IX

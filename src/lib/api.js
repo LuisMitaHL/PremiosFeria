@@ -228,12 +228,44 @@ export async function logoutAdmin() {
     await supabase.auth.signOut();
 }
 
+// El organizador entra por el mismo servicio de autenticación con su propia
+// función contra su propia tabla (spec 017). El flag del token solo dice a qué
+// pantalla ir; toda autoridad se resuelve en la base por auth.uid().
+export async function loginOrganizer(username, password) {
+    await supabase.auth.signOut();
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email: username,
+        password,
+    });
+    if (error || !data?.user) {
+        return { success: false, error: 'Credenciales incorrectas' };
+    }
+    if (!data.user.user_metadata?.organizer) {
+        // Credenciales válidas, pero de un stand. El panel no es suyo.
+        await supabase.auth.signOut();
+        return { success: false, error: 'Credenciales incorrectas' };
+    }
+    return {
+        success: true,
+        user: { id: data.user.id, username: data.user.user_metadata.username, organizer: true },
+    };
+}
+
+export async function getEventOverview() {
+    const { data, error } = await supabase.rpc('event_overview');
+    if (error) throw new Error(`Error al obtener el resumen: ${error.message}`);
+    return data;
+}
+
 export async function getSession() {
     const { data } = await supabase.auth.getSession();
     const uid = data?.session?.user?.id;
     if (!uid) return null;
 
     const meta = data.session.user.user_metadata;
+    if (meta?.organizer) {
+        return { user: { id: uid, username: meta.username, organizer: true } };
+    }
     if (meta?.community_id) {
         return {
             user: {

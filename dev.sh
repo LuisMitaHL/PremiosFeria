@@ -99,6 +99,7 @@ cp "$REPO/supabase/postgres-init/50_rpc.sql" "$SQL/50_rpc.sql"
 cp "$REPO/supabase/postgres-init/52_activities.sql" "$SQL/52_activities.sql"
 cp "$REPO/supabase/postgres-init/53_rewards.sql" "$SQL/53_rewards.sql"
 cp "$REPO/supabase/postgres-init/54_fulfilment.sql" "$SQL/54_fulfilment.sql"
+cp "$REPO/supabase/postgres-init/55_organizer.sql" "$SQL/55_organizer.sql"
 
 # Auth compat — must run BEFORE 40_rls.sql (its policies call auth.uid()).
 # Plain Postgres knows no auth.uid()/auth.jwt(); local gets a compat layer.
@@ -138,6 +139,12 @@ SQL
 # so link each community to its own uuid.
 cat > "$SQL/70_auth_link.sql" <<'SQL'
 UPDATE communities SET auth_user_id = id WHERE auth_user_id IS NULL;
+
+-- Organizador local. En produccion lo genera deploy-keys.sh y lo carga
+-- 71_organizer_seed.sh desde el entorno; aca es conocido para poder entrar.
+INSERT INTO organizers (username, password_hash)
+VALUES ('organizador', crypt('Organiza2024*', gen_salt('bf', 12)))
+ON CONFLICT (username) DO NOTHING;
 
 -- Mirror of prod's stand_login (51_stand_login.sql), against dev's plaintext
 -- password column. It exists so the dev auth mock verifies credentials the way

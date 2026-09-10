@@ -86,6 +86,29 @@ async function rpcStandLogin(username, password) {
   return Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
 }
 
+// El organizador tiene su propia tabla y su propia función (spec 017). Que
+// sean dos caminos separados es lo que impide que un stand se autentique como
+// organizador o al revés: cada función mira una sola tabla.
+async function rpcOrganizerLogin(username, password) {
+  const res = await fetch(`${PGRST_URL}/rpc/organizer_login`, {
+    method: "POST",
+    headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_username: username, p_password: password }),
+  });
+  if (!res.ok) throw new Error(`organizer_login rpc: ${res.status}`);
+  const rows = await res.json();
+  return Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
+}
+
+async function organizerById(id) {
+  const res = await fetch(`${PGRST_URL}/organizers?id=eq.${encodeURIComponent(id)}&select=id,username`, {
+    headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },
+  });
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
+}
+
 async function communityById(id) {
   const res = await fetch(`${PGRST_URL}/communities?id=eq.${encodeURIComponent(id)}&select=id,username,name`, {
     headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },
@@ -184,9 +207,14 @@ async function handleToken(req, res, query, ip) {
     const claims = verify(body.refresh_token);
     if (!claims?.sub) return send(res, 400, { error: "invalid_grant", error_description: "Invalid refresh token" });
     if (claims.is_anonymous) return send(res, 200, anonSessionFor(claims.sub));
+    // El sub identifica a un stand o a un organizador. Se resuelve contra la
+    // tabla, no contra lo que diga el token: el flag del token es para que el
+    // cliente sepa a qué pantalla ir, y no es una fuente de autoridad.
     const community = await communityById(claims.sub).catch(() => null);
-    if (!community) return send(res, 400, { error: "invalid_grant", error_description: "Session no longer valid" });
-    return send(res, 200, adminSession(community));
+    if (community) return send(res, 200, adminSession(community));
+    const organizer = await organizerById(claims.sub).catch(() => null);
+    if (organizer) return send(res, 200, organizerSession(organizer));
+    return send(res, 400, { error: "invalid_grant", error_description: "Session no longer valid" });
   }
 
   if (grant !== "password") {
@@ -200,13 +228,47 @@ async function handleToken(req, res, query, ip) {
     return send(res, 429, { error: "rate_limited", error_description: "Demasiados intentos. Espera unos minutos.", code: 429 });
   }
   let community = null;
+  let organizer = null;
   try {
     community = await rpcStandLogin(username, password);
+    // Se prueba el organizador solo si no era un stand, y la respuesta al
+    // fallar es idéntica en ambos casos: un nombre de organizador no puede
+    // distinguirse del de un stand por lo que devuelve el servicio.
+    if (!community) organizer = await rpcOrganizerLogin(username, password);
   } catch {
     return send(res, 500, { error: "internal_error", error_description: "Auth backend unavailable", code: 500 });
   }
-  if (!community) return invalidCredentials(res);
-  return send(res, 200, adminSession(community));
+  if (community) return send(res, 200, adminSession(community));
+  if (organizer) return send(res, 200, organizerSession(organizer));
+  return invalidCredentials(res);
+}
+
+// El token lleva organizer: true para que el cliente sepa a qué pantalla ir.
+// Ese flag NO decide nada: cada función del panel resuelve al organizador por
+// auth.uid() contra la tabla (constitución IV).
+function organizerSession(organizer) {
+  const access = mint({ sub: organizer.id, ttl: ACCESS_TTL, extra: { user_metadata: { organizer: true, username: organizer.username } } });
+  const refresh = mint({ sub: organizer.id, ttl: REFRESH_TTL, extra: { type: "refresh", user_metadata: { organizer: true, username: organizer.username } } });
+  const nowIso = new Date(access.iat * 1000).toISOString();
+  const meta = { organizer: true, username: organizer.username };
+  return {
+    access_token: access.token,
+    token_type: "bearer",
+    expires_in: ACCESS_TTL,
+    expires_at: access.exp,
+    refresh_token: refresh.token,
+    user: {
+      id: organizer.id,
+      aud: "authenticated",
+      role: "authenticated",
+      email: organizer.username,
+      email_confirmed_at: nowIso,
+      app_metadata: { provider: "username", providers: ["username"] },
+      user_metadata: meta,
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+  };
 }
 
 // Refresh for anonymous sessions keeps the same sub (no DB lookup needed).
@@ -246,8 +308,10 @@ const server = http.createServer(async (req, res) => {
         return send(res, 200, { id: claims.sub, aud: "authenticated", role: "authenticated", is_anonymous: true, app_metadata: { provider: "anonymous", providers: ["anonymous"] }, user_metadata: {}, created_at: nowIso, updated_at: nowIso });
       }
       const community = await communityById(claims.sub).catch(() => null);
-      if (!community) return send(res, 401, { error: "invalid_token", msg: "Session no longer valid" });
-      return send(res, 200, adminSession(community).user);
+      if (community) return send(res, 200, adminSession(community).user);
+      const organizer = await organizerById(claims.sub).catch(() => null);
+      if (organizer) return send(res, 200, organizerSession(organizer).user);
+      return send(res, 401, { error: "invalid_token", msg: "Session no longer valid" });
     }
     if (req.method === "GET" && path === "/health") {
       return send(res, 200, { version: "1.0.0", name: "premiosferia-auth", description: "Username auth for PremiosFeria" });
