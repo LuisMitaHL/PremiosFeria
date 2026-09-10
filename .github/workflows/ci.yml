@@ -1,0 +1,68 @@
+name: CI
+
+# Verification runs on lint and tests, never on a production build: `npm run
+# build` is a release step (see AGENTS.md).
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  test-sql:
+    name: test-sql
+    runs-on: ubuntu-latest
+
+    # Every game rule lives in Postgres, so the rules are tested against a real
+    # one. The suite builds its own throwaway database from the canonical
+    # scripts in supabase/postgres-init/, so this service starts empty.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      PSQL_CMD: psql
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the Postgres client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - run: npm run test:sql
+
