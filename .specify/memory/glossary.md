@@ -15,6 +15,8 @@ row here.
 | Visit | Visita | A repeatable scan type. Awards up to 30 points, subject to a 5-minute per-stand cooldown. |
 | Activity | Actividad | A once-per-stand scan type. Awards up to 100 points. Enforced by a partial unique index. |
 | Points | Puntos | The event currency. Earned by scanning, spent by claiming. Never negative. |
+| Nickname | Nombre / Apodo | The single value an attendee registers with. Unique across the event, case-insensitive, 2 to 24 characters. It is both the label shown on the leaderboard and the key used to return to a profile. Stored in `participants.name`. See spec 001. |
+| Device identity | Fingerprint | A weak signal identifying the browser an attendee registered from. It is the second factor that lets a nickname restore a profile on the same device, and it is never a credential on its own. Stored in `participants.fingerprint`. See spec 001. |
 | Reward | Premio | A physical prize offered by a stand, with a point cost and a stock. Stored in `rewards`. |
 | Claim | Canje | A participant exchanging points for a reward. Stored in `claimed_rewards`. |
 | Fulfilment | Entrega | The physical handover of a claimed reward at the stand. Not modelled in the system today. |

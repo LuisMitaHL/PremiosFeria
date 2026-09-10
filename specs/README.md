@@ -27,7 +27,7 @@ unless a change is proposed against them.
 
 | # | Spec | Actor | Status |
 |---|---|---|---|
-| 001 | `participant-registration` | Participant | Not started |
+| 001 | [`participant-registration`](001-participant-registration/spec.md) | Participant | Draft |
 | 002 | `camera-qr-scan` | Participant | Not started |
 | 003 | `manual-code-fallback` | Participant | Not started |
 | 004 | `visit-cooldown-rules` | Participant | Not started |
