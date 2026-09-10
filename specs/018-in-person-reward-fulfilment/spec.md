@@ -258,6 +258,28 @@ The claim exists today, but at the wrong moment and between the wrong parties.
 - `claimed_rewards` gains the stand that confirmed the handover, which is also what spec 024 needs
   in order to record it.
 
+## 10b. As built
+
+`supabase/postgres-init/54_fulfilment.sql`. `claim_reward` is gone: leaving it would have left a
+second way to spend points, with no stand and no handover.
+
+A code's life is derived from the screen still asking about it — `poll_my_claim_code` bumps
+`last_seen_at`, and a code is dead once that is older than `claim_code_grace()`. Nothing sweeps,
+for the same reason an activity's state is derived: nothing in this stack runs in the background.
+
+**A bug the browser found that the tests would not have.** The claim screen remounting issued two
+codes in the same second, and the one left open was not necessarily the one on display — the
+attendee would have shown a stand a code that had already been replaced. `issue_claim_code` now
+returns the live code if one exists (R4a), and the screen discards a result that arrives after it
+was torn down. It also stopped swallowing every polling failure: a run of them now says so, since
+that silence is what hid the bug.
+
+**Verified end to end in the browser**, both sides: the code is issued and displayed; a stand
+confirms with the code typed in lower case; points and stock move together; and the attendee's
+screen closes itself within a few seconds showing the prize and the new balance. Refusals were
+checked for an unaffordable prize, a prize already claimed, and a prize belonging to another
+stand — each leaving the code usable.
+
 ## 11. References
 
 - Constitution: III (rules in the database), IV (identity is never a parameter), VI (defence in
