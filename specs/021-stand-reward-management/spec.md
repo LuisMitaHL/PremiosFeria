@@ -247,6 +247,20 @@ profile — which removes the stand console section that would otherwise have sa
 - The catalogue itself changes little. Most of the work is the stand-facing section and the two
   write paths.
 
+## 10b. As built
+
+`supabase/postgres-init/53_rewards.sql` has exactly two functions, and their names are the rule:
+`create_reward` and `increase_reward_stock`. There is no `update_reward` to reach for, so a stand
+cannot raise a price attendees are saving towards or take away units they can already see. Both
+directions belong to the organiser (spec 023).
+
+The 300-point ceiling is a `CHECK` on the column, so it binds a direct insert as much as the form.
+`is_withdrawn` ships now, unwritten by anyone until spec 023, because the catalogue and the claim
+have to respect it from the moment it exists — otherwise 023 would have to revisit every reader.
+
+**Not built.** R11, R14 and R17a are the organiser's, and land with spec 023. Until then a wrong
+price is corrected by a database operator, exactly as stand passwords are today.
+
 ## 11. References
 
 - Constitution: III (rules in the database), IV (identity is never a parameter), VI (structural

@@ -310,6 +310,41 @@ export async function finishActivity(id) {
     return data;
 }
 
+export async function getRewardsForCommunity(communityId) {
+    const { data, error } = await supabase
+        .from('rewards')
+        .select('*')
+        .eq('community_id', communityId)
+        .order('cost', { ascending: true });
+
+    if (error) throw new Error(`Error al obtener premios: ${error.message}`);
+    return data;
+}
+
+// A stand registers its own prizes and may only ever add stock. Reducing it,
+// and changing a cost, belong to the organiser (spec 021), which is why there
+// is no updateReward here to reach for.
+export async function createReward(fields) {
+    const { data, error } = await supabase.rpc('create_reward', {
+        p_name: fields.name,
+        p_cost: Number(fields.cost),
+        p_stock: Number(fields.stock),
+        p_emoji: fields.emoji,
+        p_description: fields.description || null,
+    });
+    if (error) throw new Error(`Error al crear premio: ${error.message}`);
+    return data;
+}
+
+export async function increaseRewardStock(rewardId, by) {
+    const { data, error } = await supabase.rpc('increase_reward_stock', {
+        p_reward_id: rewardId,
+        p_by: Number(by),
+    });
+    if (error) throw new Error(`Error al agregar stock: ${error.message}`);
+    return data;
+}
+
 // ─── QR Signing (server-side) ────────────────
 
 // Firma el código QR rotativo en el servidor (el secreto nunca sale de la BD).

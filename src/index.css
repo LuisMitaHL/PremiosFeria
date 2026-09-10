@@ -1677,3 +1677,31 @@ textarea {
 .scan-result.neutral .result-title {
     color: var(--text-primary);
 }
+
+/* Icon picker (spec 021). The catalogue has no file storage, so a prize is
+   identified by an icon from a fixed set -- which also keeps every card the
+   same shape. */
+.icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    gap: var(--space-sm);
+}
+
+.icon-option {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.icon-option.is-active {
+    border-color: var(--accent-purple);
+    color: var(--accent-purple);
+    background: rgba(129, 0, 255, 0.08);
+}

@@ -10,6 +10,7 @@ import {
 import { Settings, LogOut, Loader, MapPin, Target, QrCode, Pencil, AlertTriangle, ClipboardList, Save, BookOpen, Monitor, Zap, Bot, Globe, Palette, FlaskConical, TestTube, Ruler, Gamepad2, Sprout, Music, Dumbbell, Camera, Rocket, Brain } from 'lucide-react';
 import DynamicIcon from '../../components/DynamicIcon.jsx';
 import ActivitiesSection from './ActivitiesSection.jsx';
+import RewardsSection from './RewardsSection.jsx';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -229,10 +230,7 @@ export default function AdminDashboard() {
                     )}
 
                     {section === 'premios' && (
-                        <div className="empty-state">
-                            <p>Todavía no puedes registrar premios desde aquí.</p>
-                            <p className="empty-hint">Llega con el spec 021.</p>
-                        </div>
+                        <RewardsSection communityId={community.id} />
                     )}
 
                     {section === 'canjes' && (

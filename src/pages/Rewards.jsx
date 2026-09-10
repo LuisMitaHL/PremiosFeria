@@ -86,7 +86,12 @@ export default function Rewards() {
                         const claimed = claimedIds.includes(reward.id);
                         const canAfford = participant.points >= reward.cost;
                         const inStock = reward.stock > 0;
-                        const canClaim = canAfford && inStock;
+                        // A withdrawn prize stays visible so it is clear it
+                        // existed, but it cannot be claimed (spec 021, R19a).
+                        // The refusal that matters is in the database; this only
+                        // keeps anyone from crossing the fair for nothing.
+                        const withdrawn = reward.is_withdrawn;
+                        const canClaim = canAfford && inStock && !withdrawn;
 
                         return (
                             <div key={reward.id} className={`reward-card ${claimed ? 'claimed' : ''}`}>
@@ -97,7 +102,8 @@ export default function Rewards() {
                                     <div className="reward-name">
                                         {reward.name}
                                         {claimed && <span className="badge badge-green" style={{ marginLeft: 8 }}>Canjeado</span>}
-                                        {!inStock && !claimed && <span className="badge badge-red" style={{ marginLeft: 8, background: 'var(--accent-rose)', color: 'white' }}>Agotado</span>}
+                                        {!inStock && !claimed && !withdrawn && <span className="badge badge-red" style={{ marginLeft: 8, background: 'var(--accent-rose)', color: 'white' }}>Agotado</span>}
+                                        {withdrawn && !claimed && <span className="badge badge-finished" style={{ marginLeft: 8 }}>No disponible</span>}
                                     </div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
                                         Stand: {reward.communities?.name || 'Desconocido'} · Quedan: {reward.stock}
