@@ -69,10 +69,31 @@ function verifyJwt(token) {
   }
 }
 
+// Resolve a stand from a session that is already valid. Reads only columns any
+// client may read; no credential is involved.
 async function lookupCommunity(username) {
-  const url = `${PGRST_URL}/communities?username=eq.${encodeURIComponent(username)}&select=id,username,password,name,emoji,stand_number`;
+  const url = `${PGRST_URL}/communities?username=eq.${encodeURIComponent(username)}&select=id,username,name,emoji,stand_number`;
   const res = await fetch(url, {
     headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },
+  });
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
+}
+
+// Verify credentials the way prod's auth service does: inside the database,
+// through a SECURITY DEFINER function. The credential column is not readable
+// over the API (80_column_grants.sql), so reading it out and comparing it here
+// is not an option -- which is the point of mirroring prod's shape.
+async function verifyStand(username, password) {
+  const res = await fetch(`${PGRST_URL}/rpc/stand_login`, {
+    method: "POST",
+    headers: {
+      apikey: ANON_KEY,
+      Authorization: `Bearer ${ANON_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ p_username: username, p_password: password }),
   });
   if (!res.ok) return null;
   const rows = await res.json();
@@ -116,8 +137,8 @@ async function handleToken(req, res, query) {
 
   const email = String(body.email || "");
   const password = String(body.password || "");
-  const community = await lookupCommunity(email);
-  if (!community || community.password !== password) {
+  const community = await verifyStand(email, password);
+  if (!community) {
     return send(res, 400, {
       error: "invalid_credentials",
       error_description: "Email address or password is incorrect.",

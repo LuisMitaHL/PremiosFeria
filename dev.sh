@@ -8,7 +8,7 @@
 # then runs the Vite dev server against it.
 #
 # The backend reproduces the app's canonical schema/RLS/RPC (copies of
-# supabase/postgres-init/{20_schema,31_column_grants,40_rls,50_rpc}.sql), so you develop
+# supabase/postgres-init/{20_schema,40_rls,50_rpc,80_column_grants}.sql), so you develop
 # against the same behavior as production.
 #
 # Uses:
@@ -54,7 +54,7 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-for f in supabase/postgres-init/20_schema.sql supabase/postgres-init/31_column_grants.sql supabase/postgres-init/40_rls.sql supabase/postgres-init/50_rpc.sql; do
+for f in supabase/postgres-init/20_schema.sql supabase/postgres-init/80_column_grants.sql supabase/postgres-init/40_rls.sql supabase/postgres-init/50_rpc.sql; do
   [ -f "$REPO/$f" ] || { echo "✗ expected '$REPO/$f' (canonical source) not found." >&2; exit 1; }
 done
 
@@ -94,9 +94,6 @@ GRANT USAGE ON SCHEMA public TO anon;
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO anon;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
 SQL
-# Column privileges are canonical: dev must hide the same secrets prod hides,
-# or a leak is invisible until production.
-cp "$REPO/supabase/postgres-init/31_column_grants.sql" "$SQL/31_column_grants.sql"
 cp "$REPO/supabase/postgres-init/40_rls.sql" "$SQL/40_rls.sql"
 cp "$REPO/supabase/postgres-init/50_rpc.sql" "$SQL/50_rpc.sql"
 
@@ -138,6 +135,22 @@ SQL
 # so link each community to its own uuid.
 cat > "$SQL/70_auth_link.sql" <<'SQL'
 UPDATE communities SET auth_user_id = id WHERE auth_user_id IS NULL;
+
+-- Mirror of prod's stand_login (51_stand_login.sql), against dev's plaintext
+-- password column. It exists so the dev auth mock verifies credentials the way
+-- prod does -- inside the database, SECURITY DEFINER -- instead of reading the
+-- credential column out over the API with the anon key. 80_column_grants.sql
+-- revokes that column from anon exactly as it revokes the hash in prod, so the
+-- shortcut is not available here either.
+CREATE OR REPLACE FUNCTION stand_login(p_username TEXT, p_password TEXT)
+RETURNS TABLE (id UUID, username TEXT, name TEXT, emoji TEXT, stand_number TEXT)
+LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $fn$
+  SELECT c.id, c.username, c.name, c.emoji, c.stand_number
+  FROM communities c
+  WHERE lower(c.username) = lower(btrim(p_username))
+    AND c.password = p_password
+$fn$;
+GRANT EXECUTE ON FUNCTION stand_login(TEXT, TEXT) TO anon;
 SQL
 
 # Dev seed: communities get plaintext username/password (the mock auth reads

@@ -29,11 +29,11 @@ SCHEMA_FILES=(
   supabase/postgres-init/25_auth_columns.sql
   supabase/postgres-init/26_password_hash.sql
   supabase/postgres-init/30_grants.sql
-  supabase/postgres-init/31_column_grants.sql
   supabase/postgres-init/35_auth_shim.sql
   supabase/postgres-init/40_rls.sql
   supabase/postgres-init/50_rpc.sql
   supabase/postgres-init/51_stand_login.sql
+  supabase/postgres-init/80_column_grants.sql
 )
 
 psql_admin() { $PSQL_CMD -d postgres -v ON_ERROR_STOP=1 --quiet --no-psqlrc "$@"; }

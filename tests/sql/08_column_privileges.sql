@@ -112,6 +112,40 @@ BEGIN
 END;
 $test$;
 
+-- Every column that is NOT a secret must be readable. This is the assertion that
+-- catches the mistake the explicit list above cannot: a column added by a file
+-- that runs after 80_column_grants.sql gets no grant, and the whole table
+-- becomes unreadable to clients -- which surfaces as a permission error a long
+-- way from its cause.
+DO $test$
+DECLARE
+  v_table   TEXT;
+  v_secret  TEXT[];
+  v_missing TEXT;
+BEGIN
+  FOREACH v_table IN ARRAY ARRAY['participants', 'communities'] LOOP
+    v_secret := CASE v_table
+      WHEN 'participants' THEN ARRAY['fingerprint']
+      WHEN 'communities'  THEN ARRAY['password_hash', 'password']
+    END;
+
+    SELECT string_agg(c.column_name, ', ' ORDER BY c.ordinal_position)
+    INTO v_missing
+    FROM information_schema.columns c
+    WHERE c.table_schema = 'public'
+      AND c.table_name = v_table
+      AND NOT (c.column_name = ANY (v_secret))
+      AND NOT has_column_privilege('anon', format('public.%I', v_table), c.column_name, 'SELECT');
+
+    IF v_missing IS NOT NULL THEN
+      RAISE EXCEPTION
+        'These % columns are readable by nobody: %. They were most likely added by a file that runs AFTER 80_column_grants.sql, which only grants the columns existing when it runs.',
+        v_table, v_missing;
+    END IF;
+  END LOOP;
+END;
+$test$;
+
 -- Password hashes are stored at a cost that is not trivially crackable.
 DO $test$
 DECLARE

@@ -1,4 +1,10 @@
--- 31_column_grants.sql — column-level privileges for the API roles.
+-- 80_column_grants.sql — column-level privileges for the API roles.
+--
+-- MUST RUN LAST. It grants the columns that exist at the moment it runs, so a
+-- column created by a later file gets no grant and is invisible to every client
+-- — which looks like a permissions bug a long way from its cause. The number is
+-- 80 for that reason. If you add a file after this one that creates or alters a
+-- table, move this one after it.
 --
 -- Row level security is row level ONLY. `participants` and `communities` are
 -- deliberately world-readable so the leaderboard and the stand list can be
@@ -36,6 +42,10 @@
 --
 -- ADDING A COLUMN THAT HOLDS A SECRET? Add it to the list below, and add an
 -- assertion to tests/sql/08_column_privileges.sql.
+--
+-- ADDING AN ORDINARY COLUMN? It is hidden by default, which is the safe way
+-- round. Re-running this file grants it; tests/sql/08_column_privileges.sql
+-- fails if any non-secret column is unreadable, so the mistake is caught.
 
 DO $$
 DECLARE
