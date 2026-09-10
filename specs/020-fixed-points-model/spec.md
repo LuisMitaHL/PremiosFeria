@@ -221,6 +221,23 @@ Every rule in this spec replaces something that ships today.
   longer needs to carry the amount at all, and with per-activity awards it needs to carry which
   activity. Both are signature changes, coordinated with specs 019 and 011.
 
+## 10b. As built
+
+Shipped together with spec 019. Every award value is now a constant returned by
+`points_config()` in `supabase/postgres-init/50_rpc.sql`, read by `scan_award()` — one place, so
+the signing side and the awarding side cannot disagree. `communities.visit_points` and
+`activity_points` are dropped, and the stand console no longer offers a control for either.
+
+The visit cooldown reads its interval from the same config, so the 30 minutes exist once rather
+than as a literal in a comparison.
+
+**Deviation worth recording.** The signed payload still carries the award amount as an
+*unsigned* display field, so the projection screen can tell the room what the code is worth. It is
+never read back: `validate_and_scan` recomputes the amount from `scan_award()`. The clamp
+`GREATEST(0, ...)` is kept even though the payload can no longer inflate anything — removing a
+guard because the current caller is trusted is how audit finding F3 happened.
+
+
 ## 11. References
 
 - Constitution: III (rules in the database), VI (defence in depth for the point economy).

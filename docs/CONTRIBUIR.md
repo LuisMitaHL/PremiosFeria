@@ -19,8 +19,8 @@ quien lo escribió.
 El ciclo es siempre el mismo:
 
 ```
-entrevista  ->  spec.md  ->  plan.md  ->  tasks.md  ->  código  ->  PR
-  (preguntar)   (qué y por qué)  (cómo)    (pasos)
+entrevista  ->  spec.md  ->  plan.md  ->  [tasks.md]  ->  código
+  (preguntar)   (qué y por qué)  (cómo)   (solo si se comparte)
 ```
 
 Cada paso se aprueba antes de pasar al siguiente. Un spec con un `[NEEDS CLARIFICATION]` abierto
@@ -64,9 +64,15 @@ Prestá atención especial a la base de datos: los scripts de `supabase/postgres
 **una sola vez, sobre un volumen vacío**. El plan tiene que decir si el cambio exige
 `./dev.sh --fresh` en local, un wipe en producción, y si se puede aplicar con un evento en curso.
 
-### Paso 4 — Tareas
+### Paso 4 — Tareas (solo cuando hacen falta)
 
-`tasks.md` descompone el plan. Una tarea es una unidad revisable con un commit. Cada tarea dice
+**`tasks.md` se escribe solo si el trabajo no lo va a hacer una sola persona de una sentada.**
+Descomponer un plan aprobado sirve cuando el trabajo se entrega a otro, se retoma más tarde o se
+reparte. Si vas a implementar el plan que acabás de escribir, no aporta nada — y escribirlo después
+para aparentar que se siguió el proceso es peor que no escribirlo: deja registrado un plan que
+nadie siguió.
+
+Cuando sí lo escribas: `tasks.md` descompone el plan. Una tarea es una unidad revisable con un commit. Cada tarea dice
 qué requisito satisface; si no satisface ninguno, no debería existir.
 
 Orden: base de datos, backend, frontend, documentación. Los tests se escriben junto a lo que

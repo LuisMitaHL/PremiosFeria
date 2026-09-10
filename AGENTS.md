@@ -31,12 +31,16 @@ Read `.specify/memory/architecture.md` for the full picture before touching anyt
 No behavioural change reaches `develop` without an approved spec.
 
 ```
-interview  ->  spec.md  ->  plan.md  ->  tasks.md  ->  code  ->  PR
-   (ask)      (what/why)     (how)       (steps)
+interview  ->  spec.md  ->  plan.md  ->  [tasks.md]  ->  code
+   (ask)      (what/why)     (how)      (only if shared)
 ```
 
 - Specs live in `specs/NNN-slug/`. The index is `specs/README.md`.
 - A spec must be `Approved` before `plan.md` is written. A plan must be `Approved` before code.
+- **`tasks.md` is required only when the work will not be done in one sitting by one person.**
+  Splitting an approved plan into tasks earns its place when work is handed over, picked up later,
+  or shared — and is ceremony when the same person implements the plan they just wrote. Writing it
+  afterwards, to look compliant, is worse than not writing it: it records a plan nobody followed.
 - **If you are asked to implement something that has no spec, do not start coding.** Say the
   spec is missing and offer to write it. The only exemptions are dependency bumps, comment typo
   fixes, and this scaffolding itself.

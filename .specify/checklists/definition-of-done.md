@@ -6,6 +6,7 @@ the review — run it yourself, honestly, every time.
 ## Specification
 
 - [ ] The work maps to an approved spec, and the commit names it.
+- [ ] The spec has an approved `plan.md`. (`tasks.md` only if the work spans sessions or people.)
 - [ ] Nothing was built that no requirement asked for.
 - [ ] The spec was updated if reality diverged from it during implementation.
 - [ ] Every acceptance criterion in the spec is checked off.

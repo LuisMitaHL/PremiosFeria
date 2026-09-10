@@ -177,6 +177,24 @@ Most of this ships today, in `src/pages/admin/QRDisplay.jsx`.
   removes the reason the clamp exists, though the clamp stays.
 - The screen is where the console's sections and the visit code meet, so it lands with spec 019.
 
+## 10b. As built
+
+Shipped with specs 019 and 020. An activity's code is reached from that activity's card, which
+carries the activity in the address, so it is never ambiguous which one is on screen (R3). The
+screen labels the projected code with the activity's name and what it is worth (R5).
+
+`sign_scan_code` gained an activity argument and refuses to sign one that is not running, in the
+database rather than by hiding a button (R10, R12). When it refuses, the screen replaces the code
+with the reason instead of leaving the last one up — a screen still showing a code that no longer
+awards anything looks exactly like a working one to everybody in the room (R11).
+
+**Not yet built.** R1's "reachable from anywhere in the console" is currently the existing button
+on the stand's identity card; the visit code is one tap from every section rather than a persistent
+control. R13 holds — the visit code stays available whatever an activity is doing.
+
+**Observed lag.** A projected activity that finishes keeps its code on screen until the next
+15-second refresh. The code is refused on scan throughout.
+
 ## 11. References
 
 - Constitution: III (rules in the database), IV (identity is never a parameter), V (secrets never

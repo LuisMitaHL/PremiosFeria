@@ -264,6 +264,32 @@ Nothing in this spec exists today. There is no activity entity of any kind.
   its duration, and whether it has ended is a question asked at the moment of the award.
 - The stand console gains its section structure here; specs 021 and 018 fill the other two.
 
+## 10b. As built
+
+The lifecycle lives in `supabase/postgres-init/52_activities.sql`. The state is **derived**, not
+stored: `activity_state()` reads `started_at`, `finished_at` and the duration. That is what makes
+R10 true with nothing running in the background — an activity nobody closes is finished the moment
+its duration elapses, because "has it ended?" is a question asked at the moment of the award rather
+than a column somebody has to update.
+
+Because the function takes the table type as its only argument, PostgREST exposes it as a computed
+column, so the screens read the same state the rules use.
+
+The structural guarantees: the limit of three is a `BEFORE INSERT` trigger that locks the owning
+community row before counting (a `CHECK` cannot count rows); one main event and one running
+activity are partial unique indexes.
+
+**The subtlety the plan warned about, confirmed.** An activity past its duration is *finished* by
+the derived state but still matches the one-running index, so `start_activity` calls
+`close_expired_activities` before it checks. Without it, a stand whose activity expired could never
+start another.
+
+**Observed in the browser.** The projection screen keeps showing a code for up to one rotation
+window after an activity finishes, because it learns on its next refresh. The code itself is
+refused on scan throughout, so this is a display lag rather than a hole — and it is bounded by the
+same 15 seconds everything else is.
+
+
 ## 11. References
 
 - Constitution: III (rules in the database), IV (identity is never a parameter), VI (structural
