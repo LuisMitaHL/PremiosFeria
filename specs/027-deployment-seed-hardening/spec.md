@@ -32,12 +32,14 @@ refuses to pretend that it did.
 - Making an incomplete initialization visible: the database is not reported ready and the
   services that depend on it are not started.
 - Interpreting an operator-supplied credential identically in every environment.
+- Recording that the files are a first-initialization convenience for new deployments, not an
+  ongoing management path.
 
 **Out of scope**
 
-- The long-term decision between supplying accounts from files and creating them in the
-  panel. Spec 012 retired file-based provisioning; the operator path that exists today still
-  uses files, and this spec hardens that path rather than replacing it (see open question 9).
+- Ongoing account management. Supplying accounts from files survives only as a convenience
+  for provisioning a brand-new deployment; once a deployment is initialized, communities are
+  created and managed by the organiser (specs 017 and 023), never by editing the files.
 - The organiser's bootstrap, which spec 017 owns.
 - Where credentials are stored, or how they are hashed.
 - The CDN and the network topology around the stack.
@@ -83,6 +85,8 @@ operator sees the failure instead of an empty login screen.
 | R7 | A credential MUST be interpreted the same way in local development and in production. | Must |
 | R8 | The versioned example files MUST NOT contain a real credential or a value that works as written. | Must |
 | R9 | A failed initialization MUST leave an explanation in the database log. | Should |
+| R10 | File-based inputs MUST be read only during the first initialization of a new deployment, and MUST NOT be applied again to an already-initialized database. | Must |
+| R11 | After a deployment has been initialized, creating and managing communities MUST go through the organiser, not through the files. | Must |
 
 ## 5. Business rules
 
@@ -92,6 +96,7 @@ operator sees the failure instead of an empty login screen.
 | Ready means fully initialized | Only after the last structural step | A database that reports ready before its access restrictions are in place would serve credentials it is about to hide. |
 | Whitespace around a credential is not significant | Always | The two paths that load credentials must hash the same input. A password that works locally and not in production is a bug the operator cannot see. |
 | Examples are placeholders | Always | Anything committed is public. An example that works as written is a credential in the repository. |
+| Files provision, the organiser manages | Always | The files are a one-time convenience for standing a new event up. Re-reading them against a live database would let a stale file override decisions the organiser made during the fair, which nobody watching the system could predict. |
 
 ## 6. Edge cases and failure modes
 
@@ -102,6 +107,7 @@ operator sees the failure instead of an empty login screen.
 | An input file carries a header only | Initialization succeeds with no rows for it | The stack starts normally |
 | The container restarts after a failed initialization | It stays not ready | The database remains unhealthy; the API never starts |
 | A credential has surrounding spaces | It is loaded without the padding | Sign-in succeeds with the visible credential |
+| The files change after the first initialization | They are ignored; the database is left as it is | The operator manages accounts through the organiser |
 
 ## 7. Security and integrity
 
@@ -125,10 +131,13 @@ operator sees the failure instead of an empty login screen.
 - [ ] A successful first boot reports the database healthy and starts the API.
 - [ ] A credential written with surrounding spaces signs in with the visible value.
 - [ ] The log of a failed initialization names the cause.
+- [ ] Changing the seed files after initialization has no effect on the running deployment.
+- [ ] An already-initialized deployment is managed entirely through the organiser.
 
 ## 9. Open questions
 
-[NEEDS CLARIFICATION: is file-based seeding the intended production path, given that spec 012 retired it in favour of the organiser creating communities and stands registering their own rewards? If files are transitional, this spec hardens a path that is scheduled to disappear and should say so.]
+None. Resolved 2026-09-10: the files are a perk for new deployments only. Once a deployment is
+initialized, communities and rewards are managed entirely by the organiser.
 
 ## 10. As-built notes
 
@@ -150,16 +159,17 @@ can be verified against reality. Delete this section for a spec describing work 
 **Known deviations** — where the code does not match this spec, and whether the code or the spec
 is considered wrong.
 
-- Spec 012 is retired and says file-based provisioning disappears, while the code and the
-  deployment documentation still seed from files. This is the subject of open question 9; the
-  code is considered correct for now.
+- The provisioning decision is settled (R10, R11): the files provision a new deployment
+  only, and the organiser owns management afterwards. Spec 012 is retired; this is how its
+  intent is realised without removing the first-boot convenience.
 - A change of secrets while a database volume already exists remains a documented manual
   procedure, not something this spec guards. It is out of scope here.
 
 ## 11. References
 
 - Spec 010 — `stand-login`, whose credentials these files feed.
-- Spec 012 — `csv-provisioning`, retired; the successor to the provisioning path.
+- Spec 012 — `csv-provisioning`, retired; the provisioning path it describes survives as a
+  first-initialization convenience only.
 - Spec 017 — `organizer-admin-panel`, the organiser's bootstrap.
 - Spec 023 — `organizer-community-management`, which takes over creating communities.
 - `.specify/memory/constitution.md` — principles on secrets and business rules.

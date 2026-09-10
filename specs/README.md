@@ -75,7 +75,7 @@ to be deleted. The numbers stay retired rather than being reused.
 | 006 | `points-ceiling-enforcement` | 020 | Per-stand configurable ceilings become fixed event-wide values |
 | 008 | `rewards-catalog` | 021, 018 | The catalogue stops being seed-only and becomes something a stand manages |
 | 009 | `reward-claiming` | 018 | Claiming in the app is replaced by in-person fulfilment confirmed by the stand |
-| 012 | `csv-provisioning` | 017, 023, 021 | Seeding stands and rewards from CSV disappears: the organiser creates stands, and stands register their own rewards |
+| 012 | `csv-provisioning` | 017, 023, 021, 027 | Ongoing provisioning moves to the organiser. Seeding from CSV survives only as a convenience for a new deployment (spec 027); an existing instance is managed entirely through the panel. |
 | 014 | `stand-admin-console` | 019, 021 | Its point configuration disappears; what remains is activity and reward management |
 
 ---

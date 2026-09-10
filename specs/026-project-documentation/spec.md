@@ -154,7 +154,7 @@ None.
 | R6 | Met, and accurate: the local script, the fresh-database flag, and the warning that schema changes need it. |
 | R7 | **Missing.** There were no lint or test commands when it was written. There are now. |
 | R8 | Met, and the strongest part of the document: secrets, boot, the CDN contract with verification commands, seed files, credential rotation, teardown. |
-| R9 | **Will be wrong.** It documents seeding stands from CSV, which specs 017 and 023 remove. |
+| R9 | **Will be wrong.** It documents seeding stands from CSV as the only way in. Specs 017 and 023 make the organiser the ongoing path; the file path survives only for provisioning a new deployment (spec 027). |
 | R10 | **Contradicted.** It documents a "Developer Mode" in the scanner that does not exist in the code. |
 | R11 | **Missing.** None of `AGENTS.md`, the constitution, the specs or the decision records existed when it was written. |
 | R12 | **Contradicted.** It calls the product FeriaPoints, which nothing else does. |
@@ -166,7 +166,7 @@ None.
   still changing. Doing it early guarantees rewriting it.
 - The deployment half is largely correct and should be translated and corrected rather than
   rewritten, so its hard-won detail is not lost.
-- The seeding section is not an edit but a replacement: creating communities moves into the panel.
+- The seeding section is reframed, not deleted: the files provision a brand-new deployment, and creating communities afterwards happens in the panel (spec 027).
 - Following every instruction end to end is part of accepting this spec, not an optional check.
   That is the only way R10 is ever true.
 
@@ -176,4 +176,4 @@ None.
 - `.specify/memory/constitution.md`, `architecture.md`, `glossary.md` and the decision records.
 - Spec 016 — `naming-and-hygiene-cleanup`, which settles the name this uses.
 - Spec 017 — `organizer-admin-panel`, whose bootstrap R9 documents.
-- Spec 023 — `organizer-community-management`, which replaces the seeding section.
+- Spec 023 — `organizer-community-management`, which takes over creating communities after the first initialization.

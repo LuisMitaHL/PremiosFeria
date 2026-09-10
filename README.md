@@ -115,7 +115,7 @@ stand,name,description,cost,stock,emoji
 meh,CuboRubik Dotnet,Premio de MEH,150,1,Box
 ```
 
-Rules: UTF-8, quote fields containing commas. Blank `user`/`pw` rows are ignored; blank `name`/`cost` abort the seed visibly. Seed runs once at Postgres init (empty `./data/db`); to change accounts, edit CSVs and wipe (section 6).
+Rules: UTF-8, quote fields containing commas. Blank `user`/`pw` rows are ignored; blank `name`/`cost` abort the seed visibly. The files are read once, at Postgres init on an empty `./data/db` — they provision a **new deployment only**. To create or change accounts on a running instance, use the organizer panel (or the SQL rotation in section 5); never wipe a live database to re-seed it (section 6).
 
 ### 5. Stand credentials
 
