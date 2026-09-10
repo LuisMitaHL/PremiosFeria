@@ -1,8 +1,8 @@
 # Specifications
 
 One directory per feature: `NNN-slug/`, containing `spec.md` (what and why) and, when work is to
-be done, `plan.md` (how) and `tasks.md` (steps). Numbers are assigned once and never reused or
-renumbered.
+be done, `plan.md` (how) and `tasks.md` (steps). **Numbers are assigned once and never reused or
+renumbered**, including numbers that were reserved and then abandoned.
 
 Specs are written in **English**; the UI, commit messages and team documentation are in Spanish.
 See `.specify/memory/glossary.md` for the binding translation of every domain term.
@@ -18,42 +18,101 @@ Read `.specify/memory/constitution.md` before writing or reviewing any spec.
 | `In review` | Under review; unresolved `[NEEDS CLARIFICATION]` markers may remain |
 | `Approved` | Passed review. Only now may `plan.md` be written |
 | `Implemented` | Behaviour is live and anchored in *As-built notes* |
-| `Superseded` | Replaced; the successor spec is named in the header |
+| `Superseded` | Replaced; the successor spec is named in the row |
 
-## Retro-specs — behaviour that already ships
+---
 
-These document the system as built. They carry *As-built notes* and no `plan.md` or `tasks.md`
-unless a change is proposed against them.
+## Behaviour that already ships
+
+Retro-specs, documenting the system as built. They carry *As-built notes* and no `plan.md` or
+`tasks.md` unless a change is proposed against them.
+
+| # | Spec | Actor | Status |
+|---|---|---|---|
+| 002 | `camera-qr-scan` | Participant | Not started |
+| 003 | `manual-code-fallback` | Participant | Not started |
+| 004 | `visit-cooldown-rules` | Participant | Not started |
+| 007 | `live-leaderboard` | Participant | Not started |
+| 010 | `stand-login` | Stand admin | Not started |
+| 012 | `csv-provisioning` | Event operator | Not started |
+| 015 | `pwa-shell` | Participant | Not started |
+
+## Changes to behaviour that ships
+
+Part retro-spec, part change. Each opens with what exists today and why it is being replaced.
 
 | # | Spec | Actor | Status |
 |---|---|---|---|
 | 001 | [`participant-registration`](001-participant-registration/spec.md) | Participant | Draft |
-| 002 | `camera-qr-scan` | Participant | Not started |
-| 003 | `manual-code-fallback` | Participant | Not started |
-| 004 | `visit-cooldown-rules` | Participant | Not started |
-| 005 | `activity-once-per-stand` | Participant | Not started |
-| 006 | `points-ceiling-enforcement` | Participant, Stand admin | Not started |
-| 007 | `live-leaderboard` | Participant | Not started |
-| 008 | `rewards-catalog` | Participant | Not started |
-| 009 | `reward-claiming` | Participant | Not started |
-| 010 | `stand-login` | Stand admin | Not started |
 | 011 | `qr-projection` | Stand admin | Not started |
-| 012 | `csv-provisioning` | Event operator | Not started |
 | 013 | `participant-dashboard` | Participant | Not started |
-| 014 | `stand-admin-console` | Stand admin | Not started |
-| 015 | `pwa-shell` | Participant | Not started |
+| 016 | `naming-and-hygiene-cleanup` | — | Not started |
 
-## New work
-
-These run the full cycle: interview, spec, plan, tasks, implementation.
+## New capabilities
 
 | # | Spec | Actor | Status |
 |---|---|---|---|
-| 016 | `naming-and-hygiene-cleanup` | — | Not started |
-| 017 | `event-organizer-role` | Event operator | Not started |
-| 018 | `reward-fulfilment-verification` | Participant, Stand admin | Not started |
+| 017 | `organizer-admin-panel` | Event operator | Not started |
+| 018 | `in-person-reward-fulfilment` | Participant, Stand admin | Not started |
+| 019 | `stand-activity-catalogue` | Stand admin | Not started |
+| 020 | `fixed-points-model` | Participant, Stand admin | Not started |
+| 021 | `stand-reward-management` | Stand admin | Not started |
+| 022 | `organizer-student-management` | Event operator | Not started |
+| 023 | `organizer-community-management` | Event operator | Not started |
+| 024 | `system-audit-log` | Event operator | Not started |
+| 025 | `participant-activity-progress` | Participant | Not started |
+| 026 | `project-documentation` | — | Not started |
+
+## Numbers retired before they were written
+
+These were reserved when the inventory assumed the original points and rewards model. That model
+is being replaced, so writing a retro-spec for them would have documented behaviour that is about
+to be deleted. The numbers stay retired rather than being reused.
+
+| # | Was going to be | Replaced by | Why |
+|---|---|---|---|
+| 005 | `activity-once-per-stand` | 019, 020 | One activity per stand becomes up to three, each a real entity with its own identity |
+| 006 | `points-ceiling-enforcement` | 020 | Per-stand configurable ceilings become fixed event-wide values |
+| 008 | `rewards-catalog` | 021, 018 | The catalogue stops being seed-only and becomes something a stand manages |
+| 009 | `reward-claiming` | 018 | Claiming in the app is replaced by in-person fulfilment confirmed by the stand |
+| 014 | `stand-admin-console` | 019, 021 | Its point configuration disappears; what remains is activity and reward management |
+
+---
 
 ## Working order
 
-Numeric. Each spec begins with an interview — the questions come first, the document second —
-and lands as its own `docs` commit.
+Numeric order no longer matches dependency order: the new requirements introduce a foundation
+that several other specs stand on. Working numerically would mean specifying rewards against a
+points model that is about to change underneath them.
+
+The order is therefore by dependency:
+
+```
+020 fixed-points-model          <- the points model everything else assumes
+ |
+ +-- 019 stand-activity-catalogue   (activities, and one QR per activity)
+ |     |
+ |     +-- 011 qr-projection        (the stand picks which activity it is showing)
+ |     +-- 025 participant-activity-progress
+ |
+ +-- 021 stand-reward-management    (a stand registers its own rewards and their cost)
+       |
+       +-- 018 in-person-reward-fulfilment   (personal code, stand confirms, points deducted)
+
+017 organizer-admin-panel       <- the panel these three live inside
+ |
+ +-- 022 organizer-student-management   (delivers R10b of spec 001)
+ +-- 023 organizer-community-management
+ +-- 024 system-audit-log
+
+Independent of the above: 002, 003, 004, 007, 010, 012, 013, 015, 016, 026
+```
+
+Spec 001 is already drafted and is not blocked by any of them.
+
+## A note on scope
+
+Several of these change the database schema. The initialisation scripts in
+`supabase/postgres-init/` run **once, on an empty volume**, so none of it can be applied to a
+fair already in progress. Group the schema changes into as few deployments as possible and say so
+in each `plan.md`.
