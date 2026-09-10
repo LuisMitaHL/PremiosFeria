@@ -59,7 +59,7 @@ Part retro-spec, part change. Each opens with what exists today and why it is be
 | 022 | [`organizer-student-management`](022-organizer-student-management/spec.md) | Event operator | Draft |
 | 023 | [`organizer-community-management`](023-organizer-community-management/spec.md) | Event operator | Draft |
 | 024 | [`system-audit-log`](024-system-audit-log/spec.md) | Event operator | Draft |
-| 025 | `participant-activity-progress` | Participant | Not started |
+| 025 | [`participant-activity-progress`](025-participant-activity-progress/spec.md) | Participant | Draft |
 | 026 | `project-documentation` | — | Not started |
 
 ## Numbers retired before they were written
