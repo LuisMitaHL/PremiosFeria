@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `027-deployment-seed-hardening` |
 | **Actors** | Event operator |
 | **Created** | 2026-09-10 |
@@ -40,7 +40,7 @@ at start-up, gives the operator versioned templates to fill in, and makes the fi
 **Out of scope**
 
 - Ongoing account management. Supplying accounts from files survives only as a convenience
-  for provisioning a brand-new deployment; once a deployment is initialized, communities are
+  for provisioning a brand-new deployment; once a deployment is initialized, stands are
   created and managed by the organiser (specs 017 and 023), never by editing the files.
 - The organiser's bootstrap, which spec 017 owns.
 - Where credentials are stored, or how they are hashed.
@@ -88,7 +88,7 @@ organiser's. The organiser creates the stands from the panel.
 | R8 | The versioned example files MUST NOT contain a real credential or a value that works as written. | Must |
 | R9 | A failed initialization MUST leave an explanation in the database log. | Should |
 | R10 | File-based inputs MUST be read only during the first initialization of a new deployment, and MUST NOT be applied again to an already-initialized database. | Must |
-| R11 | After a deployment has been initialized, creating and managing communities MUST go through the organiser, not through the files. | Must |
+| R11 | After a deployment has been initialized, creating and managing stands MUST go through the organiser, not through the files. | Must |
 
 ## 5. Business rules
 
@@ -140,7 +140,7 @@ organiser's. The organiser creates the stands from the panel.
 ## 9. Open questions
 
 None. Resolved 2026-09-10: the files are a perk for new deployments only. Once a deployment is
-initialized, communities and rewards are managed entirely by the organiser.
+initialized, stands and rewards are managed entirely by the organiser.
 
 ## 10. As-built notes
 
@@ -157,7 +157,9 @@ can be verified against reality. Delete this section for a spec describing work 
 | R6 | `99_init_complete.sh` runs after `80_column_grants.sql`; healthcheck requires the marker |
 | R7 | `supabase/postgres-init/70_seed.sql` (trims the password before hashing) |
 | R8 | the `.example` files |
-| R9 | the PostgreSQL init log |
+| R9 | `supabase/postgres-init/71_organizer_seed.sh` runs `psql -v ON_ERROR_STOP=1`; the base image's entrypoint sets the same for the `.sql` files |
+| R10 | `supabase/postgres-init/70_seed.sql` (executed only against an empty data volume); `docker-compose.yml` mounts `./data/db` |
+| R11 | `supabase/postgres-init/56_organizer_communities.sql` (`create_community`); spec 023 |
 
 **Known deviations** — where the code does not match this spec, and whether the code or the spec
 is considered wrong.
@@ -168,6 +170,9 @@ is considered wrong.
 - An absent input file is not a failure: only a file that is supplied and malformed stops
   initialization. An empty seed directory is the normal case for a fair managed from the
   panel.
+- The failure explanation for a malformed `.sql` seed comes from the base image's entrypoint,
+  which runs psql with `ON_ERROR_STOP=1`; the repository does not own that code.
+  `71_organizer_seed.sh` sets the flag explicitly for the run it owns.
 - A change of secrets while a database volume already exists remains a documented manual
   procedure, not something this spec guards. It is out of scope here.
 
@@ -177,5 +182,5 @@ is considered wrong.
 - Spec 012 — `csv-provisioning`, retired; the provisioning path it describes survives as a
   first-initialization convenience only.
 - Spec 017 — `organizer-admin-panel`, the organiser's bootstrap.
-- Spec 023 — `organizer-community-management`, which takes over creating communities.
+- Spec 023 — `organizer-community-management`, which takes over creating stands.
 - `.specify/memory/constitution.md` — principles on secrets and business rules.

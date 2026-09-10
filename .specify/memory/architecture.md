@@ -20,7 +20,7 @@ documented as such in the relevant specs.
 |---|---|---|
 | Participant | Anonymous session issued by the auth service at registration | `participants.auth_user_id` = JWT `sub` |
 | Stand admin | Username + bcrypt password, verified by the `stand_login` RPC | `communities.auth_user_id` = `communities.id` = JWT `sub` |
-| Event operator | None — works outside the application | CSV files, `psql`, `docker compose` |
+| Event operator | Username + bcrypt password, verified by the organiser login RPC | `organizers.auth_user_id` = `organizers.id` = JWT `sub` |
 
 `localStorage` (`fp_current_participant_id`) is a display cache only. The source of truth for
 who is acting is always the JWT, verified in Postgres.
@@ -39,7 +39,7 @@ who is acting is always the JWT, verified in Postgres.
             +-----------+---------------+
                         |
                   Postgres 16
-        schema + RLS + RPC + CSV seed, loaded once at first init
+        schema + RLS + RPC + optional CSV seed, loaded once at first init
 ```
 
 Four containers (`docker-compose.yml`): `web`, `db`, `rest`, `auth`. There is **no gateway in
@@ -76,7 +76,7 @@ an empty `./data/db`:
 | `35_auth_shim.sql` | `auth.uid()` and `auth.jwt()` reading `request.jwt.claims`; there is no GoTrue |
 | `40_rls.sql` | Policies on all six tables |
 | `50_rpc.sql` through `58_organizer_students.sql` | Every game rule, grouped by domain |
-| `70_seed.sql` | Loads `seed/stands.csv` and `seed/rewards.csv`; aborts loudly if absent |
+| `70_seed.sql` | Loads the optional `seed/stands.csv` and `seed/rewards.csv` when present; absence is not an error, a malformed file aborts the boot |
 
 The auth service (`auth/server.mjs`, zero dependencies) implements the subset of the GoTrue API
 that `supabase-js` calls: `POST /token` (password and refresh grants), `POST /signup` (anonymous),
