@@ -134,6 +134,7 @@ every half hour for six hours and doing nothing else.
 | Repeating a completed activity by manual code | Identical to the camera path | as above |
 | A stand marks a second activity as its main event | Refused; the stand is told it already has one | (stand-facing, defined in spec 019) |
 | A stand has no main event | Allowed. All its activities award 10 | none |
+| An activity that is not currently running | Nothing awarded; the reason depends on its state | defined in spec 019 |
 | A payload arrives asking for more points than the rule allows | The rule's value is awarded, not the requested one | none — the attendee sees the correct award |
 | A payload arrives asking for negative points | Nothing is subtracted; the award is never below zero | none |
 | An activity is deleted after completions | Those points stay. The attendee's history may show an activity that no longer exists | none |
