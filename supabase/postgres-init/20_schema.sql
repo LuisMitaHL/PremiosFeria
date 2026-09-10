@@ -68,7 +68,10 @@ CREATE TABLE IF NOT EXISTS scans (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   participant_id UUID REFERENCES participants(id) ON DELETE CASCADE NOT NULL,
   community_id UUID REFERENCES communities(id) ON DELETE CASCADE NOT NULL,
-  activity_id UUID REFERENCES activities(id) ON DELETE CASCADE,
+  -- RESTRICT, no CASCADE: una actividad no se elimina nunca (spec 019, R5) y
+  -- los puntos otorgados no se retiran jamás (spec 020, R11). Con CASCADE esa
+  -- promesa dependía de que nadie escribiera un DELETE; así la base se niega.
+  activity_id UUID REFERENCES activities(id) ON DELETE RESTRICT,
   points INT NOT NULL CHECK (points >= 0),
   type TEXT CHECK (type IN ('visit', 'activity')) DEFAULT 'visit',
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -84,15 +87,26 @@ CREATE TABLE IF NOT EXISTS scans (
 CREATE UNIQUE INDEX IF NOT EXISTS scans_one_completion_per_activity
   ON scans (participant_id, activity_id) WHERE (activity_id IS NOT NULL);
 
--- Premios
+-- Premios (spec 021).
+--
+-- El techo de 300 puntos es la mitad de lo que rinde recorrer la feria entera
+-- bajo el modelo del spec 020 (~600): quien hace la mitad ya puede aspirar al
+-- premio más caro. Un premio por encima de lo alcanzable no lo reclama nadie.
+--
+-- is_withdrawn permite al organizador sacar un premio de la vitrina sin
+-- borrarlo (spec 023): un canje ya confirmado tiene que seguir apuntando a algo
+-- que existe. La columna existe desde ahora porque el catálogo tiene que
+-- respetarla desde el momento en que aparece, aunque solo el spec 023 la
+-- escriba.
 CREATE TABLE IF NOT EXISTS rewards (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   community_id UUID REFERENCES communities(id) ON DELETE CASCADE NOT NULL,
-  name TEXT NOT NULL,
-  description TEXT,
-  cost INT NOT NULL CHECK (cost >= 0),
+  name TEXT NOT NULL CHECK (char_length(btrim(name)) BETWEEN 3 AND 40),
+  description TEXT CHECK (description IS NULL OR char_length(btrim(description)) <= 100),
+  cost INT NOT NULL CHECK (cost BETWEEN 0 AND 300),
   stock INT DEFAULT 0 CHECK (stock >= 0),
-  emoji TEXT DEFAULT 'Gift'
+  emoji TEXT DEFAULT 'Gift',
+  is_withdrawn BOOLEAN NOT NULL DEFAULT false
 );
 
 -- Premios reclamados

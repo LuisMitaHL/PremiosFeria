@@ -363,6 +363,13 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'reason', 'Premio no encontrado');
   END IF;
 
+  -- Un premio retirado sigue existiendo para que los canjes ya confirmados
+  -- apunten a algo real, pero no se puede reclamar (spec 021, R19a).
+  IF v_reward.is_withdrawn THEN
+    RETURN jsonb_build_object('success', false,
+      'reason', 'Este premio ya no está disponible');
+  END IF;
+
   SELECT EXISTS(
     SELECT 1 FROM claimed_rewards
     WHERE participant_id = v_participant.id AND reward_id = p_reward_id

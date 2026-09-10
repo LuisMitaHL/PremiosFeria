@@ -348,21 +348,36 @@ BEGIN
     RAISE EXCEPTION 'Closing an activity moved a balance from % to %', v_before, v_after;
   END IF;
 
-  -- And if the row itself disappeared, the points would still be earned. The
-  -- product never deletes an activity (spec 019, R5); this asserts that the
-  -- balance does not depend on that promise being kept.
-  DELETE FROM activities WHERE id = v_demo;
+  -- And the row cannot disappear at all. Spec 019 R5 says an activity is never
+  -- deleted; the foreign key from scans is RESTRICT so that promise does not
+  -- depend on nobody ever writing a DELETE. Deleting would take the completion
+  -- history of everyone who did it, and spec 020 R11 says awarded points are
+  -- never withdrawn.
+  DECLARE
+    v_blocked BOOLEAN := false;
+  BEGIN
+    BEGIN
+      DELETE FROM activities WHERE id = v_demo;
+    EXCEPTION WHEN foreign_key_violation THEN
+      v_blocked := true;
+    END;
+    IF NOT v_blocked THEN
+      RAISE EXCEPTION 'An activity with completions was deleted. The history of everyone who did it went with it, silently';
+    END IF;
+  END;
 
   SELECT points INTO v_after FROM participants WHERE id = v_p1;
   IF v_after <> 40 THEN
-    RAISE EXCEPTION 'Deleting an activity left the attendee with % points instead of the 40 they earned',
-      v_after;
+    RAISE EXCEPTION 'The attendee has % points instead of the 40 they earned', v_after;
   END IF;
 
   SELECT points INTO v_after FROM participants WHERE id = v_p5;
   IF v_after <> 10 THEN
-    RAISE EXCEPTION 'Deleting an activity left a second attendee with % points instead of 10',
-      v_after;
+    RAISE EXCEPTION 'A second attendee has % points instead of 10', v_after;
+  END IF;
+
+  IF (SELECT count(*) FROM scans WHERE activity_id = v_demo) = 0 THEN
+    RAISE EXCEPTION 'The completion history for this activity is gone';
   END IF;
 END;
 $test$;

@@ -97,6 +97,7 @@ SQL
 cp "$REPO/supabase/postgres-init/40_rls.sql" "$SQL/40_rls.sql"
 cp "$REPO/supabase/postgres-init/50_rpc.sql" "$SQL/50_rpc.sql"
 cp "$REPO/supabase/postgres-init/52_activities.sql" "$SQL/52_activities.sql"
+cp "$REPO/supabase/postgres-init/53_rewards.sql" "$SQL/53_rewards.sql"
 
 # Auth compat — must run BEFORE 40_rls.sql (its policies call auth.uid()).
 # Plain Postgres knows no auth.uid()/auth.jwt(); local gets a compat layer.

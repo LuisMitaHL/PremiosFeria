@@ -536,4 +536,86 @@ BEGIN
 END;
 $test$;
 
+-- Finishing something that already ended must say so. It has no points
+-- consequence, but a stand tapping "terminar" on an activity that ran out
+-- twenty minutes ago should not be told it worked.
+DO $test$
+DECLARE
+  v_comm UUID := 'aaaa0009-0000-4000-8000-0000000000ff';
+  v_res  JSONB;
+  v_act  UUID;
+BEGIN
+  INSERT INTO communities (id, username, name, auth_user_id)
+  VALUES (v_comm, 'test_expired_finish', 'Expired Finish', v_comm);
+
+  PERFORM set_config('request.jwt.claims',
+                     json_build_object('sub', v_comm, 'role', 'authenticated')::text, true);
+
+  v_res := create_activity('Charla corta', 'Diez minutos', '09:00', 10, false);
+  v_act := (v_res->'activity'->>'id')::uuid;
+  PERFORM start_activity(v_act);
+
+  UPDATE activities SET started_at = now() - INTERVAL '20 minutes' WHERE id = v_act;
+
+  IF (SELECT activity_state(a) FROM activities a WHERE id = a.id AND a.id = v_act) <> 'finished' THEN
+    RAISE EXCEPTION 'An activity whose duration ran out is not reported as finished';
+  END IF;
+
+  v_res := finish_activity(v_act);
+  IF NOT (v_res ? 'error') THEN
+    RAISE EXCEPTION 'Finishing an activity that ended twenty minutes ago reported success. The stand is told an action worked when there was nothing to do';
+  END IF;
+END;
+$test$;
+
+-- The two duration messages are separate, because "at least one minute" and
+-- "no more than sixty" send the stand to different halves of the field.
+DO $test$
+DECLARE
+  v_comm UUID := 'aaaa0009-0000-4000-8000-0000000000fe';
+  v_low  JSONB;
+  v_high JSONB;
+BEGIN
+  INSERT INTO communities (id, username, name, auth_user_id)
+  VALUES (v_comm, 'test_duration_msg', 'Duration Messages', v_comm);
+  PERFORM set_config('request.jwt.claims',
+                     json_build_object('sub', v_comm, 'role', 'authenticated')::text, true);
+
+  v_low  := create_activity('Muy corta', 'Cero minutos', '09:00', 0, false);
+  v_high := create_activity('Muy larga', 'Todo el dia', '09:00', 61, false);
+
+  IF (v_low->>'error') IS NOT DISTINCT FROM (v_high->>'error') THEN
+    RAISE EXCEPTION 'Too short and too long give the same message: "%". The stand cannot tell which way to move', v_low->>'error';
+  END IF;
+  IF v_low->>'error' NOT LIKE '%al menos%' THEN
+    RAISE EXCEPTION 'A zero duration was answered with "%", which does not say a minimum exists', v_low->>'error';
+  END IF;
+  IF v_high->>'error' NOT LIKE '%superar%' THEN
+    RAISE EXCEPTION 'A 61-minute duration was answered with "%", which does not say a maximum exists', v_high->>'error';
+  END IF;
+END;
+$test$;
+
+-- Nothing may delete an activity that people completed: the history would go
+-- with it, and spec 020 R11 promises awarded points are never withdrawn.
+DO $test$
+DECLARE
+  v_blocked BOOLEAN := false;
+  v_act UUID;
+BEGIN
+  SELECT activity_id INTO v_act FROM scans WHERE activity_id IS NOT NULL LIMIT 1;
+  IF v_act IS NULL THEN
+    RETURN; -- nothing completed in this suite; covered by 10_activity_awards
+  END IF;
+  BEGIN
+    DELETE FROM activities WHERE id = v_act;
+  EXCEPTION WHEN foreign_key_violation THEN
+    v_blocked := true;
+  END;
+  IF NOT v_blocked THEN
+    RAISE EXCEPTION 'An activity with completions was deleted, taking the history of everyone who did it';
+  END IF;
+END;
+$test$;
+
 ROLLBACK;

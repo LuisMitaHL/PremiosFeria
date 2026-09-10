@@ -138,7 +138,7 @@ every half hour for six hours and doing nothing else.
 | An activity that is not currently running | Nothing awarded; the reason depends on its state | defined in spec 019 |
 | A payload arrives asking for more points than the rule allows | The rule's value is awarded, not the requested one | none — the attendee sees the correct award |
 | A payload arrives asking for negative points | Nothing is subtracted; the award is never below zero | none |
-| An activity is deleted after completions | Those points stay. The attendee's history may show an activity that no longer exists | none |
+| An activity is deleted after completions | Impossible: the database refuses. Deleting would take the completion history with it, and spec 019 R5 says an activity is never deleted | none |
 | A stand is deleted after awards | Those points stay | none |
 | An attendee's balance would go below zero | Impossible: refused before it can happen | (claim-side; spec 018) |
 

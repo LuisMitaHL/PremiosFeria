@@ -16,7 +16,7 @@ VALUES ('cccc0005-0000-4000-8000-000000000001', 'aaaa0005-0000-4000-8000-0000000
        ('cccc0005-0000-4000-8000-000000000002', 'aaaa0005-0000-4000-8000-000000000001',
         'Agotado', 50, 0),
        ('cccc0005-0000-4000-8000-000000000003', 'aaaa0005-0000-4000-8000-000000000001',
-        'Caro', 5000, 5);
+        'Caro', 300, 5);
 
 INSERT INTO participants (id, name, points, auth_user_id)
 VALUES ('bbbb0005-0000-4000-8000-000000000001', 'Rich Tester', 300,
@@ -86,7 +86,7 @@ BEGIN
                      '{"sub":"bbbb0005-0000-4000-8000-000000000002","role":"authenticated"}', true);
   v_res := claim_reward('cccc0005-0000-4000-8000-000000000003');
   IF COALESCE((v_res->>'success')::boolean, false) THEN
-    RAISE EXCEPTION 'A 5000-point reward was claimed on a 10-point balance';
+    RAISE EXCEPTION 'A 300-point reward was claimed on a 10-point balance';
   END IF;
 
   SELECT points INTO v_points FROM participants WHERE id = v_poor;
@@ -126,6 +126,51 @@ BEGIN
   END;
   IF NOT v_blocked THEN
     RAISE EXCEPTION 'A duplicate claim was inserted directly: the UNIQUE on (participant_id, reward_id) is gone';
+  END IF;
+END;
+$test$;
+
+-- A withdrawn reward still exists -- so a confirmed handover always names
+-- something real -- but it cannot be claimed (spec 021, R19a).
+DO $test$
+DECLARE
+  v_res JSONB;
+  v_points INT;
+BEGIN
+  PERFORM set_config('request.jwt.claims',
+                     '{"sub":"bbbb0005-0000-4000-8000-000000000001","role":"authenticated"}', true);
+
+  UPDATE rewards SET is_withdrawn = true
+  WHERE id = 'cccc0005-0000-4000-8000-000000000002';
+  UPDATE rewards SET stock = 5
+  WHERE id = 'cccc0005-0000-4000-8000-000000000002';
+
+  v_res := claim_reward('cccc0005-0000-4000-8000-000000000002');
+  IF COALESCE((v_res->>'success')::boolean, false) THEN
+    RAISE EXCEPTION 'A withdrawn reward was claimed even though it is in stock';
+  END IF;
+
+  SELECT points INTO v_points FROM participants
+  WHERE id = 'bbbb0005-0000-4000-8000-000000000001';
+  IF v_points <> 200 THEN
+    RAISE EXCEPTION 'A refused claim on a withdrawn reward moved the balance, now %', v_points;
+  END IF;
+END;
+$test$;
+
+-- The ceiling binds every writer, including a direct insert.
+DO $test$
+DECLARE
+  v_blocked BOOLEAN := false;
+BEGIN
+  BEGIN
+    INSERT INTO rewards (community_id, name, cost, stock)
+    VALUES ('aaaa0005-0000-4000-8000-000000000001', 'Inalcanzable', 301, 1);
+  EXCEPTION WHEN check_violation THEN
+    v_blocked := true;
+  END;
+  IF NOT v_blocked THEN
+    RAISE EXCEPTION 'A reward costing 301 was stored: the 300-point ceiling is not enforced, so a stand can publish a prize nobody can reach';
   END IF;
 END;
 $test$;

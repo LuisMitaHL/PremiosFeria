@@ -96,7 +96,11 @@ BEGIN
         WHEN SQLERRM LIKE '%máximo de 3%' THEN 'Ya creaste el máximo de 3 actividades.'
         WHEN SQLERRM LIKE '%name%'        THEN 'El nombre debe tener entre 3 y 40 caracteres.'
         WHEN SQLERRM LIKE '%description%' THEN 'La descripción no puede superar los 100 caracteres.'
-        WHEN SQLERRM LIKE '%duration%'    THEN 'La duración debe estar entre 1 y 60 minutos.'
+        WHEN SQLERRM LIKE '%duration%'    THEN
+          CASE WHEN COALESCE(p_duration_min, 0) < 1
+            THEN 'La duración debe ser de al menos un minuto.'
+            ELSE 'La duración no puede superar los 60 minutos.'
+          END
         ELSE 'Datos inválidos.'
       END);
   END;
@@ -255,7 +259,11 @@ BEGIN
   IF activity_state(v_row) = 'scheduled' THEN
     RETURN jsonb_build_object('error', 'Esta actividad todavía no ha iniciado.');
   END IF;
-  IF v_row.finished_at IS NOT NULL THEN
+  -- Comprobar activity_state y no solo finished_at: una actividad cuya
+  -- duración venció ya terminó, aunque nadie la haya cerrado. Sin esto, el
+  -- stand toca "terminar" sobre algo que acabó hace veinte minutos y se le
+  -- responde que salió bien.
+  IF activity_state(v_row) = 'finished' THEN
     RETURN jsonb_build_object('error', 'Esta actividad ya terminó.');
   END IF;
 

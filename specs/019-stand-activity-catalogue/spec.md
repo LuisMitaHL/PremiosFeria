@@ -102,7 +102,7 @@ another.
 | R2b | These limits MUST be enforced where the data is stored, not only in the form. | Must |
 | R3 | A stand MUST be able to have no activities at all. | Must |
 | R4 | A stand MUST have at most one main event, as required by spec 020. | Must |
-| R5 | An activity MUST NOT be deleted, ever. | Must |
+| R5 | An activity MUST NOT be deleted, ever. This MUST be enforced where the data lives, not left to the absence of a delete path. | Must |
 | R6 | Finishing an activity MUST NOT free its slot: a stand that has created 3 can never create a 4th, whatever state those 3 are in. | Must |
 
 ### Lifecycle

@@ -34,6 +34,7 @@ SCHEMA_FILES=(
   supabase/postgres-init/50_rpc.sql
   supabase/postgres-init/51_stand_login.sql
   supabase/postgres-init/52_activities.sql
+  supabase/postgres-init/53_rewards.sql
   supabase/postgres-init/80_column_grants.sql
 )
 
