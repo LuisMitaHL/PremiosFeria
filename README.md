@@ -99,7 +99,7 @@ Seeded logins are whatever you put in `seed/stands.csv` — hand each `user,pw` 
 
 ```sql
 UPDATE communities
-SET password_hash = crypt('NewPass*', gen_salt('bf'))
+SET password_hash = crypt('NewPass*', gen_salt('bf', 12))
 WHERE username = 'meh';
 ```
 

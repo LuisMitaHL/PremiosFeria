@@ -25,6 +25,8 @@ the review — run it yourself, honestly, every time.
 - [ ] No business rule was moved from Postgres into the client.
 - [ ] No RPC accepts a caller identity as a parameter.
 - [ ] New tables have RLS enabled and explicit policies.
+- [ ] Any new column holding a secret is revoked in `31_column_grants.sql` and asserted in
+      `tests/sql/08_column_privileges.sql`. RLS is row level only; it does not hide a column.
 - [ ] No syntax or Web API newer than Chromium 83 was introduced.
 - [ ] No emoji in source code identifiers, comments or logs.
 - [ ] Dead code was removed, not commented out.

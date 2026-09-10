@@ -123,7 +123,10 @@ table to reference.
 - **Short-code lookup is `O(stands x 2 types x 2 windows)`** HMAC computations per attempt, with
   no rate limit of its own. Accepted at ~10 stands; revisit before a larger event.
 - **Six-hex-character short codes** can in principle collide across stands within a window.
-- **`participants` is publicly readable** and the client selects `*`, exposing `fingerprint` and
-  `registered_at` to anyone holding the anon key.
+- **`participants` and `communities` are publicly readable**, so the leaderboard and the stand
+  list can be public. Row level security is row level only, so `31_column_grants.sql` carries the
+  column-level privileges: `communities.password_hash`, `communities.password` and
+  `participants.fingerprint` are revoked from every client role. **A new column holding a secret
+  must be added to that file, or it is public by default.**
 - **The QR issuer identity is `premiosferia`** in `auth/server.mjs` and the production container
   is named `feriapoints`; both are legacy names slated for normalisation (spec 016).

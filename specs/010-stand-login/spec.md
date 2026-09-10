@@ -159,7 +159,7 @@ None.
 |---|---|
 | R1, R11 | `src/pages/admin/AdminLogin.jsx` and `src/lib/api.js:172-201`. The client calls the password grant with the login name in the field the library calls `email`; the service does not require it to be one. |
 | R2, R3, R4, R6 | `supabase/postgres-init/51_stand_login.sql` — `lower(btrim(...))` on the name, `crypt(p_password, c.password_hash)` on the password, inside a `SECURITY DEFINER` function. |
-| R5, R14 | The same function returns only `id`, `username` and `name`. |
+| R5, R14 | The same function returns only `id`, `username` and `name`. **R5 was not met until 31_column_grants.sql**: `GRANT SELECT ON ALL TABLES` made `communities.password_hash` readable by `anon`, so anyone holding the publishable key could download every stand's hash. Hashes were also stored at bcrypt cost 6. Both are fixed; `tests/sql/08_column_privileges.sql` asserts it. |
 | R7, R15 | `auth/server.mjs:170-171` — a single `invalid_credentials` response for every failure. |
 | R8 | Falls out of SQL: comparing against a `NULL` hash yields `NULL`, which matches no row. Documented in `26_password_hash.sql`. |
 | R9 | `auth/server.mjs` — a sliding window of 20 attempts per 5 minutes, keyed on origin and lowercased login name together. |

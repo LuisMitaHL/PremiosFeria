@@ -4,6 +4,13 @@
 
 import { supabase } from '../supabaseClient.js';
 
+// The columns a client is allowed to read. 31_column_grants.sql revokes the
+// rest at the database, so asking for '*' here is not merely untidy: it fails.
+// Kept in one place so the two cannot drift apart.
+export const PARTICIPANT_COLUMNS = 'id, name, points, registered_at';
+export const COMMUNITY_COLUMNS =
+    'id, username, name, emoji, stand_number, description, visit_points, activity_points, auth_user_id, created_at';
+
 // ─── Participants ────────────────────────────
 
 // Registro: crea una identidad anónima de Supabase Auth y vincula el
@@ -35,7 +42,7 @@ export async function registerParticipant(name, fingerprint) {
 export async function getParticipantById(id) {
     const { data, error } = await supabase
         .from('participants')
-        .select('*')
+        .select(PARTICIPANT_COLUMNS)
         .eq('id', id)
         .single();
 
@@ -46,7 +53,7 @@ export async function getParticipantById(id) {
 export async function getLeaderboard() {
     const { data, error } = await supabase
         .from('participants')
-        .select('*')
+        .select('id, name, points')
         .order('points', { ascending: false });
 
     if (error) throw new Error(`Error al obtener leaderboard: ${error.message}`);
@@ -58,7 +65,7 @@ export async function getLeaderboard() {
 export async function getCommunities() {
     const { data, error } = await supabase
         .from('communities')
-        .select('*');
+        .select(COMMUNITY_COLUMNS);
 
     if (error) throw new Error(`Error al obtener comunidades: ${error.message}`);
     return data;
@@ -67,7 +74,7 @@ export async function getCommunities() {
 export async function getMyCommunity(communityId) {
     const { data, error } = await supabase
         .from('communities')
-        .select('*')
+        .select(COMMUNITY_COLUMNS)
         .eq('id', communityId)
         .single();
 
@@ -186,7 +193,7 @@ export async function loginAdmin(email, password) {
     if (!comm) {
         const { data: row, error: commErr } = await supabase
             .from('communities')
-            .select('*')
+            .select(COMMUNITY_COLUMNS)
             .eq('auth_user_id', data.user.id)
             .single();
         if (commErr || !row) {
@@ -224,7 +231,7 @@ export async function getSession() {
 
     const { data: comm } = await supabase
         .from('communities')
-        .select('*')
+        .select(COMMUNITY_COLUMNS)
         .eq('auth_user_id', uid)
         .single();
 

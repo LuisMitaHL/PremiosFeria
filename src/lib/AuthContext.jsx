@@ -12,6 +12,7 @@ import {
 import {
     getParticipantById,
     registerParticipant as apiRegister,
+    PARTICIPANT_COLUMNS,
 } from './api.js';
 
 const AuthContext = createContext(null);
@@ -35,7 +36,7 @@ export function AuthProvider({ children }) {
                 if (user) {
                     const { data } = await supabase
                         .from('participants')
-                        .select('*')
+                        .select(PARTICIPANT_COLUMNS)
                         .eq('auth_user_id', user.id)
                         .maybeSingle();
                     p = data;

@@ -158,11 +158,13 @@ while one whose claiming is withheld appears unchanged (R2b).
 
 **Known deviations**
 
-- **R12 is not met.** `getLeaderboard` selects every column of every participant, which includes
-  `fingerprint` and `registered_at`. Anyone with the public key can read them, and the display
-  uses only the nickname and the points. This matters more after spec 001, which makes the device
-  identity half of the key that recovers a profile. **Fixed ahead of the rest of this spec, since
-  it is a privacy defect in shipped code rather than a change of behaviour.**
+- **R12 is now met.** It was not: `getLeaderboard` selected every column of every participant,
+  including `fingerprint`, and `GRANT SELECT ON ALL TABLES` meant the column was readable by
+  anyone holding the publishable key regardless of what the client asked for. Both halves are
+  fixed — `31_column_grants.sql` revokes the column at the database, and the query now names the
+  three columns it displays. `tests/sql/08_column_privileges.sql` asserts it.
+  `participants.auth_user_id` stays readable because the client resolves its own profile by it;
+  when spec 001 moves that lookup into a function, it can be revoked too.
 - R2a and R2b cannot be met until spec 022 introduces the states they refer to.
 - `src/pages/Leaderboard.jsx:35` computes a slice of the list that is never rendered — dead code
   that spec 016 removes.

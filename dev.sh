@@ -8,7 +8,7 @@
 # then runs the Vite dev server against it.
 #
 # The backend reproduces the app's canonical schema/RLS/RPC (copies of
-# supabase/postgres-init/{20_schema,40_rls,50_rpc}.sql), so you develop
+# supabase/postgres-init/{20_schema,31_column_grants,40_rls,50_rpc}.sql), so you develop
 # against the same behavior as production.
 #
 # Uses:
@@ -54,7 +54,7 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-for f in supabase/postgres-init/20_schema.sql supabase/postgres-init/40_rls.sql supabase/postgres-init/50_rpc.sql; do
+for f in supabase/postgres-init/20_schema.sql supabase/postgres-init/31_column_grants.sql supabase/postgres-init/40_rls.sql supabase/postgres-init/50_rpc.sql; do
   [ -f "$REPO/$f" ] || { echo "✗ expected '$REPO/$f' (canonical source) not found." >&2; exit 1; }
 done
 
@@ -94,6 +94,9 @@ GRANT USAGE ON SCHEMA public TO anon;
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO anon;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
 SQL
+# Column privileges are canonical: dev must hide the same secrets prod hides,
+# or a leak is invisible until production.
+cp "$REPO/supabase/postgres-init/31_column_grants.sql" "$SQL/31_column_grants.sql"
 cp "$REPO/supabase/postgres-init/40_rls.sql" "$SQL/40_rls.sql"
 cp "$REPO/supabase/postgres-init/50_rpc.sql" "$SQL/50_rpc.sql"
 
