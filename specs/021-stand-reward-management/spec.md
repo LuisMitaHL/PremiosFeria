@@ -6,7 +6,7 @@
 | **Branch** | `021-stand-reward-management` |
 | **Actors** | Stand admin, Participant, Event operator |
 | **Created** | 2026-09-10 |
-| **Last updated** | 2026-09-10 |
+| **Last updated** | 2026-09-10 (amended after spec 023) |
 
 ## 1. Purpose
 
@@ -114,7 +114,8 @@ up while they earn the difference.
 | R14 | Only the event organiser MUST be able to decrease a stock. **Deferred alongside R11.** | Must (deferred) |
 | R15 | Stock MUST decrease by exactly one when a claim is confirmed, as defined by spec 018. | Must |
 | R16 | Stock MUST never fall below zero. | Must |
-| R17 | Setting stock to zero MUST be the only way a stand withdraws a reward from circulation. | Must |
+| R17 | Setting stock to zero MUST be the only way **a stand** withdraws a reward from circulation. | Must |
+| R17a | The organiser MUST be able to withdraw any reward outright, as a state rather than a deletion. Defined by spec 023, R22 to R25. | Must (delivered by 023) |
 
 ### The attendee's catalogue
 
@@ -122,6 +123,7 @@ up while they earn the difference.
 |---|---|---|
 | R18 | An attendee MUST be able to see the rewards of every stand in one place, each showing its name, cost, icon, owning stand and whether it is available. | Must |
 | R19 | A reward with zero stock MUST be shown as out of stock and MUST NOT be claimable. | Must |
+| R19a | A reward withdrawn by the organiser, or belonging to a withdrawn community, MUST likewise be shown as unavailable and MUST NOT be claimable. | Must |
 | R20 | A reward with zero stock MUST remain visible rather than disappearing from the catalogue. | Must |
 | R21 | A reward an attendee cannot yet afford MUST be visibly distinguishable from one they can, before they attempt anything. | Must |
 | R22 | Attempting to claim a reward the attendee cannot afford MUST be refused with a message saying the balance is insufficient. | Must |
@@ -145,7 +147,8 @@ up while they earn the difference.
 | Cost after publication | Stand cannot change it; organiser can | An attendee saves towards a number. A price a stand can raise is not a promise, and the attendee has no way to know it moved. Lowering only would be safe, but a single rule — the stand sets it once, the organiser corrects mistakes — is simpler to hold in mind and leaves a record of who changed what. |
 | Stock increases | Stand, freely | It is their own inventory. More boxes arrive; nothing about what a prize costs anyone changes. |
 | Stock decreases | Organiser only | Reducing stock takes away something attendees can already see and may be walking towards. Removing by attrition — letting it run out — is honest; removing it silently is not. |
-| Withdrawal | Set stock to zero | An out-of-stock reward is already a state the catalogue handles, so no second concept is needed. Nothing is deleted, so a confirmed claim always points at a reward that still exists. |
+| Withdrawal by a stand | Set stock to zero | An out-of-stock reward is already a state the catalogue handles, so no second concept is needed for the stand. Nothing is deleted, so a confirmed claim always points at a reward that still exists. |
+| Withdrawal by the organiser | An explicit state, never a deletion | Spec 023 gives the organiser the power to take anything off the shelf, including a prize that is in stock. It is a state for the same reason nothing else here is deleted: a handover already confirmed must still name something real. |
 | Name length | 3 to 40 characters | Same limit as an activity name, for the same reason: it has to render in a card and in a list. |
 | Description length | Up to 100 characters, optional | Prize names usually explain themselves. Requiring a description for a keyring is friction with no benefit. |
 | Icon | From a fixed set | The system has no file storage, and adding it would block the entire reward flow behind new infrastructure. A fixed set also keeps every card the same shape. |
@@ -210,8 +213,12 @@ economy.
 
 ## 9. Open questions
 
-None. Two requirements — R11 and R14 — are deferred rather than open: the authority is decided,
-but the organiser's screens that exercise it belong to spec 023.
+None. Three requirements — R11, R14 and R17a — are deferred rather than open: the authority is
+decided, but the organiser's screens that exercise it belong to spec 023.
+
+**Amended after spec 023 was written.** Two things changed there and are reflected above:
+the organiser can withdraw a reward outright (R17a, R19a), and a community no longer edits its own
+profile — which removes the stand console section that would otherwise have sat beside this one.
 
 ## 10. Current behaviour and the gap
 
