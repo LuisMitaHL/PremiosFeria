@@ -174,7 +174,7 @@ te hace perder tiempo.
 Para levantar todo el stack local:
 
 ```bash
-./dev.sh           # Postgres + PostgREST + auth mock + Vite, expuesto en la LAN
+./dev.sh           # Postgres + PostgREST + auth + Vite, expuesto en la LAN
 ./dev.sh --fresh   # borra el volumen de la base y reprovisiona
 ```
 

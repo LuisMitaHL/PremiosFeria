@@ -146,7 +146,7 @@ running it on every change wastes time.
 npm run lint       # ESLint, must be clean
 npm test           # Vitest
 npm run test:sql   # business-rule tests against Postgres, needs ./dev.sh running
-./dev.sh           # full local stack: Postgres, PostgREST, mock auth, Vite on the LAN
+./dev.sh           # full local stack: Postgres, PostgREST, auth, Vite on the LAN
 ./dev.sh --fresh   # wipe the local database volume and re-provision
 ```
 

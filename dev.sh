@@ -106,6 +106,7 @@ cp "$REPO/supabase/postgres-init/54_fulfilment.sql" "$SQL/54_fulfilment.sql"
 cp "$REPO/supabase/postgres-init/55_organizer.sql" "$SQL/55_organizer.sql"
 cp "$REPO/supabase/postgres-init/56_organizer_communities.sql" "$SQL/56_organizer_communities.sql"
 cp "$REPO/supabase/postgres-init/57_registration.sql" "$SQL/57_registration.sql"
+cp "$REPO/supabase/postgres-init/58_organizer_students.sql" "$SQL/58_organizer_students.sql"
 
 # Auth compat — must run BEFORE 40_rls.sql (its policies call auth.uid()).
 # Plain Postgres knows no auth.uid()/auth.jwt(); local gets a compat layer.
@@ -141,7 +142,7 @@ GRANT authenticated TO authenticator;
 GRANT community_admin TO authenticator;
 SQL
 
-# After seed (60_*): dev mock auth issues sub = community id for admin logins,
+# After seed (60_*): auth issues sub = community id for admin logins,
 # so link each community to its own uuid.
 cat > "$SQL/70_auth_link.sql" <<'SQL'
 UPDATE communities SET auth_user_id = id WHERE auth_user_id IS NULL;
@@ -154,11 +155,11 @@ ON CONFLICT (username) DO NOTHING;
 
 SQL
 
-# Dev seed: communities get plaintext username/password (the mock auth reads
-# them) so you can log in as any stand. Usernames are bare (prod shape).
+# Dev seed: communities get a bcrypt password_hash, exactly like prod, porque
+# dev y prod comparten auth/server.mjs y el RPC stand_login. Usernames bare.
 # Source: ./seed/*.csv when present (same logins as prod), else built-in demo.
 cat > "$DEV/csv-seed.mjs" <<'MJS'
-// csv-seed.mjs — ./seed/*.csv (prod format) -> dev 60_seed.sql (plaintext pw).
+// csv-seed.mjs — ./seed/*.csv (prod format) -> dev 60_seed.sql (bcrypt pw).
 // Usage: node csv-seed.mjs stands.csv [rewards.csv] out.sql
 // Prints "user / pw (name)" login lines to stdout for the dev banner.
 import fs from "node:fs";
@@ -207,7 +208,7 @@ out.push("");
 const logins = [];
 for (const s of table(standsPath, ["user", "pw", "name"])) {
   if (!s.user || !s.pw || !s.name) { console.error(`✗ ${standsPath}: blank user/pw/name: ${JSON.stringify(s)}`); process.exit(1); }
-  out.push(`INSERT INTO communities (username, password, name) VALUES (${q(s.user)}, ${q(s.pw)}, ${q(s.name)});`);
+  out.push(`INSERT INTO communities (username, password_hash, name) VALUES (${q(s.user)}, crypt(${q(s.pw)}, gen_salt('bf', 12)), ${q(s.name)});`);
   logins.push(`    ${s.user}  (password: ./seed/stands.csv)`);
 }
 out.push("");
@@ -254,10 +255,10 @@ INSERT INTO communities (id, username, password_hash, name, emoji, stand_number)
 ('d000000a-0000-0000-0000-000000000000','trateur010',crypt('Ciasi2024*', gen_salt('bf', 12)),'CIASI','Database','10');
 
 INSERT INTO rewards (community_id, name, description, cost, stock, emoji) VALUES
-('d0000002-0000-0000-0000-000000000000','CuboRubik Dotnet',crypt('Premio de MEH', gen_salt('bf', 12)),150,1,'Box'),
-('d0000004-0000-0000-0000-000000000000','Polera Community Day XL',crypt('Premio de la comunidad AWS Umsa', gen_salt('bf', 12)),200,1,'Shirt'),
-('d0000008-0000-0000-0000-000000000000','1 mes vps',crypt('Servicio cloud de CtrlDev', gen_salt('bf', 12)),250,1,'Server'),
-('d0000009-0000-0000-0000-000000000000','Pelotitas Antiestres',crypt('Premio de Microsoft', gen_salt('bf', 12)),50,1,'Circle');
+('d0000002-0000-0000-0000-000000000000','CuboRubik Dotnet','Premio de MEH',150,1,'Box'),
+('d0000004-0000-0000-0000-000000000000','Polera Community Day XL','Premio de la comunidad AWS Umsa',200,1,'Shirt'),
+('d0000008-0000-0000-0000-000000000000','1 mes vps','Servicio cloud de CtrlDev',250,1,'Server'),
+('d0000009-0000-0000-0000-000000000000','Pelotitas Antiestres','Premio de Microsoft',50,1,'Circle');
 
 INSERT INTO participants (id, name, points) VALUES
 ('a0000001-0000-0000-0000-000000000000', 'Participante Demo', 0);
@@ -361,13 +362,18 @@ services:
         condition: service_healthy
   auth:
     image: node:24-alpine
-    command: node /srv/auth-mock.mjs
+    command: node /srv/server.mjs
     environment:
       PGRST_URL: http://rest:3000
       ANON_KEY: ${ANON_KEY}
       JWT_SECRET: dev_only_super_secret_do_not_use_in_prod
+      PORT: "3001"
+      # Generous on purpose: every request reaches auth from the gateway, so in
+      # dev the whole machine shares one bucket and a test run would lock itself
+      # out. The limiter still runs; only the ceiling moves.
+      RATE_LIMIT_MAX: "500"
     volumes:
-      - ./auth-mock.mjs:/srv/auth-mock.mjs:ro
+      - ../auth/server.mjs:/srv/server.mjs:ro
     depends_on:
       - rest
   gateway:

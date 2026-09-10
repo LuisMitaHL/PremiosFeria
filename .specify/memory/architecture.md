@@ -115,7 +115,7 @@ table to reference.
 
 | Environment | How it runs |
 |---|---|
-| Local development | `./dev.sh` generates `.dev/` from the canonical SQL and starts Postgres, PostgREST, a mock auth service and Vite, bound to the LAN so phones can reach it. `./dev.sh --fresh` wipes the volume. Schema changes require `--fresh`. |
+| Local development | `./dev.sh` generates `.dev/` from the canonical SQL and starts Postgres, PostgREST, the same `auth/server.mjs` production runs, and Vite, bound to the LAN so phones can reach it. `./dev.sh --fresh` wipes the volume. Schema changes require `--fresh`. |
 | Production | `deploy-keys.sh` writes `.env.prod` (mode 600), then `docker compose --env-file .env.prod up -d --build`. `VITE_SUPABASE_URL` is baked at build time, so changing the domain requires `--build`. |
 
 ## Known constraints and accepted trade-offs

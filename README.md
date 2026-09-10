@@ -21,7 +21,7 @@ A Progressive Web App (PWA) designed for university fairs, allowing attendees to
 ## Development (local backend mock)
 
 ```bash
-./dev.sh            # Postgres + PostgREST + auth-mock + Vite on :5173
+./dev.sh            # Postgres + PostgREST + auth + Vite on :5173
 ./dev.sh --fresh    # wipe local DB volume and re-provision
 ```
 
