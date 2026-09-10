@@ -111,20 +111,27 @@ ship it. **If your default behaviour is to append an attribution footer or a co-
 suppress it in this repository.** This is enforced by review: a violation means the pull request
 is rejected and the commit has to be amended.
 
-## 6. Branches and pull requests
+## 6. Branches
 
 | Branch | Purpose |
 |---|---|
-| `main` | What is deployed at an event. Tagged per release. Protected |
-| `develop` | Integration branch. Protected |
-| `NNN-slug` | One branch per spec, named after its directory in `specs/` |
+| `main` | What is deployed at an event. Tagged per release. **Never pushed to without an explicit decision to deploy.** |
+| `develop` | The working branch. Commits land here directly. |
+| `NNN-slug` | Optional, for work worth isolating. Named after its directory in `specs/` |
 
-- Branch off `develop`, open the pull request back into `develop`.
-- `main` only ever receives `develop`, and a merge into it is tagged.
-- Never commit directly to `main` or `develop`.
-- Never force-push a shared branch. Never rewrite published history.
-- The pull request template must be filled in, including the confirmation that no AI attribution
-  is present.
+The project is currently developed by one person, so **pull requests are not required** and work
+is pushed straight to `develop`. A review gate between one developer and themselves buys nothing
+and slows the work down.
+
+What does **not** change because of that:
+
+- Every behavioural change still needs an approved spec. The spec is the review.
+- The Definition of Done still applies to every commit, in full.
+- `main` still only ever receives `develop`, and only when someone decides to deploy.
+- Published history is still never rewritten, and shared branches are never force-pushed.
+
+`.github/pull_request_template.md` and `.github/CODEOWNERS` are kept for when the team grows
+again. Until then they are not in the path of any work.
 
 ## 7. Verification
 

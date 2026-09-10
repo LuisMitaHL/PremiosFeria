@@ -121,6 +121,7 @@ reason.
 | R19 | A participant MUST be told, when a claim is refused for this reason, that it was withheld — not that they are short of points or that stock ran out. | Must |
 | R20 | The organiser MUST be able to remove a participant from the event, and to reinstate them. | Must |
 | R21 | A removed participant MUST NOT be able to earn or claim anything. | Must |
+| R21a | A removed participant MUST NOT appear on the leaderboard. Reinstating them MUST return them to it, in the position their points give them. | Must |
 | R22 | A participant MUST NOT be deleted, ever, and removing one MUST NOT erase their balance or history. | Must |
 
 ### Adjusting a balance
@@ -143,6 +144,7 @@ reason.
 | Nickname changes | Subject to every rule in spec 001 | A nickname is still the recovery key and still appears on a projected leaderboard. The organiser correcting one must not be able to create the duplicate or the overlong name that spec 001 forbids. |
 | Withholding claims | Keeps earning, blocks spending | This is the sanction spec 001 warns about at registration. Removing someone entirely for an offensive nickname is disproportionate; letting them collect prizes anyway makes the warning meaningless. |
 | Removal | Never a deletion | Scans and handovers reference the participant. The same rule that protects communities and rewards protects people: nothing that happened is erased. |
+| Removal and the leaderboard | Removed participants disappear from it | Removal is for somebody who should no longer be part of the event. Leaving them on a board projected to the hall would undercut the act. Their history survives; their place on the screen does not. |
 | Adjustments require a reason | Always | An adjustment is the one place where the leaderboard stops being a consequence of what happened in the hall. A number with no reason is indistinguishable from a favour; the reason is what makes the log worth keeping. |
 | Adjustments are distinguishable | Always | Anyone reading a balance later must be able to see which part was earned and which was granted. A blended total cannot be audited. |
 | Adjustments cannot go below zero | Always | Spec 020 R12 binds every writer, including the organiser. |
@@ -214,6 +216,7 @@ is the most dangerous spec in the set.
       leaderboard.
 - [ ] A withheld claim is refused at the stand with the real reason, not a wrong one.
 - [ ] A removed participant can neither earn nor claim, and is restored intact on reinstatement.
+- [ ] A removed participant disappears from the leaderboard, and returns to it on reinstatement.
 - [ ] No participant can be deleted.
 - [ ] An adjustment without a reason is refused.
 - [ ] An adjustment that would go below zero is refused.
@@ -267,4 +270,5 @@ Nothing in this spec exists. There is no organiser, and therefore no desk.
   exchange enforces R17.
 - Spec 020 — `fixed-points-model`, amended by R23 to R27.
 - Spec 023 — `organizer-community-management`, which applies the same withdrawal pattern to stands.
+- Spec 007 — `live-leaderboard`, whose R2a and R2b this spec's states drive.
 - Spec 024 — `system-audit-log`, which stores what R26 requires.

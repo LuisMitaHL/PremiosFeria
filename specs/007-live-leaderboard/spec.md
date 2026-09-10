@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Status** | Implemented |
+| **Status** | Draft |
 | **Branch** | `007-live-leaderboard` |
 | **Actors** | Participant |
 | **Created** | 2026-09-10 |
-| **Last updated** | 2026-09-10 |
+| **Last updated** | 2026-09-10 (open question resolved) |
 
 ## 1. Purpose
 
@@ -66,6 +66,8 @@ service.
 |---|---|---|
 | R1 | Participants MUST be listed in descending order of points. | Must |
 | R2 | Every registered participant MUST appear, not only the top of the list. | Must |
+| R2a | A participant removed from the event MUST NOT appear. | Must |
+| R2b | A participant whose claiming is withheld MUST still appear, unchanged. | Must |
 | R3 | The top three MUST be presented distinctly from the rest. | Must |
 | R4 | Each row MUST show the participant's nickname and their points. | Must |
 | R5 | The attendee's own row MUST be marked so they can find it without reading. | Must |
@@ -75,7 +77,7 @@ service.
 | R9 | The load of many attendees watching at once MUST NOT reach the database once per viewer. | Must |
 | R10 | Refreshing MUST stop when the attendee leaves the screen. | Must |
 | R11 | With no participants registered, the screen MUST say so rather than appear broken. | Must |
-| R12 | The leaderboard MUST NOT expose anything about a participant beyond what it displays. | Must |
+| R12 | The leaderboard MUST NOT expose anything about a participant beyond what it displays: the request itself MUST ask only for the nickname and the points. | Must |
 | R13 | Nothing on this screen MUST change anything. | Must |
 
 ## 5. Business rules
@@ -86,7 +88,8 @@ service.
 | Refresh on returning | Always | A phone coming out of a pocket showing a ten-minute-old board is worse than one showing nothing, because it looks current. |
 | How it stays fresh | Asking again, not being told | A realtime service is a second stateful component to run and keep alive through a CDN, for one screen that does not need to be instant. See ADR 0003. |
 | Absorbing the load | Cached briefly in front of the database | Three hundred phones asking every five seconds is three hundred queries per window if nothing sits in front. A short-lived cache collapses that to roughly one, which is what makes the interval affordable. |
-| Everyone appears | Always | A cut-off list tells most attendees nothing about themselves, and they are the majority of the audience. |
+| Everyone appears | Every participant still in the event | A cut-off list tells most attendees nothing about themselves, and they are the majority of the audience. Someone removed from the event is no longer in it, and should not hold a place on a screen projected to the hall. |
+| Withheld claiming | Does not affect the leaderboard | The sanction is on spending, not on earning. Someone with an unfortunate nickname still walked the fair, and the board records what happened. |
 | Ties | Not broken deliberately | Two attendees on the same points are equal, and any tiebreak — who got there first, alphabetical — would be arbitrary and invisible. |
 
 ## 6. Edge cases and failure modes
@@ -101,6 +104,8 @@ service.
 | The network drops | The last known board stays on screen and refreshing resumes when the network returns | none |
 | The attendee leaves the screen | Refreshing stops | none |
 | A participant registers while the board is open | They appear on the next refresh | none |
+| A participant is removed while the board is open | They disappear on the next refresh, and the positions below them move up | none |
+| A participant whose claiming is withheld | Appears normally, indistinguishable from anyone else | none |
 
 ## 7. Security and integrity
 
@@ -129,17 +134,16 @@ readable by everyone.
 - [ ] No persistent connection is opened.
 - [ ] Refreshing stops when the attendee leaves the screen.
 - [ ] With no participants, the screen explains rather than appearing broken.
-- [ ] The data fetched contains nothing that is not displayed.
+- [ ] The data fetched contains nothing that is not displayed: no device identity, no timestamps.
+- [ ] A removed participant does not appear, and the positions below them close up.
+- [ ] A participant whose claiming is withheld appears exactly as anyone else does.
 - [ ] Nothing on the screen changes any state.
 
 ## 9. Open questions
 
-- `[NEEDS CLARIFICATION: how do the participant states introduced by spec 022 affect this screen?]`
-  Spec 022 lets the organiser remove a participant from the event and withhold their ability to
-  claim. It says a participant who cannot claim still appears here (R18), but says nothing about a
-  removed one. Both readings are defensible: keeping them preserves the history of the event,
-  removing them stops somebody who was ejected from occupying a place on a projected screen. This
-  is spec 022's decision to make, and it is recorded here because this is the screen it affects.
+None. The question raised while writing this spec — what the participant states introduced by
+spec 022 mean for this screen — was resolved: **a removed participant does not appear** (R2a),
+while one whose claiming is withheld appears unchanged (R2b).
 
 ## 10. As-built notes
 
@@ -155,8 +159,11 @@ readable by everyone.
 **Known deviations**
 
 - **R12 is not met.** `getLeaderboard` selects every column of every participant, which includes
-  `fingerprint` and `registered_at`. Anyone with the public key can read them. The display uses
-  only the nickname and the points.
+  `fingerprint` and `registered_at`. Anyone with the public key can read them, and the display
+  uses only the nickname and the points. This matters more after spec 001, which makes the device
+  identity half of the key that recovers a profile. **Fixed ahead of the rest of this spec, since
+  it is a privacy defect in shipped code rather than a change of behaviour.**
+- R2a and R2b cannot be met until spec 022 introduces the states they refer to.
 - `src/pages/Leaderboard.jsx:35` computes a slice of the list that is never rendered — dead code
   that spec 016 removes.
 - R9 depends entirely on a CDN configuration this repository only provides as an example. If it is

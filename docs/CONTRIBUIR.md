@@ -76,29 +76,31 @@ prueban, nunca al final.
 
 Una tarea a la vez, un commit por tarea. Verificás con lint y tests sobre la marcha.
 
-### Paso 6 — Pull request
+### Paso 6 — Publicar
 
 Recorré [`.specify/checklists/definition-of-done.md`](../.specify/checklists/definition-of-done.md)
-completo y llená la plantilla del PR.
+completo antes de empujar.
 
 ## 3. Ramas
 
 | Rama | Para qué |
 |---|---|
-| `main` | Lo que está desplegado en un evento. Con tag por release. Protegida |
-| `develop` | Rama de integración. Protegida |
-| `NNN-slug` | Una rama por spec, con el mismo nombre que su carpeta en `specs/` |
+| `main` | Lo que está desplegado en un evento. Con tag por release. **Nunca se le hace push sin decidir explícitamente desplegar.** |
+| `develop` | La rama de trabajo. Los commits van directo acá. |
+| `NNN-slug` | Opcional, para trabajo que convenga aislar. Con el mismo nombre que su carpeta en `specs/` |
 
-```bash
-git checkout develop && git pull
-git checkout -b 009-reward-claiming
-# ... trabajo ...
-git push -u origin 009-reward-claiming
-```
+Hoy el proyecto lo desarrolla una sola persona, así que **no se exigen pull requests** y el
+trabajo se empuja directo a `develop`. Una compuerta de revisión entre alguien y sí mismo no
+aporta nada y frena el trabajo.
 
-El PR va siempre contra `develop`. A `main` solo entra `develop`, y cada merge a `main` se
-etiqueta. Nunca commitees directo a `main` ni a `develop`, y nunca reescribas la historia de una
-rama publicada.
+Lo que **no** cambia por eso:
+
+- Todo cambio de comportamiento sigue necesitando un spec aprobado. El spec es la revisión.
+- La Definition of Done sigue aplicando a cada commit, completa.
+- A `main` solo entra `develop`, y solo cuando se decide desplegar.
+- La historia publicada no se reescribe, y a una rama compartida no se le hace force push.
+
+La plantilla de PR y el archivo CODEOWNERS quedan para cuando el equipo vuelva a crecer.
 
 ## 4. Commits
 
