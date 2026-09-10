@@ -21,8 +21,8 @@ lasts and is then torn down.
 - **Backend**: self-hosted Postgres 16 + PostgREST v12 + a zero-dependency Node auth service.
   Not Supabase Cloud, despite the `@supabase/supabase-js` client and the `VITE_SUPABASE_*`
   variable names.
-- **All business rules live in Postgres**, as `SECURITY DEFINER` RPC in
-  `supabase/postgres-init/50_rpc.sql`.
+- **All business rules live in Postgres**, as `SECURITY DEFINER` PL/pgSQL functions in the
+  numbered `supabase/postgres-init/*.sql` files (`50_rpc.sql` onwards).
 
 Read `.specify/memory/architecture.md` for the full picture before touching anything.
 
@@ -169,8 +169,10 @@ These come from the constitution. Breaking one is a rejected pull request, not a
    A table without policies is either fully exposed or fully unreachable.
 5. **Guard the point economy structurally.** Anything that awards or spends points must be backed
    by a constraint, a unique index, or a conditional `UPDATE ... WHERE` — not by an `IF`.
-6. **Chromium 83 is the floor.** No newer syntax or Web API without an ADR accepting the
-   exclusion.
+6. **Chromium 83 is the browser floor; Node 24 is the pinned runtime.** The build targets
+   `chrome83` for JS and CSS, and images run `node:24-alpine`. Do not introduce syntax or Web
+   APIs newer than Chromium 83, or a requirement for a Node major other than 24, without an ADR
+   accepting the exclusion.
 7. **No emoji in source code.** Commit messages only.
 8. **Never commit secrets.** `.env.prod`, `seed/*.csv` and `data/` are git-ignored and stay that
    way.
@@ -183,7 +185,7 @@ These come from the constitution. Breaking one is a rejected pull request, not a
 | `.specify/templates/` | Spec, plan and task templates |
 | `.specify/checklists/` | Spec review and Definition of Done |
 | `specs/` | One directory per feature |
-| `src/lib/api.js` | The only module that talks to the backend |
+| `src/lib/api.js` | The client API layer: PostgREST queries and RPC calls |
 | `supabase/postgres-init/` | Canonical schema, RLS and RPC — runs once, in numeric order |
 | `auth/server.mjs` | The auth service, zero dependencies |
 | `tests/sql/` | Business-rule tests against a real database |

@@ -37,9 +37,9 @@ The traps this project sets, in order of how often they are missed:
 
 **2. Design the approach.**
 Read the code you intend to change before proposing how to change it. Reuse what exists —
-`src/lib/api.js` is the only module that talks to the backend, and every game rule already has a
-home in `supabase/postgres-init/50_rpc.sql`. Say why you chose this approach over the obvious
-alternative.
+`src/lib/api.js` is the client API layer, and every game rule already has a home in
+`supabase/postgres-init/` (`50_rpc.sql` onwards). Say why you chose this approach over the
+obvious alternative.
 
 **3. Write `plan.md`** from the template, in English, into the spec's directory.
 

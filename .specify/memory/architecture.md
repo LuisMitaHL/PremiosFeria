@@ -54,8 +54,7 @@ the CDN microcache collapses the resulting herd into roughly one query per windo
 React 19 + Vite 8, plain JavaScript (no TypeScript), vanilla CSS in a single `src/index.css`
 design system. Routing is `HashRouter`, so URLs look like `/#/dashboard`.
 
-- `src/lib/api.js` — the only module that talks to the backend. All PostgREST queries and RPC
-  calls go through here.
+- `src/lib/api.js` — the client API layer for PostgREST queries and RPC calls.
 - `src/lib/AuthContext.jsx` — participant and stand-admin session state.
 - `src/lib/qrSecurity.js` — encodes and decodes the already-signed payload; computes the
   countdown to the next rotation. **It does no signing and holds no secret.**
@@ -76,7 +75,7 @@ an empty `./data/db`:
 | `30_grants.sql` | Broad grants — the real filter is RLS |
 | `35_auth_shim.sql` | `auth.uid()` and `auth.jwt()` reading `request.jwt.claims`; there is no GoTrue |
 | `40_rls.sql` | Policies on all six tables |
-| `50_rpc.sql`, `51_stand_login.sql` | Every game rule |
+| `50_rpc.sql` through `58_organizer_students.sql` | Every game rule, grouped by domain |
 | `70_seed.sql` | Loads `seed/stands.csv` and `seed/rewards.csv`; aborts loudly if absent |
 
 The auth service (`auth/server.mjs`, zero dependencies) implements the subset of the GoTrue API
