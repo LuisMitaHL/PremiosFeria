@@ -34,7 +34,6 @@ Retro-specs, documenting the system as built. They carry *As-built notes* and no
 | 004 | `visit-cooldown-rules` | Participant | Not started |
 | 007 | `live-leaderboard` | Participant | Not started |
 | 010 | `stand-login` | Stand admin | Not started |
-| 012 | `csv-provisioning` | Event operator | Not started |
 | 015 | `pwa-shell` | Participant | Not started |
 
 ## Changes to behaviour that ships
@@ -52,7 +51,7 @@ Part retro-spec, part change. Each opens with what exists today and why it is be
 
 | # | Spec | Actor | Status |
 |---|---|---|---|
-| 017 | `organizer-admin-panel` | Event operator | Not started |
+| 017 | [`organizer-admin-panel`](017-organizer-admin-panel/spec.md) | Event operator | Draft |
 | 018 | [`in-person-reward-fulfilment`](018-in-person-reward-fulfilment/spec.md) | Participant, Stand admin | Draft |
 | 019 | [`stand-activity-catalogue`](019-stand-activity-catalogue/spec.md) | Stand admin | Draft |
 | 020 | [`fixed-points-model`](020-fixed-points-model/spec.md) | Participant, Stand admin | Draft |
@@ -76,6 +75,7 @@ to be deleted. The numbers stay retired rather than being reused.
 | 008 | `rewards-catalog` | 021, 018 | The catalogue stops being seed-only and becomes something a stand manages |
 | 009 | `reward-claiming` | 018 | Claiming in the app is replaced by in-person fulfilment confirmed by the stand |
 | 014 | `stand-admin-console` | 019, 021 | Its point configuration disappears; what remains is activity and reward management |
+| 012 | `csv-provisioning` | 017, 023, 021 | Seeding stands and rewards from CSV disappears: the organiser creates stands, and stands register their own rewards |
 
 ---
 
