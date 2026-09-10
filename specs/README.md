@@ -55,7 +55,7 @@ Part retro-spec, part change. Each opens with what exists today and why it is be
 | 017 | `organizer-admin-panel` | Event operator | Not started |
 | 018 | `in-person-reward-fulfilment` | Participant, Stand admin | Not started |
 | 019 | `stand-activity-catalogue` | Stand admin | Not started |
-| 020 | `fixed-points-model` | Participant, Stand admin | Not started |
+| 020 | [`fixed-points-model`](020-fixed-points-model/spec.md) | Participant, Stand admin | Draft |
 | 021 | `stand-reward-management` | Stand admin | Not started |
 | 022 | `organizer-student-management` | Event operator | Not started |
 | 023 | `organizer-community-management` | Event operator | Not started |
