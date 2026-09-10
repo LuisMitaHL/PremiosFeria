@@ -37,6 +37,13 @@ ALTER TABLE rewards ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "rewards_read" ON rewards;
 CREATE POLICY "rewards_read" ON rewards FOR SELECT USING (true);
 
+-- Códigos de canje: RLS activa y SIN ninguna política, igual que settings.
+-- Ningún cliente los lee ni los escribe: el estudiante consulta el suyo por RPC
+-- y el stand lo presenta al confirmar. Un código legible por cualquiera es la
+-- capacidad de caminar hasta cualquier stand y gastarle los puntos a otro.
+ALTER TABLE claim_codes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "claim_codes_read" ON claim_codes;
+
 -- Claimed rewards: lectura pública, insert via RPC
 ALTER TABLE claimed_rewards ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "claimed_rewards_read" ON claimed_rewards;
