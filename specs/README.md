@@ -58,7 +58,7 @@ Part retro-spec, part change. Each opens with what exists today and why it is be
 | 021 | [`stand-reward-management`](021-stand-reward-management/spec.md) | Stand admin | Draft |
 | 022 | [`organizer-student-management`](022-organizer-student-management/spec.md) | Event operator | Draft |
 | 023 | [`organizer-community-management`](023-organizer-community-management/spec.md) | Event operator | Draft |
-| 024 | `system-audit-log` | Event operator | Not started |
+| 024 | [`system-audit-log`](024-system-audit-log/spec.md) | Event operator | Draft |
 | 025 | `participant-activity-progress` | Participant | Not started |
 | 026 | `project-documentation` | — | Not started |
 
