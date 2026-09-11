@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `026-project-documentation` |
 | **Actors** | — |
 | **Created** | 2026-09-10 |
@@ -169,6 +169,37 @@ None.
 - The seeding section is reframed, not deleted: the files provision a brand-new deployment, and creating communities afterwards happens in the panel (spec 027).
 - Following every instruction end to end is part of accepting this spec, not an optional check.
   That is the only way R10 is ever true.
+
+## 10b. As built
+
+The README is rewritten from scratch in Spanish rather than translated. It opens with what an
+attendee actually does — chooses a name, scans, plays, shows a code at the table — because that is
+the only paragraph most readers will read, and it is the one the old README never had.
+
+**Two halves, one file (R2).** "Para desarrollar" and "Para operar la feria", with an index. The
+operating half keeps the deployment instructions that were already accurate, in Spanish, including
+the seeding and organiser-account behaviour documented alongside spec 027.
+
+**Three things were documented that did not exist (R10).** The old file described a "Developer
+Mode" helper in the scanner that was removed long ago, listed `claim_reward` among the functions
+that hold the rules — it was deleted by spec 018, when claiming moved to the stand confirming a
+handover in person — and carried two overlapping deployment sections, one of which pointed at a
+port the other contradicted. A README teaches readers whether to trust it; the cost of the stale
+line is every true line next to it.
+
+**It points rather than restates (R11).** The specs, the working rules, the constitution, the
+decision records and the glossary are linked, with one line each saying what is in them. Copying
+any of it here would guarantee two versions that eventually disagree.
+
+**Nothing in it works if pasted (R13).** Every hostname is `ejemplo.test`, every credential is an
+angle-bracket placeholder, and the CSV examples no longer carry the real demo passwords that the
+old file printed — those were the live development credentials, sitting in the most-read file in
+the repository. The last line says so out loud, so that a reader in a hurry does not discover it by
+running one.
+
+**What is deliberately not here:** the rules themselves. Cooldowns, point values and activity
+limits are in the specs and enforced in the database; writing them down in the README would create
+a fourth place to keep them in step.
 
 ## 11. References
 

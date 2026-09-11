@@ -60,7 +60,7 @@ Part retro-spec, part change. Each opens with what exists today and why it is be
 | 023 | [`organizer-community-management`](023-organizer-community-management/spec.md) | Event operator | Implemented |
 | 024 | [`system-audit-log`](024-system-audit-log/spec.md) | Event operator | Implemented |
 | 025 | [`participant-activity-progress`](025-participant-activity-progress/spec.md) | Participant | Implemented |
-| 026 | [`project-documentation`](026-project-documentation/spec.md) | — | Draft |
+| 026 | [`project-documentation`](026-project-documentation/spec.md) | — | Implemented |
 
 ## Numbers retired before they were written
 

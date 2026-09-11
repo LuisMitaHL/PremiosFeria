@@ -1,69 +1,203 @@
-# FeriaPoints — University Fair Rewards System
+# Community Quest
 
-A Progressive Web App (PWA) designed for university fairs, allowing attendees to scan QR codes at stands to earn points and redeem rewards.
+Una aplicación web instalable (PWA) para ferias universitarias. Los asistentes recorren los
+stands, escanean el código QR que cada stand proyecta, acumulan puntos y los canjean por los
+premios que las comunidades traen a sus mesas.
 
-## Features
+Lo que hace un asistente, de principio a fin: elige un nombre, escanea el QR de un stand y suma
+puntos por la visita, participa en las actividades que ese stand organiza y suma más, mira el
+ranking, y cuando le alcanza se acerca a la mesa, muestra un código personal y la comunidad le
+entrega el premio en mano. No hay correo, ni contraseña, ni registro previo: el nombre y el
+teléfono desde el que lo escribió son toda su identidad.
 
-- **PWA**: Installable on mobile devices with offline support.
-- **Scanner**: Built-in QR scanner with manual fallback.
-- **Admin Panel**: Manage stands, generate rotating QR codes, and view stats.
-- **Security**: Time-based rotating QR codes (TOTP-style) with HMAC signatures to prevent sharing and replay attacks.
-- **Data Persistence**: Minimal self-hosted backend (Postgres + PostgREST + username auth); leaderboard polls every 5s.
+Hay tres roles. El **asistente** juega. La **comunidad** (el stand) proyecta su código, publica sus
+actividades y sus premios, y confirma cada entrega. La **organización** monta el evento, da de alta
+a las comunidades, resuelve los reclamos y lee el registro de todo lo que pasó.
 
-## Tech Stack
+---
 
-- **Frontend**: React, Vite
-- **Styling**: Vanilla CSS (CSS Modules/Variables)
-- **Routing**: React Router DOM
-- **Libraries**: `html5-qrcode` (Scanner), `qrcode.react` (Generator)
-- **Backend**: self-hosted minimal stack — Postgres 16 + PostgREST v12 + a zero-dependency Node auth service (username/password, HS256 sessions, 12h access + 48h refresh); your CDN routes + microcaches hot reads (see `nginx-cdn.conf.example`). Game rules live in Postgres RPC (`sign_scan_code`, `validate_and_scan`, `claim_reward`, `stand_login`); RLS scopes writes to `auth.uid()`. No realtime service: the leaderboard polls every 5s.
+## Índice
 
-## Platform targets
+- [Cómo está armado](#cómo-está-armado)
+- [Para desarrollar](#para-desarrollar)
+  - [Requisitos](#requisitos)
+  - [Levantar el entorno local](#levantar-el-entorno-local)
+  - [Cómo se verifica el trabajo](#cómo-se-verifica-el-trabajo)
+  - [Dónde está escrito el resto](#dónde-está-escrito-el-resto)
+- [Para operar la feria](#para-operar-la-feria)
+  - [1. Secretos](#1-secretos)
+  - [2. Arranque](#2-arranque)
+  - [3. Contrato con el CDN](#3-contrato-con-el-cdn)
+  - [4. Siembra opcional desde CSV](#4-siembra-opcional-desde-csv)
+  - [5. Credenciales de los stands](#5-credenciales-de-los-stands)
+  - [6. Borrar y volver a desplegar](#6-borrar-y-volver-a-desplegar)
 
-- **Node.js 24** — all images pinned to `node:24-alpine` (`Dockerfile`, `auth/Dockerfile`, `dev.sh`). Build/runtime below Node 20.19 is unsupported (Vite 8 requirement).
-- **Chrome/Chromium 83 minimum** — lowest device floor is Bromite (= Chromium 83). Enforced via `build.target: 'chrome83'` + `cssTarget: 'chrome83'` in `vite.config.js`; output must not use post-83 syntax.
+---
 
-## Development (local backend mock)
+## Cómo está armado
+
+Cuatro servicios, ninguno de ellos grande:
+
+| Servicio | Qué es | Para qué |
+|---|---|---|
+| `web` | Nginx sirviendo el bundle estático | La aplicación que corre en el teléfono |
+| `db` | Postgres 16 | Los datos **y todas las reglas del juego** |
+| `rest` | PostgREST v12 | Publica la base como API; no decide nada |
+| `auth` | Un servicio Node sin dependencias (`auth/server.mjs`) | Usuario y contraseña para stands y organización, sesiones HS256 |
+
+**Las reglas de negocio viven en Postgres**, en funciones `SECURITY DEFINER`
+(`supabase/postgres-init/`), no en el cliente. Cuánto vale una visita, cada cuánto se puede repetir,
+si una actividad está en curso, si a alguien le alcanza para un premio, quién puede confirmar una
+entrega: todo eso se decide en la base. El cliente dibuja y pregunta; no concede nada. Quien tenga
+la clave publicable puede llamar a la API directamente, y esa es exactamente la razón por la que
+ninguna regla puede vivir del otro lado.
+
+Dos consecuencias que conviene tener presentes al leer el código:
+
+- **La identidad nunca es un parámetro.** Ninguna función acepta "soy este participante": lo
+  resuelve con `auth.uid()` a partir del token. Row Level Security acota las lecturas, y los
+  privilegios por columna esconden lo que no debe leerse ni siquiera de una tabla pública.
+- **Nada corre en segundo plano.** No hay tareas programadas ni servicio de tiempo real. El estado
+  de una actividad, la vigencia de un código de canje y todo lo demás se **derivan** al momento de
+  preguntarlo; el ranking se refresca por sondeo cada cinco segundos.
+
+---
+
+## Para desarrollar
+
+### Requisitos
+
+| Herramienta | Versión | Por qué esa |
+|---|---|---|
+| Node.js | 24 | Todas las imágenes están fijadas a `node:24-alpine`. Vite 8 no soporta por debajo de Node 20.19 |
+| Docker + Docker Compose | Cualquiera reciente | El entorno local levanta Postgres, PostgREST y el servicio de auth |
+| React | 19 | |
+| Vite | 8 | |
+| Vitest | 5 | |
+| ESLint | 10 | Configuración plana (`eslint.config.js`) |
+
+**El piso de compatibilidad es Chromium 83.** No es una cifra elegida por gusto: el dispositivo más
+antiguo del público objetivo corre Bromite, que es Chromium 83. Está impuesto en `vite.config.js`
+con `build.target: 'chrome83'` y `cssTarget: 'chrome83'`, y significa que el código que se publica
+no puede usar sintaxis posterior. Es la razón por la que verás patrones que hoy se escribirían de
+otra forma.
+
+### Levantar el entorno local
 
 ```bash
-./dev.sh            # Postgres + PostgREST + auth + Vite on :5173
-./dev.sh --fresh    # wipe local DB volume and re-provision
+./dev.sh            # Postgres + PostgREST + auth + Vite, expuesto en la LAN
+./dev.sh --fresh    # borra el volumen de la base y vuelve a provisionar
 ```
 
-Backend files are generated under `.dev/` from the canonical prod sources (`supabase/postgres-init/{20_schema,40_rls,50_rpc}.sql`). API at `http://<lan-ip>:3000`, demo logins printed by the script. Seed: `./seed/*.csv` when present (same logins as prod), else built-in demo stands. After pulling schema changes, run `./dev.sh --fresh` once (old volumes keep the old schema).
+El script genera `.dev/` a partir de los **mismos archivos SQL que se despliegan en producción**
+(`supabase/postgres-init/`), y corre el mismo `auth/server.mjs`. Esto no es un detalle: cuando el
+entorno local tenía su propio servicio de auth simulado, tres errores distintos salieron de que
+dev y producción no fueran lo mismo, y dos de ellos en el camino de las credenciales.
 
-## Production deployment
+El script imprime al final las credenciales de demostración de cada stand y de la organización, y
+la dirección de LAN por la que un teléfono real puede entrar. La cámara necesita HTTPS, así que
+desde otro dispositivo conviene probar con el código manual de seis caracteres.
 
-Compose file is prod-oriented: 4 services (web static, Postgres, PostgREST, username auth). No gateway here — your **existing CDN system** routes to the published ports (see `nginx-cdn.conf.example`). TLS terminates there too. No certs in this repo.
+> **Un cambio de esquema exige una base nueva.** Los scripts de inicialización de Postgres corren
+> una sola vez, sobre un volumen vacío. Si tocas `supabase/postgres-init/`, corre `./dev.sh --fresh`
+> una vez; si no, seguirás trabajando contra el esquema viejo y el síntoma aparecerá lejos de la
+> causa.
 
-### 1. Secrets
+### Cómo se verifica el trabajo
 
 ```bash
-SITE_URL=https://feria.example.com ./deploy-keys.sh   # generates .env.prod (mode 600)
+npm run lint        # ESLint, falla con cualquier aviso
+npm test            # Vitest
+npm run test:sql    # las reglas de negocio, contra un Postgres real
 ```
 
-Never commit `.env.prod`. `POSTGRES_PASSWORD` is hex-only (URL-safe, embedded in connection strings). Re-run with `--force` to rotate (then `down` + wipe `./data/db`, since the DB password is baked at init).
+`npm run test:sql` construye una base descartable **desde los scripts canónicos de producción** y
+corre las suites de `tests/sql/`. No hay simulaciones: una simulación de `validate_and_scan` no
+demostraría nada sobre la función que de verdad corre durante la feria. Necesita el entorno local
+levantado, o `PSQL_CMD` apuntando a cualquier servidor alcanzable.
 
-`deploy-keys.sh` also generates the organiser login (`ORGANIZER_USERNAME` / `ORGANIZER_PASSWORD`), written to the database **only on the first boot of an empty `./data/db`**. Regenerating `.env.prod` while the volume exists leaves the printed password unusable — the panel answers *"Credenciales incorrectas"*. To apply new credentials, wipe `./data/db` (section 6) or update the stored hash:
+> **`npm run build` no es una forma de verificar.** Que el bundle se arme no dice nada sobre si las
+> reglas se cumplen. La compilación pertenece al despliegue; el trabajo se verifica con las tres
+> compuertas de arriba.
+
+Un test que nunca estuvo en rojo no demuestra nada: al escribir una aserción, rompe a propósito la
+regla que dice cubrir y comprueba que falla.
+
+### Dónde está escrito el resto
+
+Este archivo explica qué es el sistema y cómo se corre. Todo lo demás vive en su lugar, y se
+enlaza en vez de copiarse, porque dos versiones de la misma regla terminan contradiciéndose:
+
+| Dónde | Qué hay |
+|---|---|
+| [`specs/`](specs/) | Las especificaciones, una por flujo, con su estado. [`specs/README.md`](specs/README.md) es el índice |
+| [`AGENTS.md`](AGENTS.md) | Las reglas de trabajo del equipo: ramas, commits, Definition of Done. Fuente única, también para los asistentes de IA |
+| [`.specify/memory/constitution.md`](.specify/memory/constitution.md) | Los principios que ningún cambio puede romper |
+| [`.specify/memory/decisions/`](.specify/memory/decisions/) | Por qué el sistema es así y no de otra forma |
+| [`docs/CONTRIBUIR.md`](docs/CONTRIBUIR.md) | La guía práctica de contribución |
+| [`.specify/memory/glossary.md`](.specify/memory/glossary.md) | El glosario del dominio, español e inglés: las specs están en inglés y la interfaz en español |
+
+El proyecto usa **desarrollo guiado por especificaciones**: un cambio de comportamiento se escribe
+primero como spec y recién después como código. Si vas a cambiar cómo se comporta algo y no
+encuentras su spec, escríbela antes.
+
+---
+
+## Para operar la feria
+
+El `docker-compose.yml` está orientado a producción: los cuatro servicios, sin pasarela. **El
+enrutado y el TLS los hace tu CDN existente** contra los puertos publicados; en este repositorio no
+hay certificados. El backend es efímero por diseño: corre unas horas y se apaga.
+
+### 1. Secretos
+
+```bash
+SITE_URL=https://feria.ejemplo.test ./deploy-keys.sh   # genera .env.prod con permisos 600
+```
+
+`.env.prod` no se versiona nunca. `POSTGRES_PASSWORD` es hexadecimal porque viaja dentro de cadenas
+de conexión. Para rotar, `--force`, y después `down` y borrar `./data/db`: la contraseña de la base
+queda fijada en la inicialización.
+
+`deploy-keys.sh` genera también el usuario de la organización (`ORGANIZER_USERNAME` /
+`ORGANIZER_PASSWORD`). **Se escribe en la base solo en el primer arranque de un `./data/db` vacío.**
+Volver a generar `.env.prod` con el volumen ya existente deja la contraseña impresa sin efecto, y
+el panel responde *"Credenciales incorrectas"*. Para aplicar credenciales nuevas, borra `./data/db`
+(sección 6) o actualiza el hash almacenado:
 
 ```sql
 UPDATE organizers
-SET password_hash = crypt('<organizer-password>', gen_salt('bf', 12))
-WHERE username = '<organizer-username>';
+SET password_hash = crypt('<contraseña-de-organizacion>', gen_salt('bf', 12))
+WHERE username = '<usuario-de-organizacion>';
 ```
 
-The organiser signs in at its own address, `https://<origin>/#/organizador/entrar` (the app uses a
-hash router). It is deliberately not linked from any stand or attendee screen (spec 017). The stand
-login (`/#/admin/login`) accepts stand accounts only; the organiser's credentials are refused there
-with a message pointing to the organiser access.
+La organización entra por su propia dirección, `https://<origen>/#/organizador/entrar` (la
+aplicación usa enrutado por hash). No está enlazada desde ninguna pantalla de stand ni de
+asistente, a propósito. La pantalla de stand (`/#/admin/login`) acepta solo cuentas de stand: las
+credenciales de organización se rechazan ahí con un mensaje que indica por dónde entrar.
 
-### 2. Boot
+**Las comunidades se crean desde el panel**, en la sección Comunidades: la organización da de alta
+el stand y el sistema genera una contraseña que se muestra **una sola vez**. No hay forma de volver
+a verla, solo de restablecerla. Cada comunidad publica después sus propias actividades y sus
+propios premios desde su consola; la organización puede corregir precios, existencias y bajas, pero
+no registra premios en nombre de nadie.
+
+### 2. Arranque
 
 ```bash
 docker compose --env-file .env.prod up -d --build
 ```
 
-First boot: Postgres init loads schema + RLS + RPC, and pre-loads accounts from `./seed/*.csv` when present (both files optional — copy the tracked `.example` files, see section 4). With an empty `./seed`, only the organiser account is created and stands are added from the panel. Init scripts run in numeric order, so a malformed seed that aborts also stops the organiser account from being created. A completion marker is written only after the whole chain succeeds, and the `db` healthcheck requires it: if init aborted, the database stays `unhealthy` and the API is never started against an empty database. Read the database logs before trusting the first boot. Check against published ports:
+En el primer arranque, la inicialización de Postgres carga el esquema, las políticas y las
+funciones, y siembra cuentas desde `./seed/*.csv` si los archivos están presentes (ambos son
+opcionales, ver sección 4). Con `./seed` vacío se crea únicamente la cuenta de organización y los
+stands se agregan desde el panel.
+
+Los scripts de inicialización corren en orden numérico, así que una siembra mal formada que aborte
+impide también que se cree la cuenta de organización. Se escribe una marca de finalización solo
+cuando toda la cadena termina bien, y el `healthcheck` de `db` la exige: si la inicialización
+abortó, la base queda `unhealthy` y la API nunca arranca contra una base a medio construir. **Lee
+los registros de la base antes de confiar en el primer arranque.**
 
 ```bash
 curl -s http://localhost:9999/health
@@ -71,122 +205,96 @@ curl -s -H "apikey: $ANON" http://localhost:3000/communities?select=name
 docker compose --env-file .env.prod exec db psql -U postgres
 ```
 
-### 3. CDN contract (`nginx-cdn.conf.example`)
+### 3. Contrato con el CDN
 
-Deploy the example on your CDN box: set the 3 upstreams to the docker host IP + published ports (`WEB/REST/AUTH_PORT`). Same public origin serves all paths (TLS also terminates there):
+Despliega `nginx-cdn.conf.example` en tu CDN y apunta los tres upstreams a la IP del host de Docker
+y a los puertos publicados (`WEB/REST/AUTH_PORT`). Un mismo origen público sirve todas las rutas, y
+ahí termina el TLS:
 
-| Path | Target |
+| Ruta | Destino |
 |---|---|
-| `/rest/v1/*` | PostgREST (GET 200s microcached 5s) |
-| `/auth/v1/*` | Auth service (never cached) |
-| `/*` | App (SPA) |
+| `/rest/v1/*` | PostgREST (los GET con 200 se microcachean 5 s) |
+| `/auth/v1/*` | Servicio de auth (nunca se cachea) |
+| `/*` | La aplicación |
 
-Microcache lives in the example (5s TTL, herd lock, stale-while-revalidate, per-session keys). Verify through the CDN:
+El microcaché está en el ejemplo: 5 s de vida, cerrojo contra estampida, `stale-while-revalidate` y
+claves por sesión. Es lo que absorbe el sondeo del ranking. Para comprobarlo a través del CDN:
 
 ```bash
-curl -sI -H "apikey: $ANON" https://feria.example.com/rest/v1/communities?select=name | grep -i x-microcache
-# first: MISS, then: HIT
+curl -sI -H "apikey: $ANON" https://feria.ejemplo.test/rest/v1/communities?select=name | grep -i x-microcache
+# la primera vez MISS, después HIT
 ```
 
-`VITE_SUPABASE_URL` must be the public `https://` origin — Vite bakes it at `docker build` time, so changing the domain requires `--build`.
+`VITE_SUPABASE_URL` tiene que ser el origen público `https://`. Vite lo incrusta durante
+`docker build`, así que cambiar de dominio obliga a reconstruir con `--build`.
 
-### 4. Seed accounts from CSV
+### 4. Siembra opcional desde CSV
 
-The two files are optional: with an empty `./seed` the first boot creates only the
-organiser account, and stands and rewards are added from the panel afterwards. To
-pre-load them, copy the tracked examples and edit the copies: `seed/*.csv` is
-git-ignored because it holds plaintext passwords, so only the `.example` files are
-committed.
+Los dos archivos son opcionales: con `./seed` vacío, el primer arranque crea solo la cuenta de
+organización y todo lo demás se agrega desde el panel. Para precargarlos, copia los ejemplos
+versionados y edita las copias — `seed/*.csv` está en `.gitignore` porque contiene contraseñas en
+claro, así que solo se versionan los `.example`:
 
 ```bash
 cp seed/stands.csv.example seed/stands.csv
 cp seed/rewards.csv.example seed/rewards.csv
 chmod 600 seed/stands.csv
-# then edit both files
+# y después edita ambos
 ```
 
-No accounts are hardcoded in SQL.
+No hay ninguna cuenta escrita a mano en el SQL.
 
-`seed/stands.csv` (optional, header `user,pw,name`):
+`seed/stands.csv`, cabecera `user,pw,name`:
 
 ```csv
 user,pw,name
-meh,Meh2024*,MEH
-ieee,Ieee2024*,IEEE
+stand-uno,<contraseña-1>,Nombre De La Comunidad
 ```
 
-`seed/rewards.csv` (optional, header-only allowed for "stands only"; header `stand,name,description,cost,stock,emoji` — `stand` matches a `user` above):
+`seed/rewards.csv`, cabecera `stand,name,description,cost,stock,emoji`, donde `stand` coincide con
+un `user` del archivo anterior. Se admite dejarlo con solo la cabecera si no quieres precargar
+premios:
 
 ```csv
 stand,name,description,cost,stock,emoji
-meh,CuboRubik Dotnet,Premio de MEH,150,1,Box
+stand-uno,Nombre del premio,Una descripción corta,150,1,Box
 ```
 
-Rules: UTF-8, quote fields containing commas. Blank `user`/`pw` rows are ignored; blank `name`/`cost` abort the seed visibly. The files are read once, at Postgres init on an empty `./data/db` — they provision a **new deployment only**; an empty `./seed` is valid and leaves only the organiser account. To create or change accounts on a running instance, use the organizer panel (or the SQL rotation in section 5); never wipe a live database to re-seed it (section 6).
+Reglas: UTF-8, y entrecomilla los campos que contengan comas. Las filas con `user` o `pw` vacíos se
+ignoran; las que tengan `name` o `cost` vacíos abortan la siembra de forma visible.
 
-### 5. Stand credentials
+**Los archivos se leen una sola vez**, en la inicialización de Postgres sobre un `./data/db` vacío:
+sirven para provisionar un despliegue nuevo, nada más. Para crear o cambiar cuentas en una
+instancia en marcha se usa el panel de organización (o la rotación por SQL de la sección 5). Nunca
+borres una base viva para volver a sembrarla.
 
-Seeded logins are whatever you put in `seed/stands.csv` — hand each `user,pw` pair to its stand over a secure channel. There is no email recovery; rotate via SQL:
+### 5. Credenciales de los stands
+
+Las cuentas sembradas son las que pusiste en `seed/stands.csv`; entrega cada par `user,pw` a su
+stand por un canal seguro. Las creadas desde el panel muestran su contraseña una sola vez. No hay
+recuperación por correo: para rotar una contraseña en una instancia en marcha, usa el panel, o SQL:
 
 ```sql
 UPDATE communities
-SET password_hash = crypt('NewPass*', gen_salt('bf', 12))
-WHERE username = 'meh';
+SET password_hash = crypt('<contraseña-nueva>', gen_salt('bf', 12))
+WHERE username = '<usuario-del-stand>';
 ```
 
-(Seed CSV edits only apply on a fresh DB — rotate live passwords with the SQL above.)
+El coste 12 no es decorativo: el valor por omisión de `gen_salt('bf')` es 6, que se rompe sin
+esfuerzo fuera de línea.
 
-### 6. Wipe / redeploy
+### 6. Borrar y volver a desplegar
 
 ```bash
 docker compose --env-file .env.prod down
-rm -rf ./data/db   # DESTRUCTIVE: init + seed re-run on next up
+rm -rf ./data/db   # DESTRUCTIVO: la inicialización y la siembra vuelven a correr
 ```
 
-A wipe re-creates the organiser from the current `ORGANIZER_*` in `.env.prod` and re-runs the CSV seed.
+Un borrado vuelve a crear la organización con los `ORGANIZER_*` que haya en `.env.prod` y repite la
+siembra desde CSV. Los datos de la base viven en `./data/db`, montado del host y fuera del control
+de versiones.
 
-DB data lives in `./data/db` (bind mount, git-ignored).
+---
 
-## Deployment
-
-The application is containerized using Docker and served via Nginx.
-
-### Prerequisites
-
-- Docker and Docker Compose installed on your system.
-
-### Running with Docker Compose
-
-This starts the full prod stack (needs `.env.prod`, see Production deployment below):
-
-1.  Clone the repository (if not already done).
-2.  Run the following command in the project root:
-
-    ```bash
-    SITE_URL=https://feria.example.com ./deploy-keys.sh   # generates .env.prod
-    docker compose --env-file .env.prod up -d --build
-    ```
-
-3.  Access the application at:
-    [http://localhost:8080](http://localhost:8080) (or through your CDN at `VITE_SUPABASE_URL`)
-
-### Manual Build
-
-To build and run locally without Docker:
-
-```bash
-# Install dependencies
-npm install
-
-# Run in development mode
-npm run dev
-
-# Build for production
-npm run build
-# Preview production build
-npm run preview
-```
-
-## Developer Tools
-
-When running on `localhost`, the scanner page includes a **"Developer Mode"** helper. This allows you to simulate scanning a valid QR code without needing a physical camera, which is useful for testing the rewards flow.
+Todos los dominios, usuarios y contraseñas de este archivo son marcadores de posición. Ninguno
+funciona si se pega tal cual, que es justamente la idea.
