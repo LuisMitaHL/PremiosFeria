@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { Plus, PackagePlus, Loader, AlertTriangle } from 'lucide-react';
 import {
     getRewardsForCommunity,
@@ -24,6 +24,7 @@ export default function RewardsSection({ communityId }) {
     const [form, setForm] = useState(EMPTY_FORM);
     const [addingTo, setAddingTo] = useState(null);
     const [addAmount, setAddAmount] = useState(1);
+    const campoId = useId();
 
     // Un refresco que falla no tapa la lista que el stand ya esta leyendo: el
     // error solo se muestra si todavia no hay nada que mostrar (spec 028, R6).
@@ -141,6 +142,7 @@ export default function RewardsSection({ communityId }) {
                                         className="form-input"
                                         type="number"
                                         min={1}
+                                        aria-label={`Unidades a agregar a ${reward.name}`}
                                         value={addAmount}
                                         style={{ maxWidth: 90 }}
                                         onChange={(e) => setAddAmount(e.target.value)}
@@ -185,8 +187,9 @@ export default function RewardsSection({ communityId }) {
             {showForm && (
                 <form onSubmit={handleCreate} className="glass-card">
                     <div className="form-group">
-                        <label className="form-label">Nombre</label>
+                        <label className="form-label" htmlFor={`${campoId}-nombre`}>Nombre</label>
                         <input
+                            id={`${campoId}-nombre`}
                             className="form-input"
                             value={form.name}
                             minLength={3}
@@ -197,8 +200,9 @@ export default function RewardsSection({ communityId }) {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Descripción (opcional)</label>
+                        <label className="form-label" htmlFor={`${campoId}-descripcion`}>Descripción (opcional)</label>
                         <input
+                            id={`${campoId}-descripcion`}
                             className="form-input"
                             value={form.description}
                             maxLength={100}
@@ -207,8 +211,9 @@ export default function RewardsSection({ communityId }) {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Costo en puntos</label>
+                        <label className="form-label" htmlFor={`${campoId}-costo`}>Costo en puntos</label>
                         <input
+                            id={`${campoId}-costo`}
                             className="form-input"
                             type="number"
                             min={0}
@@ -224,8 +229,9 @@ export default function RewardsSection({ communityId }) {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Unidades</label>
+                        <label className="form-label" htmlFor={`${campoId}-unidades`}>Unidades</label>
                         <input
+                            id={`${campoId}-unidades`}
                             className="form-input"
                             type="number"
                             min={0}
@@ -236,12 +242,16 @@ export default function RewardsSection({ communityId }) {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Ícono</label>
-                        <div className="icon-grid">
+                        {/* Encabeza una botonera, no un campo: no hay control al que asociar
+                            la etiqueta, así que nombra al grupo. */}
+                        <span className="form-label" id={`${campoId}-icono`}>Ícono</span>
+                        <div className="icon-grid" role="group" aria-labelledby={`${campoId}-icono`}>
                             {ICONS.map((icon) => (
                                 <button
                                     key={icon}
                                     type="button"
+                                    aria-label={`Ícono ${icon}`}
+                                    aria-pressed={form.emoji === icon}
                                     className={`icon-option ${form.emoji === icon ? 'is-active' : ''}`}
                                     onClick={() => setForm({ ...form, emoji: icon })}
                                 >

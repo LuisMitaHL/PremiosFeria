@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext.js';
 import { ShieldCheck, AlertTriangle, Loader } from 'lucide-react';
@@ -9,6 +9,7 @@ export default function OrganizerLogin() {
     const [form, setForm] = useState({ username: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const campoId = useId();
 
     useEffect(() => {
         if (organizerUser) navigate('/organizador', { replace: true });
@@ -45,8 +46,9 @@ export default function OrganizerLogin() {
 
                 <form onSubmit={handleSubmit} className="glass-card">
                     <div className="form-group">
-                        <label className="form-label">Usuario</label>
+                        <label className="form-label" htmlFor={`${campoId}-usuario`}>Usuario</label>
                         <input
+                            id={`${campoId}-usuario`}
                             className="form-input"
                             value={form.username}
                             autoComplete="username"
@@ -57,8 +59,9 @@ export default function OrganizerLogin() {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Contraseña</label>
+                        <label className="form-label" htmlFor={`${campoId}-clave`}>Contraseña</label>
                         <input
+                            id={`${campoId}-clave`}
                             className="form-input"
                             type="password"
                             value={form.password}

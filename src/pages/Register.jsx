@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/authContext.js';
 import { UserPlus, AlertTriangle, Loader, KeyRound } from 'lucide-react';
@@ -13,6 +13,7 @@ export default function Register() {
     // organización (spec 022). Es el otro camino a la misma pantalla.
     const [recovering, setRecovering] = useState(false);
     const [code, setCode] = useState('');
+    const campoId = useId();
 
     // If already registered, redirect
     useEffect(() => {
@@ -79,8 +80,9 @@ export default function Register() {
                 {recovering ? (
                     <form onSubmit={handleRecover} className="glass-card">
                         <div className="form-group">
-                            <label className="form-label">Código de recuperación</label>
+                            <label className="form-label" htmlFor={`${campoId}-codigo`}>Código de recuperación</label>
                             <input
+                                id={`${campoId}-codigo`}
                                 className="form-input claim-code-input"
                                 value={code}
                                 maxLength={6}
@@ -108,8 +110,9 @@ export default function Register() {
                 ) : (
                 <form onSubmit={handleSubmit} className="glass-card">
                     <div className="form-group">
-                        <label className="form-label">Elige tu nombre</label>
+                        <label className="form-label" htmlFor={`${campoId}-nombre`}>Elige tu nombre</label>
                         <input
+                            id={`${campoId}-nombre`}
                             className="form-input"
                             type="text"
                             placeholder="Ej: zorro"

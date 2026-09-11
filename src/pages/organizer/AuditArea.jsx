@@ -160,6 +160,7 @@ export default function AuditArea() {
             <div className="audit-filters">
                 <select
                     className="form-input"
+                    aria-label="Filtrar por tipo de movimiento"
                     value={filtros.kind}
                     onChange={(e) => cambiar('kind', e.target.value)}
                 >
@@ -173,6 +174,7 @@ export default function AuditArea() {
 
                 <select
                     className="form-input"
+                    aria-label="Filtrar por quién lo hizo"
                     value={filtros.actorKind}
                     onChange={(e) => cambiar('actorKind', e.target.value)}
                 >
@@ -186,6 +188,7 @@ export default function AuditArea() {
 
                 <select
                     className="form-input"
+                    aria-label="Filtrar por resultado"
                     value={filtros.outcome}
                     onChange={(e) => cambiar('outcome', e.target.value)}
                 >
@@ -196,6 +199,7 @@ export default function AuditArea() {
 
                 <select
                     className="form-input"
+                    aria-label="Filtrar por período"
                     value={filtros.minutos}
                     onChange={(e) => cambiar('minutos', e.target.value)}
                 >

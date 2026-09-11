@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import {
     Search, KeyRound, Pencil, Ban, RotateCcw, Loader, AlertTriangle, Copy, Plus, Minus,
 } from 'lucide-react';
@@ -22,6 +22,10 @@ export default function StudentsArea() {
     const [recovery, setRecovery] = useState(null);
     const [newName, setNewName] = useState('');
     const [adjust, setAdjust] = useState({ amount: '', reason: '' });
+    // Las etiquetas del detalle viven dentro de un .map(), pero solo se dibuja el
+    // panel del estudiante seleccionado, así que un identificador por componente
+    // alcanza: nunca hay dos copias del mismo id en la página.
+    const campoId = useId();
 
     // Un refresco que falla no tapa la lista ya cargada (spec 028, R6).
     const hubo = useRef(false);
@@ -135,10 +139,11 @@ export default function StudentsArea() {
             )}
 
             <div className="form-group">
-                <label className="form-label">
+                <label className="form-label" htmlFor={`${campoId}-buscar`}>
                     <Search size={13} /> Buscar por nombre
                 </label>
                 <input
+                    id={`${campoId}-buscar`}
                     className="form-input"
                     value={query}
                     placeholder="Ej: zorro"
@@ -181,7 +186,9 @@ export default function StudentsArea() {
                             {detail && (
                                 <>
                                     <div className="form-group">
-                                        <label className="form-label">Recuperar su perfil</label>
+                                        {/* Encabeza un botón, no un campo: no hay control al
+                                            que asociar una etiqueta. */}
+                                        <span className="form-label">Recuperar su perfil</span>
                                         <p className="form-hint">
                                             Solo si estás seguro de que es esta persona. El sistema
                                             no puede distinguir a quien cambió de teléfono de quien
@@ -201,9 +208,10 @@ export default function StudentsArea() {
                                     </div>
 
                                     <div className="form-group">
-                                        <label className="form-label">Nombre</label>
+                                        <label className="form-label" htmlFor={`${campoId}-nombre`}>Nombre</label>
                                         <div className="activity-actions">
                                             <input
+                                                id={`${campoId}-nombre`}
                                                 className="form-input"
                                                 value={newName}
                                                 maxLength={24}
@@ -223,13 +231,14 @@ export default function StudentsArea() {
                                     </div>
 
                                     <div className="form-group">
-                                        <label className="form-label">Ajustar puntos</label>
+                                        <label className="form-label" htmlFor={`${campoId}-monto`}>Ajustar puntos</label>
                                         <p className="form-hint">
                                             Es el único cambio de saldo que no ocurrió en el salón,
                                             así que lleva motivo.
                                         </p>
                                         <div className="activity-actions">
                                             <input
+                                                id={`${campoId}-monto`}
                                                 className="form-input"
                                                 type="number"
                                                 placeholder="Ej: 30 o -20"
@@ -239,8 +248,11 @@ export default function StudentsArea() {
                                                     setAdjust({ ...adjust, amount: e.target.value })
                                                 }
                                             />
+                                            {/* La etiqueta visible del grupo nombra al monto,
+                                                así que el motivo lleva la suya propia. */}
                                             <input
                                                 className="form-input"
+                                                aria-label="Motivo del ajuste"
                                                 placeholder="Motivo"
                                                 value={adjust.reason}
                                                 maxLength={200}

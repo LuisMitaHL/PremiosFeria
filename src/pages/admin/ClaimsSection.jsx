@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { Loader, AlertTriangle, CheckCircle } from 'lucide-react';
 import { getRewardsForCommunity, confirmHandover } from '../../lib/api.js';
 import DynamicIcon from '../../components/DynamicIcon.jsx';
@@ -11,6 +11,7 @@ export default function ClaimsSection({ communityId }) {
     const [error, setError] = useState('');
     const [done, setDone] = useState(null);
     const [busy, setBusy] = useState(false);
+    const campoId = useId();
 
     const load = useCallback(async () => {
         try {
@@ -88,8 +89,9 @@ export default function ClaimsSection({ communityId }) {
 
             <form onSubmit={handleConfirm} className="glass-card">
                 <div className="form-group">
-                    <label className="form-label">Código del estudiante</label>
+                    <label className="form-label" htmlFor={`${campoId}-codigo`}>Código del estudiante</label>
                     <input
+                        id={`${campoId}-codigo`}
                         className="form-input claim-code-input"
                         value={code}
                         maxLength={6}
@@ -104,8 +106,10 @@ export default function ClaimsSection({ communityId }) {
                 </div>
 
                 <div className="form-group">
-                    <label className="form-label">Premio que le vas a entregar</label>
-                    <div className="reward-choices">
+                    {/* Encabeza una botonera, no un campo: no hay control al que asociar
+                        la etiqueta, así que nombra al grupo. */}
+                    <span className="form-label" id={`${campoId}-premio`}>Premio que le vas a entregar</span>
+                    <div className="reward-choices" role="group" aria-labelledby={`${campoId}-premio`}>
                         {rewards.map((reward) => (
                             <button
                                 key={reward.id}

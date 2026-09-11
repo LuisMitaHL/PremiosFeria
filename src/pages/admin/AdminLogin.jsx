@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext.js';
 import { ShieldCheck, AlertTriangle, Loader, ArrowRight } from 'lucide-react';
@@ -9,6 +9,7 @@ export default function AdminLogin() {
     const [form, setForm] = useState({ username: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const campoId = useId();
 
     // If already logged in, redirect to admin
     useEffect(() => {
@@ -25,14 +26,20 @@ export default function AdminLogin() {
         }
 
         setLoading(true);
-        const result = await loginAdmin(form.username.trim(), form.password.trim());
-        setLoading(false);
+        try {
+            const result = await loginAdmin(form.username.trim(), form.password.trim());
 
-        if (result.success) {
-            navigate('/admin', { replace: true });
-        } else {
-            console.error("Login attempt failed:", result);
-            setError(result.error ? `Error: ${result.error}` : 'Credenciales incorrectas o error de conexión');
+            if (result.success) {
+                navigate('/admin', { replace: true });
+            } else {
+                setError(result.error ? `Error: ${result.error}` : 'Credenciales incorrectas o error de conexión');
+            }
+        } catch (err) {
+            setError(`Error: ${err.message}`);
+        } finally {
+            // En el finally y no despues de la llamada: si algo lanza, el boton
+            // quedaba deshabilitado y no habia forma de reintentar sin recargar.
+            setLoading(false);
         }
     };
 
@@ -49,8 +56,9 @@ export default function AdminLogin() {
 
                 <form onSubmit={handleSubmit} className="glass-card">
                     <div className="form-group">
-                        <label className="form-label">Usuario de comunidad</label>
+                        <label className="form-label" htmlFor={`${campoId}-usuario`}>Usuario de comunidad</label>
                         <input
+                            id={`${campoId}-usuario`}
                             className="form-input"
                             type="text"
                             placeholder="meh"
@@ -61,8 +69,9 @@ export default function AdminLogin() {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Contraseña</label>
+                        <label className="form-label" htmlFor={`${campoId}-clave`}>Contraseña</label>
                         <input
+                            id={`${campoId}-clave`}
                             className="form-input"
                             type="password"
                             placeholder="••••••••"
@@ -83,9 +92,9 @@ export default function AdminLogin() {
                 </form>
 
                 <p style={{ textAlign: 'center', marginTop: 32, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    <span style={{ cursor: 'pointer', textDecoration: 'underline', fontWeight: 500 }} onClick={() => navigate('/')}>
+                    <button type="button" className="link-inline" onClick={() => navigate('/')}>
                         ← Volver al inicio
-                    </span>
+                    </button>
                 </p>
             </div>
         </div>

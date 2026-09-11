@@ -127,6 +127,7 @@ export default function RewardsArea() {
                             className="form-input"
                             type="number"
                             style={{ maxWidth: 100 }}
+                            aria-label={`Costo en puntos de ${p.name}`}
                             value={campo(p.id, 'cost', p.cost)}
                             onChange={(e) => editar(p.id, 'cost', e.target.value)}
                         />
@@ -145,6 +146,7 @@ export default function RewardsArea() {
                             className="form-input"
                             type="number"
                             style={{ maxWidth: 100 }}
+                            aria-label={`Unidades en existencia de ${p.name}`}
                             value={campo(p.id, 'stock', p.stock)}
                             onChange={(e) => editar(p.id, 'stock', e.target.value)}
                         />

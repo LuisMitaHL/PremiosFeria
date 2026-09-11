@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Square, QrCode, Pencil, Plus, Loader, Star, AlertTriangle } from 'lucide-react';
 import {
@@ -33,6 +33,7 @@ export default function ActivitiesSection({ communityId }) {
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [form, setForm] = useState(EMPTY_FORM);
+    const campoId = useId();
 
     const load = useCallback(async () => {
         try {
@@ -229,8 +230,9 @@ export default function ActivitiesSection({ communityId }) {
             {showForm && (
                 <form onSubmit={handleSubmit} className="glass-card">
                     <div className="form-group">
-                        <label className="form-label">Nombre</label>
+                        <label className="form-label" htmlFor={`${campoId}-nombre`}>Nombre</label>
                         <input
+                            id={`${campoId}-nombre`}
                             className="form-input"
                             value={form.name}
                             minLength={3}
@@ -241,8 +243,9 @@ export default function ActivitiesSection({ communityId }) {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Descripción</label>
+                        <label className="form-label" htmlFor={`${campoId}-descripcion`}>Descripción</label>
                         <input
+                            id={`${campoId}-descripcion`}
                             className="form-input"
                             value={form.description}
                             maxLength={100}
@@ -252,8 +255,9 @@ export default function ActivitiesSection({ communityId }) {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Hora estimada de inicio</label>
+                        <label className="form-label" htmlFor={`${campoId}-inicio`}>Hora estimada de inicio</label>
                         <input
+                            id={`${campoId}-inicio`}
                             className="form-input"
                             type="time"
                             value={form.estimated_start}
@@ -266,8 +270,9 @@ export default function ActivitiesSection({ communityId }) {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Duración (minutos)</label>
+                        <label className="form-label" htmlFor={`${campoId}-duracion`}>Duración (minutos)</label>
                         <input
+                            id={`${campoId}-duracion`}
                             className="form-input"
                             type="number"
                             min={1}

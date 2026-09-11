@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { Plus, KeyRound, Pencil, Ban, RotateCcw, Loader, AlertTriangle, Copy } from 'lucide-react';
 import {
     getCommunities,
@@ -27,6 +27,7 @@ export default function CommunitiesArea() {
     // Shown exactly once, right after it is generated. There is no way back to
     // it: the database keeps only a hash (spec 023, R5).
     const [credentials, setCredentials] = useState(null);
+    const campoId = useId();
 
     // Un refresco que falla no tapa la lista ya cargada (spec 028, R6).
     const hubo = useRef(false);
@@ -233,8 +234,9 @@ export default function CommunitiesArea() {
             {showForm && (
                 <form onSubmit={handleSubmit} className="glass-card">
                     <div className="form-group">
-                        <label className="form-label">Nombre de la comunidad</label>
+                        <label className="form-label" htmlFor={`${campoId}-nombre`}>Nombre de la comunidad</label>
                         <input
+                            id={`${campoId}-nombre`}
                             className="form-input"
                             value={form.name}
                             required
@@ -243,8 +245,9 @@ export default function CommunitiesArea() {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Usuario para iniciar sesión</label>
+                        <label className="form-label" htmlFor={`${campoId}-usuario`}>Usuario para iniciar sesión</label>
                         <input
+                            id={`${campoId}-usuario`}
                             className="form-input"
                             value={form.username}
                             required
@@ -259,8 +262,9 @@ export default function CommunitiesArea() {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Número de stand</label>
+                        <label className="form-label" htmlFor={`${campoId}-stand`}>Número de stand</label>
                         <input
+                            id={`${campoId}-stand`}
                             className="form-input"
                             value={form.stand_number}
                             onChange={(e) => setForm({ ...form, stand_number: e.target.value })}
@@ -268,8 +272,9 @@ export default function CommunitiesArea() {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Descripción (opcional)</label>
+                        <label className="form-label" htmlFor={`${campoId}-descripcion`}>Descripción (opcional)</label>
                         <input
+                            id={`${campoId}-descripcion`}
                             className="form-input"
                             value={form.description}
                             onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -277,12 +282,16 @@ export default function CommunitiesArea() {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Ícono</label>
-                        <div className="icon-grid">
+                        {/* Encabeza una botonera, no un campo: no hay control al que asociar
+                            la etiqueta, así que nombra al grupo. */}
+                        <span className="form-label" id={`${campoId}-icono`}>Ícono</span>
+                        <div className="icon-grid" role="group" aria-labelledby={`${campoId}-icono`}>
                             {ICONS.map((icon) => (
                                 <button
                                     key={icon}
                                     type="button"
+                                    aria-label={`Ícono ${icon}`}
+                                    aria-pressed={form.emoji === icon}
                                     className={`icon-option ${form.emoji === icon ? 'is-active' : ''}`}
                                     onClick={() => setForm({ ...form, emoji: icon })}
                                 >

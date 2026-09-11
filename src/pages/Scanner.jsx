@@ -49,10 +49,17 @@ export default function Scanner() {
         if (!scanning || showManual) return;
 
         let scanner = null;
+        // La libreria se carga bajo demanda, y en ese rato la pantalla puede
+        // cerrarse. Sin esta bandera la limpieza corria con scanner todavia en
+        // null, no apagaba nada, y la camara se encendia despues sobre una
+        // pantalla que ya no existe: la luz del telefono queda prendida y no
+        // hay forma de apagarla desde la aplicacion.
+        let cancelado = false;
 
         const initScanner = async () => {
             try {
                 const { Html5Qrcode } = await import('html5-qrcode');
+                if (cancelado) return;
                 scanner = new Html5Qrcode('qr-reader');
                 html5QrRef.current = scanner;
 
@@ -72,6 +79,7 @@ export default function Scanner() {
                     () => { } // ignore errors on each frame
                 );
             } catch (err) {
+                if (cancelado) return;
                 console.error('Camera error:', err);
                 setShowManual(true);
             }
@@ -80,6 +88,7 @@ export default function Scanner() {
         initScanner();
 
         return () => {
+            cancelado = true;
             if (scanner && scanner.isScanning) {
                 scanner.stop().catch(() => { });
             }
@@ -262,8 +271,11 @@ export default function Scanner() {
                                 Introduce el código manual de 6 caracteres o pega el código QR:
                             </p>
                             <div className="form-group">
+                                {/* No tiene etiqueta visible: el texto de arriba describe el
+                                    formulario entero, no este campo. */}
                                 <textarea
                                     className="form-input"
+                                    aria-label="Código manual o código QR"
                                     rows={3}
                                     placeholder="Ej: A1B2C3"
                                     value={manualInput}

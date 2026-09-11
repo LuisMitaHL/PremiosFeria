@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext.js';
 import GuidedTour from '../../components/GuidedTour.jsx';
@@ -30,6 +30,7 @@ export default function AdminDashboard() {
     // The console has three sections (spec 019, R28). Rewards and claims arrive
     // with specs 021 and 018.
     const [section, setSection] = useState('actividades');
+    const campoId = useId();
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -42,26 +43,36 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (!adminUser) return;
 
+        // Una respuesta que llegue despues de cerrar la pantalla, o despues de
+        // que cambie el stand, no escribe nada.
+        let vigente = true;
+
         const load = async () => {
             try {
                 const [comm, allParts] = await Promise.all([
                     getMyCommunity(adminUser.id),
                     getLeaderboard(),
                 ]);
+                if (!vigente) return;
                 setCommunity(comm);
                 setParticipants(allParts);
 
                 if (comm) {
                     const communityScans = await getScansByCommunity(comm.id);
+                    if (!vigente) return;
                     setScans(communityScans);
                 }
             } catch (err) {
                 console.error('Admin load error:', err);
             } finally {
-                setLoading(false);
+                if (vigente) setLoading(false);
             }
         };
         load();
+
+        return () => {
+            vigente = false;
+        };
     }, [adminUser]);
 
     function openEditModal() {
@@ -277,17 +288,25 @@ export default function AdminDashboard() {
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>Editar Comunidad</h2>
-                            <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+                            <button className="modal-close" aria-label="Cerrar" onClick={() => setShowModal(false)}>✕</button>
                         </div>
 
                         <form onSubmit={handleSubmit}>
                             <div className="form-group">
-                                <label className="form-label">Icono</label>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                {/* Encabeza una botonera, no un campo: no hay control al que
+                                    asociar la etiqueta, así que nombra al grupo. */}
+                                <span className="form-label" id={`${campoId}-icono`}>Icono</span>
+                                <div
+                                    role="group"
+                                    aria-labelledby={`${campoId}-icono`}
+                                    style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
+                                >
                                     {iconOptions.map(({ name, icon: Icon }) => (
                                         <button
                                             type="button"
                                             key={name}
+                                            aria-label={`Icono ${name}`}
+                                            aria-pressed={form.emoji === name}
                                             onClick={() => setForm({ ...form, emoji: name })}
                                             style={{
                                                 fontSize: '1.5rem',
@@ -308,8 +327,9 @@ export default function AdminDashboard() {
                             </div>
 
                             <div className="form-group">
-                                <label className="form-label">Nombre del grupo *</label>
+                                <label className="form-label" htmlFor={`${campoId}-nombre`}>Nombre del grupo *</label>
                                 <input
+                                    id={`${campoId}-nombre`}
                                     className="form-input"
                                     type="text"
                                     value={form.name}
@@ -320,8 +340,9 @@ export default function AdminDashboard() {
                             </div>
 
                             <div className="form-group">
-                                <label className="form-label">Número de Stand</label>
+                                <label className="form-label" htmlFor={`${campoId}-stand`}>Número de Stand</label>
                                 <input
+                                    id={`${campoId}-stand`}
                                     className="form-input"
                                     type="text"
                                     value={form.stand_number}
@@ -331,8 +352,9 @@ export default function AdminDashboard() {
                             </div>
 
                             <div className="form-group">
-                                <label className="form-label">Descripción</label>
+                                <label className="form-label" htmlFor={`${campoId}-descripcion`}>Descripción</label>
                                 <input
+                                    id={`${campoId}-descripcion`}
                                     className="form-input"
                                     type="text"
                                     value={form.description}
