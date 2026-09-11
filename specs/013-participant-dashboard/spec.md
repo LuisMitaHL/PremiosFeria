@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `013-participant-dashboard` |
 | **Actors** | Participant |
 | **Created** | 2026-09-10 |
@@ -175,9 +175,11 @@ Part of this ships today, in `src/pages/Dashboard.jsx`.
 - R10 introduces refreshing on a screen that has never had it. Specs 018 and 025 add their own;
   the plan should decide whether the three share a mechanism.
 
-## 10b. As built, so far
+## 10b. As built
 
-Shipped alongside spec 019, because the figures it needed could not exist before activities did.
+### First half, alongside spec 019
+
+Shipped there because the figures it needed could not exist before activities did.
 
 - **R2 and R3 are met.** Progress now reads against a total on the same tile — "1/10 stands",
   "1/2 actividades" — so a number means something on its own. The separate "Total Stands" tile is
@@ -186,10 +188,47 @@ Shipped alongside spec 019, because the figures it needed could not exist before
   an activity had been completed, which was right when a stand had one activity and silently wrong
   once it can have three. It now counts completions.
 - **R7 is met, and R4 partly.** The hardcoded zero — the application's one explicit TODO — is gone,
-  replaced by the real count of prizes received. The count of prizes *within reach* still needs
-  spec 021's withdrawal state and cost ceiling, so it is not built yet.
-- **R6, R10 and R12 are not built.** No summary of what is running, no refresh without reloading,
-  and the empty states are still bare zeroes.
+  replaced by the real count of prizes received. The count of prizes *within reach* still needed
+  spec 021's withdrawal state and cost ceiling, so it was not built then.
+
+### The rest
+
+- **R4 and R5 are met, in one read.** `participant_dashboard()` answers the whole screen at once:
+  balance, progress, what is within reach, what is running. The count of prizes within reach is
+  what forced the shape. It depends on cost, stock, a withdrawn prize, a withdrawn stand and this
+  attendee's own claims, so assembling it in the browser would have meant shipping the catalogue
+  and every claim to a phone in order to count them there — and counting them against a balance
+  read at a different moment. That last part is the real argument: a balance from one request next
+  to a count from another can promise a prize the catalogue has already taken away.
+- **Zero within reach is not one piece of news, and the database says which.** Barred from
+  claiming, nothing published, nothing affordable yet, everything affordable already taken home,
+  nothing left in stock — five situations, each with its own sentence. Which one it is follows
+  from the data, so it is decided where the data is; only the wording lives in the screen. The
+  shortfall is measured to the cheapest prize the attendee could still take home, never to one
+  they already have.
+- **R6 is met.** A summary of what is running, each row saying where to walk, with a route to the
+  full activities screen. The state is the derived one (`activity_state`), so an activity whose
+  duration elapsed with nobody's screen open leaves the summary by itself, and a stand that left
+  the fair takes its activity out of it entirely — this list is an invitation to walk somewhere.
+- **R10 is met by sharing the mechanism, not by adding a third one.** The leaderboard's polling
+  helper — interval plus a refetch on focus and visibility, five seconds, ADR 0003 — is now the
+  general one in `src/lib/api.js`, and the home screen uses it under its own name. The session
+  balance is re-read in the same round, because the application header draws it too, and two
+  different balances on one screen read as a broken application.
+- **R12 is met without inventing figures.** Where a denominator does not exist yet the tile shows
+  a dash rather than "0/0", and the sentence that explains it sits immediately below — the stands
+  list, the running summary, the reach card. The count of prizes received moved into the reach
+  card as a footnote that only appears once there is one: "Premios: 0" was the bare zero this
+  requirement exists to prevent.
+- **One thing deliberately left alone.** Withdrawn stands still count towards the stands total,
+  because the list of chips under that figure still shows them. A total that quietly dropped one
+  would read as an arithmetic error, and a visit already made would stop counting.
+
+Covered by `tests/sql/17_participant_dashboard.sql`: each exclusion in R5 is lifted one at a time
+and the count must move by exactly the prize behind it; the five ways of reaching zero; the
+derived state behind the running summary; that the figures belong to the session and to nobody
+else — the function takes no arguments at all; and that looking at the screen moves no balance,
+no stock and no claim.
 
 ## 11. References
 
