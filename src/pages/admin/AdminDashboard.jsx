@@ -24,6 +24,7 @@ export default function AdminDashboard() {
     const [participants, setParticipants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [errorModal, setErrorModal] = useState('');
     const [form, setForm] = useState({
         name: '', emoji: 'BookOpen', stand_number: '', description: '',
     });
@@ -77,6 +78,7 @@ export default function AdminDashboard() {
 
     function openEditModal() {
         if (!community) return;
+        setErrorModal('');
         setForm({
             name: community.name,
             emoji: community.emoji,
@@ -90,13 +92,21 @@ export default function AdminDashboard() {
         e.preventDefault();
         if (!form.name.trim() || !community) return;
 
+        setErrorModal('');
         try {
             const updated = await updateCommunity(community.id, form);
             setCommunity(updated);
             setShowModal(false);
         } catch (err) {
+            // Cuando el servidor no responde, el mensaje que llega es la pagina
+            // de error del proxy entera. Eso no se le muestra a nadie: el
+            // detalle va a la consola y el stand lee algo que puede accionar.
             console.error('Update error:', err);
-            alert('Error al actualizar: ' + err.message);
+            setErrorModal(
+                /<html|<!doctype/i.test(err.message)
+                    ? 'No se pudo guardar: el servidor no responde. Revisa la conexión e inténtalo de nuevo.'
+                    : `No se pudo guardar: ${err.message}`
+            );
         }
     }
 
@@ -362,6 +372,12 @@ export default function AdminDashboard() {
                                     placeholder="Breve descripción del grupo"
                                 />
                             </div>
+
+                            {errorModal && (
+                                <p className="form-error">
+                                    <AlertTriangle size={14} /> {errorModal}
+                                </p>
+                            )}
 
                             <button type="submit" className="btn btn-primary btn-full">
                                 <Save size={16} /> Guardar Cambios
