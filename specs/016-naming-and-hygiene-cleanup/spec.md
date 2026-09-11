@@ -268,6 +268,11 @@ that RLS does not already allow — but it is the shape of the mistake that late
 why `.env.example` takes its place. R14, shutting that hosted project down, is the operator's to do
 and is not something this repository can carry out.
 
+Two more of the same kind surfaced while closing the review on spec 015: the page linked
+`/manifest.json`, which the PWA plugin never emits — it produces `manifest.webmanifest` and injects
+its own link, so the hand-written one could only ever be wrong — and the page description read
+"Comunity Quest", which is the text an installing browser shows.
+
 **Dead code deleted rather than commented (R17).** `getAllScans`, which nothing imported; a
 `leaderboard.slice(3, 20)` computed and never rendered; and ten `import React` lines left from
 before the new JSX transform.

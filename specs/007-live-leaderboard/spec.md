@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `007-live-leaderboard` |
 | **Actors** | Participant |
 | **Created** | 2026-09-10 |
@@ -135,9 +135,9 @@ readable by everyone.
 - [ ] Refreshing stops when the attendee leaves the screen.
 - [ ] With no participants, the screen explains rather than appearing broken.
 - [ ] The data fetched contains nothing that is not displayed: no device identity, no timestamps.
-- [ ] A removed participant does not appear, and the positions below them close up.
-- [ ] A participant whose claiming is withheld appears exactly as anyone else does.
-- [ ] Nothing on the screen changes any state.
+- [x] A removed participant does not appear, and the positions below them close up.
+- [x] A participant whose claiming is withheld appears exactly as anyone else does.
+- [x] Nothing on the screen changes any state.
 
 ## 9. Open questions
 
@@ -161,13 +161,21 @@ while one whose claiming is withheld appears unchanged (R2b).
 - **R12 is now met.** It was not: `getLeaderboard` selected every column of every participant,
   including `fingerprint`, and `GRANT SELECT ON ALL TABLES` meant the column was readable by
   anyone holding the publishable key regardless of what the client asked for. Both halves are
-  fixed — `31_column_grants.sql` revokes the column at the database, and the query now names the
+  fixed — `80_column_grants.sql` revokes the column at the database (it was `31_` when this was written; it has to run after every file that creates a column, which is why it moved), and the query now names the
   three columns it displays. `tests/sql/08_column_privileges.sql` asserts it.
   `participants.auth_user_id` stays readable because the client resolves its own profile by it;
   when spec 001 moves that lookup into a function, it can be revoked too.
-- R2a and R2b cannot be met until spec 022 introduces the states they refer to.
-- `src/pages/Leaderboard.jsx:35` computes a slice of the list that is never rendered — dead code
-  that spec 016 removes.
+- **R2a and R2b are now met.** They could not be until spec 022 introduced the states they refer
+  to. `getLeaderboard` filters `is_removed`, and nothing filters `claims_barred`: withholding a
+  claim is a sanction on spending, not on earning, so the row stays exactly as anyone else's.
+  Verified in the browser — an attendee removed from the event disappeared from a projected
+  ranking and the positions below closed up, while one barred from claiming stayed in place with
+  their points and their "Tú" badge.
+- **The filter is in the query, not in the database.** A removed attendee's row is still readable
+  through the API, and that is accepted: the row holds a nickname and a points total, both public
+  by design, and R2a is about what the projected screen shows. If that ever stops being true, the
+  leaderboard becomes a function rather than a table read.
+- The dead slice at `src/pages/Leaderboard.jsx:35` is gone, with spec 016.
 - R9 depends entirely on a CDN configuration this repository only provides as an example. If it is
   misconfigured, the full polling load reaches Postgres directly.
 

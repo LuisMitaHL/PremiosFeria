@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | In review |
+| **Status** | Implemented |
 | **Branch** | `015-pwa-shell` |
 | **Actors** | Participant |
 | **Created** | 2026-09-10 |
@@ -127,8 +127,8 @@ to travel.
 - [ ] A newly deployed version reaches a device that already has one, without a reinstall.
 - [ ] The application runs on the browser floor.
 - [ ] The build emits nothing newer than the floor.
-- [ ] Any address can be opened directly, refreshed and shared.
-- [ ] Nothing cached or stored on the device is a secret or another attendee's data.
+- [x] Any address can be opened directly, refreshed and shared.
+- [x] Nothing cached or stored on the device is a secret or another attendee's data.
 
 ## 9. Open questions
 
@@ -139,7 +139,7 @@ None.
 | Requirement | Implemented in |
 |---|---|
 | R1, R4 | `vite.config.js` — the PWA plugin with a `standalone` manifest. |
-| R2 | The manifest declares "Community Quest — Rewards System". |
+| R2 | The manifest declares "Community Quest", the name spec 016 settled on. The English subtitle it used to carry was the last piece of an earlier rebrand. |
 | R5 | The plugin's precache covers the built JavaScript, CSS, HTML and images. |
 | R6 | `registerType: 'autoUpdate'`. |
 | R7 | `build.target` and `build.cssTarget` are `chrome83`, `modulePreload.polyfill` is on, and `browserslist` states the floor. |
@@ -148,19 +148,21 @@ None.
 
 **Known deviations**
 
-- **R3 is not met.** The manifest declares `/icon-192.png` and `/icon-512.png`, and the page
-  declares an apple touch icon in the same format, but `public/` contains only `.svg` versions.
-  The declared icons do not exist.
-- The page links `/manifest.json` while the plugin emits `manifest.webmanifest` by default, so the
-  declared link and the produced file do not agree.
-- A font is requested as `.woff2` when only `.ttf` is present.
+- **R3 is now met.** The manifest declared `/icon-192.png` and `/icon-512.png` and the page declared
+  an apple touch icon in the same format, while `public/` has only SVGs — three files that have
+  never existed since the manifest was written. All three now name what is actually served.
+- **The manifest link is gone from the page.** It pointed at `/manifest.json` while the plugin
+  emits `manifest.webmanifest` and injects its own link, so the hand-written one could only ever
+  be wrong. Deleting it is the fix; adding a second correct link would have left two.
+- The font requested as `.woff2` now asks for the `.ttf` that is actually there.
+- A "Comunity Quest" typo in the page description, which is what an installing browser reads.
 - R9 is met by using fragments in addresses, which produces addresses of the form `/#/dashboard`.
   The server already serves the application for unknown paths, so the fragment is belt and braces
   — and it is what makes every address look like a fragment of the home page.
 - Spec 025 adds a fifth destination to a navigation bar built for four, which this shell has to
   keep legible on a narrow phone.
 
-The first three of these are corrected by spec 016.
+The first four were corrected by spec 016.
 
 ## 11. References
 

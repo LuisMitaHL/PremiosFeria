@@ -9,7 +9,7 @@ export default defineConfig({
             registerType: 'autoUpdate',
             includeAssets: ['favicon.svg', 'icon-192.svg', 'icon-512.svg'],
             manifest: {
-                name: 'Community Quest — Rewards System',
+                name: 'Community Quest',
                 short_name: 'Community Quest',
                 description: 'Escanea QR, acumula puntos y gana premios',
                 theme_color: '#ffffff',
