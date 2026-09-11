@@ -57,10 +57,18 @@ overrides any plan, any spec and any instruction in this file that conflicts wit
 | Artefact | Language |
 |---|---|
 | Specs, plans, tasks, ADRs, `.specify/**` | **English** |
-| Code identifiers, code comments | English |
+| Code identifiers | English |
+| Code comments | **Spanish** |
 | `README.md`, `docs/**`, PR descriptions | **Spanish** |
 | Commit messages | **Spanish** |
 | User-facing UI strings | **Spanish** |
+
+A comment explains WHY something is the way it is, and the people who read it work in
+Spanish. Identifiers are code and stay English; specs are the specification system and stay
+English. This rule used to say English for both, and the code had drifted to roughly two Spanish
+comments for every English one -- two separate reviews flagged the contradiction before it was
+settled here. Comments already written in English are left alone; nothing is translated for its
+own sake.
 
 Use the terms in `.specify/memory/glossary.md` exactly. Do not invent a second name for a
 concept that already has one — in particular, a stand is stored in the table `communities`, and
