@@ -16,6 +16,7 @@ import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import QRDisplay from './pages/admin/QRDisplay.jsx';
 import OrganizerLogin from './pages/organizer/OrganizerLogin.jsx';
 import OrganizerPanel from './pages/organizer/OrganizerPanel.jsx';
+import ActivityNotice from './components/ActivityNotice.jsx';
 
 function BackgroundDecorations() {
     return (
@@ -58,6 +59,12 @@ function AppLayout({ children }) {
 
             {/* Page Content */}
             {children}
+
+            {/* Los avisos de actividad viven aca y no dentro de una pantalla:
+                aparecen sobre cualquiera de las del estudiante, y sobre ninguna
+                del stand ni del organizador, porque este layout es el que las
+                separa (spec 029, R14 y R15). Sin perfil no hay avisos (R16). */}
+            {participant && <ActivityNotice participantId={participant.id} />}
 
             {/* Bottom Navigation */}
             <nav className="bottom-nav">

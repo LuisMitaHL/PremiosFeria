@@ -2241,3 +2241,91 @@ textarea {
     line-height: 1.45;
     overflow-x: auto;
 }
+
+/* ---------------------------------------------------------------------------
+   Aviso de actividad iniciada (spec 029)
+
+   Se apoya justo encima de la barra de navegacion en vez de flotar al centro:
+   no tapa la navegacion ni lo que el estudiante este haciendo, y en el escaner
+   queda despejado del visor de la camara (R13). Por debajo de la barra en
+   z-index a proposito, para que un aviso nunca impida moverse.
+--------------------------------------------------------------------------- */
+.activity-notice {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 90;
+  width: calc(100% - 32px);
+  max-width: 420px;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  border-radius: 14px;
+  background: rgba(28, 28, 32, 0.94);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  animation: notice-in 220ms ease-out;
+}
+
+@keyframes notice-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.activity-notice-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 4px 12px 14px;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.activity-notice-icon {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--accent-amber, #fbbf24);
+}
+
+.activity-notice-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.activity-notice-text strong {
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-notice-meta {
+  font-size: 0.76rem;
+  opacity: 0.78;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-notice-close {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.activity-notice-close:hover {
+  opacity: 1;
+}
