@@ -49,6 +49,7 @@ Part retro-spec, part change. Each opens with what exists today and why it is be
 | 028 | [`screens-reflect-shared-state`](028-screens-reflect-shared-state/spec.md) | Participant, Stand admin, Event operator | Implemented |
 | 029 | [`activity-start-notice`](029-activity-start-notice/spec.md) | Participant | Implemented |
 | 030 | [`guided-tour`](030-guided-tour/spec.md) | Participant, Stand admin | Implemented |
+| 031 | [`event-statistics`](031-event-statistics/spec.md) | Event operator | Approved |
 
 ## New capabilities
 

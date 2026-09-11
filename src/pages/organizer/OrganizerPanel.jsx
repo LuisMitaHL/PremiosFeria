@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext.js';
 import { getEventOverview } from '../../lib/api.js';
@@ -8,12 +8,18 @@ import StudentsArea from './StudentsArea.jsx';
 import AuditArea from './AuditArea.jsx';
 import RewardsArea from './RewardsArea.jsx';
 
+// La pantalla de estadisticas y su libreria de graficos se piden al abrirla:
+// asi el paquete que descarga un estudiante no paga por una pantalla que no
+// puede ver (spec 031, R5 y ADR 0006).
+const StatsArea = lazy(() => import('./StatsArea.jsx'));
+
 const AREAS = [
     ['inicio', 'Inicio'],
     ['estudiantes', 'Estudiantes'],
     ['comunidades', 'Comunidades'],
     ['premios', 'Premios'],
     ['registro', 'Registro'],
+    ['estadisticas', 'Estadísticas'],
 ];
 
 export default function OrganizerPanel() {
@@ -186,6 +192,12 @@ export default function OrganizerPanel() {
                 {area === 'registro' && <AuditArea />}
 
                 {area === 'premios' && <RewardsArea />}
+
+                {area === 'estadisticas' && (
+                    <Suspense fallback={<div className="empty-state"><Loader size={28} className="spin-icon" /></div>}>
+                        <StatsArea />
+                    </Suspense>
+                )}
             </div>
         </div>
     );

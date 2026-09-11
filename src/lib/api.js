@@ -496,6 +496,21 @@ export async function getEventOverview() {
     return data;
 }
 
+// ─── Organizer: estadísticas (spec 031) ──────
+//
+// Una sola lectura: todas las figuras comparten el mismo instante y el mismo
+// filtro, y el servidor decide quién puede leerlas por auth.uid()
+// (constitución IV). Sin parámetros, es todo el evento. No hay encuesta de
+// identidad: no se envía ninguna.
+export async function getEventStatistics({ from, to } = {}) {
+    const { data, error } = await supabase.rpc('event_statistics', {
+        p_from: from || null,
+        p_to: to || null,
+    });
+    if (error) throw new Error(errorLegible(error, 'Error al obtener las estadísticas'));
+    return data;
+}
+
 export async function getSession() {
     const { data } = await supabase.auth.getSession();
     const uid = data?.session?.user?.id;

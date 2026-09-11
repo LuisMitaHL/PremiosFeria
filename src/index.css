@@ -2434,3 +2434,188 @@ textarea {
   text-decoration: underline;
   font-weight: 500;
 }
+
+/* ============================================
+   Estadísticas del evento (spec 031)
+   ============================================
+   Una pantalla de lectura, no de operación: filtro, conclusiones arriba y las
+   figuras debajo. La librería de gráficos vive en un chunk aparte (ADR 0006),
+   así que estos estilos son los que la sostienen. Construida con los tokens de
+   arriba, sin estilos en línea (spec 016).
+   ============================================ */
+
+.stat-filter {
+    margin-bottom: var(--space-lg);
+}
+
+.stat-filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-sm);
+}
+
+.stat-filter-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.stat-filter-form input {
+    font: inherit;
+    font-size: 0.82rem;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border-glass);
+    background: #ffffff;
+    color: var(--text-primary);
+}
+
+.stat-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: var(--space-sm);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.stats-callouts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.stat-callout {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    text-align: center;
+}
+
+.stat-callout-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.1;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.stat-callout-label {
+    margin-top: 4px;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stat-mini-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+}
+
+.stat-mini {
+    background: var(--bg-glass);
+    border-radius: 12px;
+    padding: var(--space-sm) var(--space-md);
+}
+
+.stat-mini-value {
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.stat-mini-label {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.stat-panel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.stat-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+}
+
+.stat-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.stat-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-export {
+    padding: 4px 10px;
+    font-size: 0.72rem;
+}
+
+.stat-empty {
+    padding: var(--space-md) 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+/* Altura fija: Chart.js necesita un contenedor con alto propio para ser
+   responsivo (maintainAspectRatio: false). */
+.chart-box {
+    position: relative;
+    height: 220px;
+}
+
+.chart-box-sm {
+    height: 180px;
+}
+
+.stat-table-wrap {
+    overflow-x: auto;
+}
+
+.stat-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.stat-table th,
+.stat-table td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    white-space: nowrap;
+}
+
+.stat-table th {
+    color: var(--text-secondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+}
+

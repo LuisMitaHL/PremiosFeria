@@ -9,7 +9,8 @@ already covers.
 
 Records 0001 to 0005 are **retroactive**: the decisions were made and shipped before this
 project adopted spec-driven development, and were reconstructed from the commit history and the
-code. They are recorded so the reasoning survives.
+code. They are recorded so the reasoning survives. From 0006 onwards, ADRs are written as part of
+the work that needs them.
 
 | # | Decision | Status |
 |---|---|---|
@@ -18,3 +19,4 @@ code. They are recorded so the reasoning survives.
 | [0003](0003-polling-over-realtime.md) | Drop realtime in favour of polling plus a CDN microcache | Accepted |
 | [0004](0004-business-rules-in-postgres.md) | Keep every game rule in Postgres RPC | Accepted |
 | [0005](0005-chromium-83-target.md) | Target Chromium 83 as the compatibility floor | Accepted |
+| [0006](0006-statistics-browser-floor.md) | Let the event-statistics area exceed the Chromium 83 floor | Accepted |
