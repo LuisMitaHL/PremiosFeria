@@ -136,8 +136,14 @@ export default function OrganizerPanel() {
                                 <p>Ninguna actividad en curso.</p>
                             </div>
                         ) : (
-                            overview.runningActivities.map((a, i) => (
-                                <div key={i} className="glass-card activity-card is-running">
+                            // La clave es stand + actividad y no el indice: la
+                            // lista cambia sola conforme los stands inician y
+                            // terminan, y con el indice React reutiliza la
+                            // tarjeta equivocada. El par es unico porque un
+                            // stand tiene como mucho una actividad en curso
+                            // (spec 019, indice unico parcial).
+                            overview.runningActivities.map((a) => (
+                                <div key={`${a.stand}::${a.activity}`} className="glass-card activity-card is-running">
                                     <div className="activity-head">
                                         <div className="activity-name">{a.activity}</div>
                                         <span className="badge badge-running">En curso</span>

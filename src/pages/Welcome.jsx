@@ -53,9 +53,9 @@ export default function Welcome() {
             </button>
 
             <p style={{ marginTop: 40, fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                <span style={{ cursor: 'pointer', textDecoration: 'underline', fontWeight: 500 }} onClick={() => navigate('/admin/login')}>
+                <button type="button" className="link-inline" onClick={() => navigate('/admin/login')}>
                     Panel de administración →
-                </span>
+                </button>
             </p>
         </div>
     );

@@ -37,16 +37,26 @@ export default function QRDisplay() {
     useEffect(() => {
         if (!adminUser) return;
 
+        // Si la pantalla se cierra o cambia de stand con la peticion en vuelo,
+        // la respuesta que llegue tarde no debe escribir nada: dos lecturas que
+        // se cruzan dejarian en pantalla la comunidad equivocada.
+        let vigente = true;
+
         const load = async () => {
             try {
-                setCommunity(await getMyCommunity(adminUser.id));
+                const fila = await getMyCommunity(adminUser.id);
+                if (vigente) setCommunity(fila);
             } catch (err) {
                 console.error('QR load error:', err);
             } finally {
-                setLoading(false);
+                if (vigente) setLoading(false);
             }
         };
         load();
+
+        return () => {
+            vigente = false;
+        };
     }, [adminUser]);
 
     // El servidor firma el código; el secreto nunca llega al navegador
