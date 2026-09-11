@@ -35,6 +35,27 @@ function errorLegible(error, contexto) {
         return `${contexto}: no hay conexión. Revisa la red e inténtalo de nuevo.`;
     }
 
+    // La sesion caduca a las 12 horas y se renueva sola mientras el token de
+    // refresco siga vivo. Cuando eso no ocurre -- el refresco fallo, o el
+    // telefono guardo un token corrupto -- PostgREST contesta PGRST301, y el
+    // texto que trae es "JWT expired" o, peor,
+    // JWSError (JSONDecodeError "Not valid base64url"). Ninguno de los dos
+    // significa nada para quien lo lee, y los dos se arreglan igual.
+    if (error?.code === 'PGRST301') {
+        console.error(`${contexto}: sesión no válida`, crudo);
+        return 'Tu sesión expiró. Vuelve a iniciar sesión.';
+    }
+
+    // Estos dos solo aparecen si el cliente pide algo que no le corresponde:
+    // una columna revocada, o una que no existe. Es un error nuestro, no una
+    // situacion de quien esta usando la aplicacion, asi que el texto tecnico se
+    // queda en la consola -- donde alguien puede actuar sobre el -- y la
+    // pantalla dice lo unico cierto que le sirve al lector.
+    if (error?.code === '42501' || error?.code === '42703') {
+        console.error(`${contexto}: la consulta pide algo que no puede leer`, error);
+        return `${contexto}: algo falló de nuestro lado. Avisa a la organización.`;
+    }
+
     return `${contexto}: ${crudo}`;
 }
 
@@ -108,7 +129,7 @@ export async function getLeaderboard() {
         .eq('is_removed', false)
         .order('points', { ascending: false });
 
-    if (error) throw new Error(errorLegible(error, 'Error al obtener leaderboard'));
+    if (error) throw new Error(errorLegible(error, 'Error al obtener el ranking'));
     return data;
 }
 
@@ -242,11 +263,24 @@ export async function confirmHandover(code, rewardId) {
 
 // ─── Auth (Admin) ────────────────────────────
 
+// El servicio distingue "contraseña incorrecta" de "demasiados intentos", pero
+// el cliente aplastaba las dos en "Credenciales incorrectas". A un stand
+// limitado por intentos eso le dice que se equivoco de contraseña, asi que
+// vuelve a probar y se mantiene bloqueado solo. Es el unico mensaje del
+// servicio de auth que la persona necesita leer tal cual.
+function credencialesORitmo(error) {
+    const crudo = String(error?.message ?? '');
+    if (/demasiados intentos/i.test(crudo) || error?.status === 429) {
+        return 'Demasiados intentos. Espera unos minutos antes de volver a probar.';
+    }
+    return 'Credenciales incorrectas';
+}
+
 export async function loginAdmin(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error || !data?.user) {
-        return { success: false, error: 'Credenciales incorrectas' };
+        return { success: false, error: credencialesORitmo(error) };
     }
 
     // An organiser authenticates through the same endpoint (spec 017), but this
@@ -297,7 +331,7 @@ export async function loginOrganizer(username, password) {
         password,
     });
     if (error || !data?.user) {
-        return { success: false, error: 'Credenciales incorrectas' };
+        return { success: false, error: credencialesORitmo(error) };
     }
     if (!data.user.user_metadata?.organizer) {
         // Credenciales válidas, pero de un stand. El panel no es suyo.
