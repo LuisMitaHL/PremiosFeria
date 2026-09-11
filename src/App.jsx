@@ -17,6 +17,7 @@ import QRDisplay from './pages/admin/QRDisplay.jsx';
 import OrganizerLogin from './pages/organizer/OrganizerLogin.jsx';
 import OrganizerPanel from './pages/organizer/OrganizerPanel.jsx';
 import ActivityNotice from './components/ActivityNotice.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 function BackgroundDecorations() {
     return (
@@ -133,8 +134,12 @@ function AppRoutes() {
 
 export default function App() {
     return (
-        <AuthProvider>
-            <AppRoutes />
-        </AuthProvider>
+        // Por fuera del proveedor a proposito: si lo que falla al dibujarse es
+        // la sesion misma, la red tiene que seguir puesta.
+        <ErrorBoundary>
+            <AuthProvider>
+                <AppRoutes />
+            </AuthProvider>
+        </ErrorBoundary>
     );
 }

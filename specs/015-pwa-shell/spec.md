@@ -78,6 +78,7 @@ to travel.
 | R8 | The application MUST NOT present itself as working offline when it cannot. | Must |
 | R9 | Every address the application uses MUST survive being opened directly, refreshed, and shared. | Must |
 | R10 | Nothing stored on the device MUST include a secret, a credential, or another attendee's data. | Must |
+| R11 | An exception while rendering MUST NOT leave the attendee on a blank page; the shell MUST say what happened and offer a way back. | Must |
 
 ## 5. Business rules
 
@@ -145,6 +146,15 @@ None.
 | R7 | `build.target` and `build.cssTarget` are `chrome83`, `modulePreload.polyfill` is on, and `browserslist` states the floor. |
 | R9 | Addresses use a fragment (`HashRouter`, `src/main.jsx`), so any address survives a direct open without server cooperation — and `nginx.conf` also serves the application for unknown paths. |
 | R10 | Only the current participant's identifier is kept on the device, as a display cache; the authority is the session. |
+
+**R11 was added after the fact, and it was a real hole.** Every screen already caught the
+failures of its own reads, but nothing caught an exception thrown *while React was rendering*:
+React unmounts the whole tree and what is left is a white page. An attendee in the middle of a fair
+has no way of knowing that reloading fixes it, and nothing on screen says so. `ErrorBoundary`
+wraps the application outside the session provider, on purpose — if what fails to render is the
+session itself, the net has to still be up. Verified by breaking date formatting mid-render: the
+screen showed the message and the button, and the button recovered the dashboard with its points
+intact.
 
 **Known deviations**
 
