@@ -31,6 +31,7 @@ SCHEMA_FILES=(
   supabase/postgres-init/30_grants.sql
   supabase/postgres-init/35_auth_shim.sql
   supabase/postgres-init/40_rls.sql
+  supabase/postgres-init/45_audit.sql
   supabase/postgres-init/50_rpc.sql
   supabase/postgres-init/51_stand_login.sql
   supabase/postgres-init/52_activities.sql
@@ -40,6 +41,7 @@ SCHEMA_FILES=(
   supabase/postgres-init/56_organizer_communities.sql
   supabase/postgres-init/57_registration.sql
   supabase/postgres-init/58_organizer_students.sql
+  supabase/postgres-init/59_audit_read.sql
   supabase/postgres-init/80_column_grants.sql
 )
 

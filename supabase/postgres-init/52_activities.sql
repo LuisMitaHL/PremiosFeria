@@ -77,8 +77,15 @@ CREATE OR REPLACE FUNCTION create_activity(
 DECLARE
   v_community UUID := calling_community();
   v_row activities%ROWTYPE;
+  v_error TEXT;
 BEGIN
   IF v_community IS NULL THEN
+    -- No hay stand que atribuir — justamente por eso se rechaza —, así que el
+    -- asiento queda a nombre de quien haya llamado, sea quien sea (spec 024, R8).
+    PERFORM audit(p_action => 'activity.create', p_outcome => 'refused',
+                  p_actor_kind => audit_actor(), p_actor_id => audit_actor_id(),
+                  p_subject_kind => 'activity', p_subject_label => btrim(p_name),
+                  p_reason => 'No autorizado');
     RETURN jsonb_build_object('error', 'No autorizado');
   END IF;
 
@@ -89,13 +96,21 @@ BEGIN
             p_duration_min, COALESCE(p_is_main_event, false))
     RETURNING * INTO v_row;
   EXCEPTION
+    -- Los asientos de rechazo van en los manejadores y no dentro del bloque
+    -- protegido: si el registro no se puede escribir, la excepción sale de la
+    -- función y la acción falla, que es lo que exige R21.
     WHEN unique_violation THEN
       -- The only unique index an insert can hit is the one main event per
       -- community; a new activity is never started, so it cannot collide with
       -- the one-running index.
-      RETURN jsonb_build_object('error', 'Ya tienes un evento principal.');
+      v_error := 'Ya tienes un evento principal.';
+      PERFORM audit(p_action => 'activity.create', p_outcome => 'refused',
+                    p_actor_kind => 'stand', p_actor_id => v_community,
+                    p_subject_kind => 'activity', p_subject_label => btrim(p_name),
+                    p_reason => v_error);
+      RETURN jsonb_build_object('error', v_error);
     WHEN check_violation THEN
-      RETURN jsonb_build_object('error', CASE
+      v_error := CASE
         WHEN SQLERRM LIKE '%máximo de 3%' THEN 'Ya creaste el máximo de 3 actividades.'
         WHEN SQLERRM LIKE '%name%'        THEN 'El nombre debe tener entre 3 y 40 caracteres.'
         WHEN SQLERRM LIKE '%description%' THEN 'La descripción no puede superar los 100 caracteres.'
@@ -105,8 +120,18 @@ BEGIN
             ELSE 'La duración no puede superar los 60 minutos.'
           END
         ELSE 'Datos inválidos.'
-      END);
+      END;
+      PERFORM audit(p_action => 'activity.create', p_outcome => 'refused',
+                    p_actor_kind => 'stand', p_actor_id => v_community,
+                    p_subject_kind => 'activity', p_subject_label => btrim(p_name),
+                    p_reason => v_error);
+      RETURN jsonb_build_object('error', v_error);
   END;
+
+  PERFORM audit(p_action => 'activity.create', p_outcome => 'ok',
+                p_actor_kind => 'stand', p_actor_id => v_community,
+                p_subject_kind => 'activity', p_subject_id => v_row.id,
+                p_subject_label => v_row.name);
 
   RETURN jsonb_build_object('activity', to_jsonb(v_row));
 END;
@@ -129,17 +154,45 @@ CREATE OR REPLACE FUNCTION update_activity(
 DECLARE
   v_community UUID := calling_community();
   v_row activities%ROWTYPE;
+  v_before JSONB;
+  v_label TEXT;
+  v_error TEXT;
 BEGIN
   IF v_community IS NULL THEN
+    PERFORM audit(p_action => 'activity.update', p_outcome => 'refused',
+                  p_actor_kind => audit_actor(), p_actor_id => audit_actor_id(),
+                  p_subject_kind => 'activity', p_subject_id => p_id,
+                  p_reason => 'No autorizado');
     RETURN jsonb_build_object('error', 'No autorizado');
   END IF;
 
   SELECT * INTO v_row FROM activities WHERE id = p_id AND community_id = v_community;
   IF NOT FOUND THEN
+    PERFORM audit(p_action => 'activity.update', p_outcome => 'refused',
+                  p_actor_kind => 'stand', p_actor_id => v_community,
+                  p_subject_kind => 'activity', p_subject_id => p_id,
+                  p_reason => 'Actividad no encontrada');
     RETURN jsonb_build_object('error', 'Actividad no encontrada');
   END IF;
+
+  -- Solo los campos que esta edición toca, nunca la fila entera: copiarla es
+  -- como un hash o una huella terminan en el registro (spec 024, R9).
+  v_before := jsonb_build_object(
+    'name', v_row.name,
+    'description', v_row.description,
+    'estimated_start', v_row.estimated_start,
+    'duration_min', v_row.duration_min,
+    'is_main_event', v_row.is_main_event);
+  v_label := v_row.name;
+
   IF activity_state(v_row) <> 'scheduled' THEN
-    RETURN jsonb_build_object('error', 'No puedes editar una actividad que ya inició.');
+    v_error := 'No puedes editar una actividad que ya inició.';
+    PERFORM audit(p_action => 'activity.update', p_outcome => 'refused',
+                  p_actor_kind => 'stand', p_actor_id => v_community,
+                  p_subject_kind => 'activity', p_subject_id => v_row.id,
+                  p_subject_label => v_label, p_before => v_before,
+                  p_reason => v_error);
+    RETURN jsonb_build_object('error', v_error);
   END IF;
 
   BEGIN
@@ -155,14 +208,37 @@ BEGIN
     RETURNING * INTO v_row;
   EXCEPTION
     WHEN unique_violation THEN
-      RETURN jsonb_build_object('error', 'Ya tienes un evento principal.');
+      v_error := 'Ya tienes un evento principal.';
+      PERFORM audit(p_action => 'activity.update', p_outcome => 'refused',
+                    p_actor_kind => 'stand', p_actor_id => v_community,
+                    p_subject_kind => 'activity', p_subject_id => p_id,
+                    p_subject_label => v_label, p_before => v_before,
+                    p_reason => v_error);
+      RETURN jsonb_build_object('error', v_error);
     WHEN check_violation THEN
-      RETURN jsonb_build_object('error', 'Datos inválidos.');
+      v_error := 'Datos inválidos.';
+      PERFORM audit(p_action => 'activity.update', p_outcome => 'refused',
+                    p_actor_kind => 'stand', p_actor_id => v_community,
+                    p_subject_kind => 'activity', p_subject_id => p_id,
+                    p_subject_label => v_label, p_before => v_before,
+                    p_reason => v_error);
+      RETURN jsonb_build_object('error', v_error);
   END;
 
   IF NOT FOUND THEN
-    RETURN jsonb_build_object('error', 'No puedes editar una actividad que ya inició.');
+    v_error := 'No puedes editar una actividad que ya inició.';
+    PERFORM audit(p_action => 'activity.update', p_outcome => 'refused',
+                  p_actor_kind => 'stand', p_actor_id => v_community,
+                  p_subject_kind => 'activity', p_subject_id => p_id,
+                  p_subject_label => v_label, p_before => v_before,
+                  p_reason => v_error);
+    RETURN jsonb_build_object('error', v_error);
   END IF;
+
+  PERFORM audit(p_action => 'activity.update', p_outcome => 'ok',
+                p_actor_kind => 'stand', p_actor_id => v_community,
+                p_subject_kind => 'activity', p_subject_id => v_row.id,
+                p_subject_label => v_row.name, p_before => v_before);
 
   RETURN jsonb_build_object('activity', to_jsonb(v_row));
 END;
@@ -196,8 +272,15 @@ RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
 DECLARE
   v_community UUID := calling_community();
   v_row activities%ROWTYPE;
+  v_before JSONB;
+  v_label TEXT;
+  v_error TEXT;
 BEGIN
   IF v_community IS NULL THEN
+    PERFORM audit(p_action => 'activity.start', p_outcome => 'refused',
+                  p_actor_kind => audit_actor(), p_actor_id => audit_actor_id(),
+                  p_subject_kind => 'activity', p_subject_id => p_id,
+                  p_reason => 'No autorizado');
     RETURN jsonb_build_object('error', 'No autorizado');
   END IF;
 
@@ -209,20 +292,35 @@ BEGIN
 
   SELECT * INTO v_row FROM activities WHERE id = p_id AND community_id = v_community;
   IF NOT FOUND THEN
+    PERFORM audit(p_action => 'activity.start', p_outcome => 'refused',
+                  p_actor_kind => 'stand', p_actor_id => v_community,
+                  p_subject_kind => 'activity', p_subject_id => p_id,
+                  p_reason => 'Actividad no encontrada');
     RETURN jsonb_build_object('error', 'Actividad no encontrada');
   END IF;
-  IF activity_state(v_row) = 'running' THEN
-    RETURN jsonb_build_object('error', 'Esta actividad ya está en curso.');
-  END IF;
-  IF activity_state(v_row) = 'finished' THEN
-    RETURN jsonb_build_object('error', 'Esta actividad ya terminó.');
-  END IF;
 
-  IF EXISTS (
+  -- Iniciar cambia un solo campo, y el registro guarda ese campo y nada más.
+  v_before := jsonb_build_object('started_at', v_row.started_at);
+  v_label := v_row.name;
+
+  IF activity_state(v_row) = 'running' THEN
+    v_error := 'Esta actividad ya está en curso.';
+  ELSIF activity_state(v_row) = 'finished' THEN
+    v_error := 'Esta actividad ya terminó.';
+  ELSIF EXISTS (
     SELECT 1 FROM activities a
     WHERE a.community_id = v_community AND activity_state(a) = 'running'
   ) THEN
-    RETURN jsonb_build_object('error', 'Termina la actividad en curso antes de iniciar otra.');
+    v_error := 'Termina la actividad en curso antes de iniciar otra.';
+  END IF;
+
+  IF v_error IS NOT NULL THEN
+    PERFORM audit(p_action => 'activity.start', p_outcome => 'refused',
+                  p_actor_kind => 'stand', p_actor_id => v_community,
+                  p_subject_kind => 'activity', p_subject_id => v_row.id,
+                  p_subject_label => v_label, p_before => v_before,
+                  p_reason => v_error);
+    RETURN jsonb_build_object('error', v_error);
   END IF;
 
   BEGIN
@@ -230,12 +328,29 @@ BEGIN
     WHERE id = p_id AND community_id = v_community AND started_at IS NULL
     RETURNING * INTO v_row;
   EXCEPTION WHEN unique_violation THEN
-    RETURN jsonb_build_object('error', 'Termina la actividad en curso antes de iniciar otra.');
+    v_error := 'Termina la actividad en curso antes de iniciar otra.';
+    PERFORM audit(p_action => 'activity.start', p_outcome => 'refused',
+                  p_actor_kind => 'stand', p_actor_id => v_community,
+                  p_subject_kind => 'activity', p_subject_id => p_id,
+                  p_subject_label => v_label, p_before => v_before,
+                  p_reason => v_error);
+    RETURN jsonb_build_object('error', v_error);
   END;
 
   IF NOT FOUND THEN
-    RETURN jsonb_build_object('error', 'Esta actividad ya inició.');
+    v_error := 'Esta actividad ya inició.';
+    PERFORM audit(p_action => 'activity.start', p_outcome => 'refused',
+                  p_actor_kind => 'stand', p_actor_id => v_community,
+                  p_subject_kind => 'activity', p_subject_id => p_id,
+                  p_subject_label => v_label, p_before => v_before,
+                  p_reason => v_error);
+    RETURN jsonb_build_object('error', v_error);
   END IF;
+
+  PERFORM audit(p_action => 'activity.start', p_outcome => 'ok',
+                p_actor_kind => 'stand', p_actor_id => v_community,
+                p_subject_kind => 'activity', p_subject_id => v_row.id,
+                p_subject_label => v_row.name, p_before => v_before);
 
   RETURN jsonb_build_object('activity', to_jsonb(v_row));
 END;
@@ -250,24 +365,47 @@ RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
 DECLARE
   v_community UUID := calling_community();
   v_row activities%ROWTYPE;
+  v_before JSONB;
+  v_label TEXT;
+  v_error TEXT;
 BEGIN
   IF v_community IS NULL THEN
+    PERFORM audit(p_action => 'activity.finish', p_outcome => 'refused',
+                  p_actor_kind => audit_actor(), p_actor_id => audit_actor_id(),
+                  p_subject_kind => 'activity', p_subject_id => p_id,
+                  p_reason => 'No autorizado');
     RETURN jsonb_build_object('error', 'No autorizado');
   END IF;
 
   SELECT * INTO v_row FROM activities WHERE id = p_id AND community_id = v_community;
   IF NOT FOUND THEN
+    PERFORM audit(p_action => 'activity.finish', p_outcome => 'refused',
+                  p_actor_kind => 'stand', p_actor_id => v_community,
+                  p_subject_kind => 'activity', p_subject_id => p_id,
+                  p_reason => 'Actividad no encontrada');
     RETURN jsonb_build_object('error', 'Actividad no encontrada');
   END IF;
+
+  v_before := jsonb_build_object('finished_at', v_row.finished_at);
+  v_label := v_row.name;
+
   IF activity_state(v_row) = 'scheduled' THEN
-    RETURN jsonb_build_object('error', 'Esta actividad todavía no ha iniciado.');
-  END IF;
+    v_error := 'Esta actividad todavía no ha iniciado.';
   -- Comprobar activity_state y no solo finished_at: una actividad cuya
   -- duración venció ya terminó, aunque nadie la haya cerrado. Sin esto, el
   -- stand toca "terminar" sobre algo que acabó hace veinte minutos y se le
   -- responde que salió bien.
-  IF activity_state(v_row) = 'finished' THEN
-    RETURN jsonb_build_object('error', 'Esta actividad ya terminó.');
+  ELSIF activity_state(v_row) = 'finished' THEN
+    v_error := 'Esta actividad ya terminó.';
+  END IF;
+
+  IF v_error IS NOT NULL THEN
+    PERFORM audit(p_action => 'activity.finish', p_outcome => 'refused',
+                  p_actor_kind => 'stand', p_actor_id => v_community,
+                  p_subject_kind => 'activity', p_subject_id => v_row.id,
+                  p_subject_label => v_label, p_before => v_before,
+                  p_reason => v_error);
+    RETURN jsonb_build_object('error', v_error);
   END IF;
 
   -- LEAST keeps the recorded end from being later than the duration allowed,
@@ -276,6 +414,11 @@ BEGIN
   SET finished_at = LEAST(now(), started_at + make_interval(mins => duration_min))
   WHERE id = p_id AND community_id = v_community AND finished_at IS NULL
   RETURNING * INTO v_row;
+
+  PERFORM audit(p_action => 'activity.finish', p_outcome => 'ok',
+                p_actor_kind => 'stand', p_actor_id => v_community,
+                p_subject_kind => 'activity', p_subject_id => p_id,
+                p_subject_label => v_label, p_before => v_before);
 
   RETURN jsonb_build_object('activity', to_jsonb(v_row));
 END;

@@ -98,6 +98,7 @@ GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO anon;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
 SQL
 cp "$REPO/supabase/postgres-init/40_rls.sql" "$SQL/40_rls.sql"
+cp "$REPO/supabase/postgres-init/45_audit.sql" "$SQL/45_audit.sql"
 cp "$REPO/supabase/postgres-init/50_rpc.sql" "$SQL/50_rpc.sql"
 cp "$REPO/supabase/postgres-init/51_stand_login.sql" "$SQL/51_stand_login.sql"
 cp "$REPO/supabase/postgres-init/52_activities.sql" "$SQL/52_activities.sql"
@@ -107,6 +108,7 @@ cp "$REPO/supabase/postgres-init/55_organizer.sql" "$SQL/55_organizer.sql"
 cp "$REPO/supabase/postgres-init/56_organizer_communities.sql" "$SQL/56_organizer_communities.sql"
 cp "$REPO/supabase/postgres-init/57_registration.sql" "$SQL/57_registration.sql"
 cp "$REPO/supabase/postgres-init/58_organizer_students.sql" "$SQL/58_organizer_students.sql"
+cp "$REPO/supabase/postgres-init/59_audit_read.sql" "$SQL/59_audit_read.sql"
 
 # Auth compat — must run BEFORE 40_rls.sql (its policies call auth.uid()).
 # Plain Postgres knows no auth.uid()/auth.jwt(); local gets a compat layer.

@@ -81,6 +81,21 @@ export async function getLeaderboard() {
     return data;
 }
 
+// ─── Inicio del estudiante (spec 013) ────────
+
+// Todas las cifras de la pantalla de inicio en una sola lectura: el saldo, el
+// avance, cuántos premios están a su alcance y qué se está haciendo ahora
+// mismo. Cuántos premios alcanza depende del costo, del stock, de dos retiradas
+// y de lo que ya canjeó; armarlo acá significaría traerse el catálogo entero y
+// contarlo en el teléfono, contra un saldo leído en otro momento.
+// No lleva parámetros: de quién son las cifras lo decide la base por
+// auth.uid() (constitución IV).
+export async function getParticipantDashboard() {
+    const { data, error } = await supabase.rpc('participant_dashboard');
+    if (error) throw new Error(`Error al obtener tu resumen: ${error.message}`);
+    return data;
+}
+
 // ─── Communities ─────────────────────────────
 
 export async function getCommunities() {
@@ -583,7 +598,15 @@ export async function getSignedScanCode(communityId, type, activityId = null) {
 // Ephemeral fair backend has no realtime service: callers poll instead.
 // Same cleanup contract as the old channel subscriptions (call the
 // returned function on unmount). Refetches on interval + on tab focus.
-export function startLeaderboardPolling(callback, ms = 5000) {
+//
+// Un solo mecanismo para todas las pantallas que se refrescan solas: el
+// ranking (spec 007), el catálogo de actividades (spec 025) y el inicio del
+// estudiante (spec 013, R10). Cinco segundos es lo que acordó el ADR 0003 y lo
+// que absorbe el microcaché; una pantalla con su propio intervalo sería un
+// cuarto número que nadie volvería a revisar al ajustarlo.
+export const POLL_MS = 5000;
+
+export function startPolling(callback, ms = POLL_MS) {
     const timer = setInterval(callback, ms);
     const onFocus = () => callback();
     window.addEventListener('focus', onFocus);
@@ -593,4 +616,28 @@ export function startLeaderboardPolling(callback, ms = 5000) {
         window.removeEventListener('focus', onFocus);
         document.removeEventListener('visibilitychange', onFocus);
     };
+}
+
+// El ranking fue el primero en necesitarlo y conserva el nombre con el que lo
+// llama su pantalla.
+export const startLeaderboardPolling = startPolling;
+
+// ---------------------------------------------------------------------------
+// Registro de actividad (spec 024)
+//
+// El filtro de tiempo se envía como un instante, no como "hace N minutos": el
+// reloj del teléfono y el del servidor no son el mismo, y una ventana calculada
+// en cada lado devuelve cosas distintas a la misma pregunta. El servidor acota
+// el tamaño de página; acá no se pide un número.
+export async function auditRead({ kind, actorKind, outcome, minutos, cursor } = {}) {
+    const { data, error } = await supabase.rpc('audit_read', {
+        p_kind: kind || null,
+        p_actor_kind: actorKind || null,
+        p_outcome: outcome || null,
+        p_from: minutos ? new Date(Date.now() - Number(minutos) * 60000).toISOString() : null,
+        p_cursor: cursor ?? null,
+    });
+
+    if (error) throw new Error(`Error al leer el registro: ${error.message}`);
+    return data;
 }

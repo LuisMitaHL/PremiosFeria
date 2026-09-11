@@ -269,6 +269,13 @@ out of that divergence, and the credential path is the worst place to have one.
 attendee did there. Every reference to history is now `RESTRICT`, so "nothing is deleted" is the
 database's rule rather than a convention.
 
+**R20 to R25 were finished later, with spec 024.** The functions shipped with this spec, and
+the spec was marked implemented on the strength of them, but the panel's "Premios" area was
+still a placeholder: the organiser could not actually reprice, restock, withdraw or reinstate
+anything. It surfaced while wiring the audit screen into the same panel. The lesson is narrow
+and worth writing down: a requirement about what a person can do is not met by the function
+that would let them do it.
+
 ## 11. References
 
 - Constitution: III (rules in the database), IV (identity is never a parameter), V (secrets never

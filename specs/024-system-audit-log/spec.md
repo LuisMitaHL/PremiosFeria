@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `024-system-audit-log` |
 | **Actors** | Event operator |
 | **Created** | 2026-09-10 |
@@ -223,6 +223,72 @@ Nothing in this spec exists.
   nicety.
 - Nothing in the system deletes rows, which is what makes an entry's references still resolve
   later. That property is now load-bearing for this spec.
+
+## 10b. As built
+
+Two files. `45_audit.sql` holds the table and the writer, numbered before `50` because every
+function from there on writes to it; `59_audit_read.sql` holds the reader, which needs
+`calling_organizer()` from `55`. The screen is `src/pages/organizer/AuditArea.jsx`, in the panel's
+"Registro" area.
+
+**Recording is an `INSERT` in the caller's transaction.** Not a queue, not a trigger on each
+table. Table triggers were considered and rejected early: they see rows change, not actions
+refused, and R3 makes refusals the larger half of this log — they also cannot record *why*.
+
+**The `EXCEPTION` blocks turned out to be the real hazard, not the happy path.** Four functions
+already wrapped a conditional write in `BEGIN ... EXCEPTION`, and one of those handlers is
+`WHEN OTHERS`. An `audit()` call inside such a block has its failure caught and converted into an
+ordinary refusal — the caller is told a reason that never happened, and the change is silently
+rolled back. Worse, the log's own `CHECK` constraint raises `check_violation`, which two of those
+handlers catch by name. Every entry is therefore written **outside** the block: the refusal reason
+travels out in a variable and is recorded after the block closes. R21 is the requirement that
+forced this, and it is the one place where getting it wrong would have been invisible.
+
+**Ordering is an identity column.** `now()` is identical for everything in one transaction, so two
+actions in the same instant could not be read back in order. Paging is by key rather than
+`OFFSET`: the organiser reads newest-first while the fair keeps writing at that end, and an
+`OFFSET` over a table growing at the head repeats and skips rows.
+
+**Three holes were found by handing the work out and reading the results back.**
+
+The first: `audit()` is a `SECURITY DEFINER` function in `public`, which is exactly what PostgREST
+publishes, and Postgres grants `EXECUTE` to `PUBLIC` by default. Any client holding the publishable
+key could have called `/rpc/audit` and written entries — "scan.award ok" attributed to anyone —
+into the one screen the organiser reads all afternoon. Revoking the table was not enough; the
+functions needed revoking too. A log a third party can write to is worth no more than one they can
+edit.
+
+The second: the secret guard walked only the top level of `before` and `detail`, so
+`{"community": {"password_hash": ...}}` passed it — and nesting is exactly what copying a row
+produces, which is the mistake the guard exists to catch. It now walks every level, arrays
+included.
+
+The third: `actor_id` held a community id on resolved paths and the token's subject on unresolved
+ones. Filtering the log by a stand would have silently omitted that stand's refused attempts,
+which are the entries someone would go looking for. `audit_actor_id()` resolves everything into one
+identifier space.
+
+**The scope filter is a static list, not a query.** It was built from `audit_kinds()`, which
+returned only the scopes that already had entries; the browser check showed the filter offering
+"Todo" and "Inicios de sesión" and nothing else, and silently ignoring a selection for a scope that
+had not happened yet. A filter that appears gradually cannot be learned. The list now lives in the
+client and `audit_kinds()` is dropped rather than left unused.
+
+**Two things are deliberately not recorded**, both stated in the plan: `poll_my_claim_code`, which
+runs every two seconds per attendee and changes nothing worth a line, and
+`close_expired_activities`, which nobody performs — it is derived cleanup that any read can
+trigger, and logging it would attribute a change to whichever attendee happened to open a screen.
+
+**Verified in the browser** against a running fair: a failed sign-in for a stand and for the
+organiser, a registration, an awarded scan and a refused one, a reprice from 250 to 90, a refused
+reprice at 5000 carrying "El costo no puede superar los 300 puntos.", and a withdrawal and
+reinstatement — each filtered by scope, by actor, by outcome and by time range, alone and
+combined, with "No hay movimientos que coincidan." when nothing matches.
+
+**A gap in spec 023 surfaced while wiring the panel.** Its R20 to R25 give the organiser control
+over any reward's cost, stock and withdrawal, and the functions existed, but the panel's "Premios"
+area was still an empty placeholder — 023 was marked implemented on the strength of its backend.
+That screen is built here rather than papered over.
 
 ## 11. References
 

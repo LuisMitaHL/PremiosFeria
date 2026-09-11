@@ -26,11 +26,19 @@ DECLARE
   v_code TEXT;
 BEGIN
   IF calling_organizer() IS NULL THEN
+    -- Que alguien que no es el organizador intente emitir un codigo de
+    -- recuperacion es exactamente lo que el organizador deberia poder ver.
+    PERFORM audit(p_action => 'participant.issue_recovery', p_outcome => 'refused',
+                  p_actor_kind => audit_actor(), p_actor_id => audit_actor_id(),
+                  p_reason => 'No autorizado');
     RETURN jsonb_build_object('error', 'No autorizado');
   END IF;
 
   SELECT * INTO v_row FROM participants WHERE id = p_participant_id FOR UPDATE;
   IF NOT FOUND THEN
+    PERFORM audit(p_action => 'participant.issue_recovery', p_outcome => 'refused',
+                  p_actor_kind => 'organizer', p_actor_id => calling_organizer(),
+                  p_reason => 'Estudiante no encontrado');
     RETURN jsonb_build_object('error', 'Estudiante no encontrado');
   END IF;
 
@@ -47,6 +55,14 @@ BEGIN
       -- Colision con otro codigo abierto; se reintenta.
     END;
   END LOOP;
+
+  -- Que se emitio, nunca cual. Un codigo de recuperacion en el registro es la
+  -- capacidad de quedarse con el perfil de otro, y el registro lo lee el
+  -- organizador en una pantalla abierta toda la tarde (R9).
+  PERFORM audit(p_action => 'participant.issue_recovery', p_outcome => 'ok',
+                p_actor_kind => 'organizer', p_actor_id => calling_organizer(),
+                p_subject_kind => 'participant', p_subject_id => v_row.id,
+                p_subject_label => v_row.name);
 
   RETURN jsonb_build_object('code', v_code, 'name', v_row.name);
 END;
@@ -66,6 +82,9 @@ DECLARE
   v_participant participants%ROWTYPE;
 BEGIN
   IF v_uid IS NULL THEN
+    PERFORM audit(p_action => 'participant.recover', p_outcome => 'refused',
+                  p_actor_kind => 'anonymous',
+                  p_reason => 'No se pudo crear tu sesión. Intenta de nuevo.');
     RETURN jsonb_build_object('error', 'No se pudo crear tu sesión. Intenta de nuevo.');
   END IF;
 
@@ -74,6 +93,11 @@ BEGIN
   FOR UPDATE;
 
   IF NOT FOUND OR NOT recovery_code_is_live(v_row) THEN
+    -- Sin sujeto: un codigo que no existe no apunta a nadie, y registrar el
+    -- codigo tecleado convertiria el registro en una lista de intentos.
+    PERFORM audit(p_action => 'participant.recover', p_outcome => 'refused',
+                  p_actor_kind => 'anonymous', p_actor_id => v_uid,
+                  p_reason => 'Código inválido o vencido. Pide uno nuevo en el stand de organización.');
     RETURN jsonb_build_object('error', 'Código inválido o vencido. Pide uno nuevo en el stand de organización.');
   END IF;
 
@@ -88,6 +112,11 @@ BEGIN
 
   UPDATE recovery_codes SET closed_at = now(), closed_reason = 'used'
   WHERE id = v_row.id;
+
+  PERFORM audit(p_action => 'participant.recover', p_outcome => 'ok',
+                p_actor_kind => 'participant', p_actor_id => v_participant.id,
+                p_subject_kind => 'participant', p_subject_id => v_participant.id,
+                p_subject_label => v_participant.name);
 
   RETURN jsonb_build_object('participant', to_jsonb(v_participant) - 'fingerprint');
 END;
@@ -148,10 +177,20 @@ CREATE OR REPLACE FUNCTION organizer_rename_participant(p_participant_id UUID, p
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
 DECLARE
   v_row participants%ROWTYPE;
+  v_antes TEXT;
+  v_fallo TEXT;
 BEGIN
   IF calling_organizer() IS NULL THEN
+    PERFORM audit(p_action => 'participant.rename', p_outcome => 'refused',
+                  p_actor_kind => audit_actor(), p_actor_id => audit_actor_id(),
+                  p_reason => 'No autorizado');
     RETURN jsonb_build_object('error', 'No autorizado');
   END IF;
+
+  -- El nombre anterior se lee antes del UPDATE. Despues ya no existe en ningun
+  -- lado, y "se renombro" sin decir desde que no responde la pregunta que
+  -- alguien vino a hacer (R7).
+  SELECT name INTO v_antes FROM participants WHERE id = p_participant_id;
 
   BEGIN
     UPDATE participants SET name = btrim(p_name)
@@ -159,14 +198,32 @@ BEGIN
     RETURNING * INTO v_row;
   EXCEPTION
     WHEN unique_violation THEN
-      RETURN jsonb_build_object('error', 'Ese nombre ya está en uso.');
+      v_fallo := 'Ese nombre ya está en uso.';
     WHEN check_violation THEN
-      RETURN jsonb_build_object('error', 'El nombre debe tener entre 2 y 24 caracteres.');
+      v_fallo := 'El nombre debe tener entre 2 y 24 caracteres.';
   END;
 
-  IF NOT FOUND THEN
-    RETURN jsonb_build_object('error', 'Estudiante no encontrado');
+  -- El asiento va fuera del bloque: el registro tiene su propio CHECK, que
+  -- levanta check_violation, y ese manejador lo confundiria con un nombre de
+  -- largo invalido (R21).
+  IF v_fallo IS NULL AND NOT FOUND THEN
+    v_fallo := 'Estudiante no encontrado';
   END IF;
+
+  IF v_fallo IS NOT NULL THEN
+    PERFORM audit(p_action => 'participant.rename', p_outcome => 'refused',
+                  p_actor_kind => 'organizer', p_actor_id => calling_organizer(),
+                  p_subject_kind => 'participant', p_subject_id => p_participant_id,
+                  p_subject_label => v_antes,
+                  p_reason => v_fallo);
+    RETURN jsonb_build_object('error', v_fallo);
+  END IF;
+
+  PERFORM audit(p_action => 'participant.rename', p_outcome => 'ok',
+                p_actor_kind => 'organizer', p_actor_id => calling_organizer(),
+                p_subject_kind => 'participant', p_subject_id => v_row.id,
+                p_subject_label => v_row.name,
+                p_before => jsonb_build_object('name', v_antes));
   RETURN jsonb_build_object('participant', to_jsonb(v_row) - 'fingerprint');
 END;
 $fn$;
@@ -181,10 +238,16 @@ CREATE OR REPLACE FUNCTION organizer_set_participant_flags(
 ) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
 DECLARE
   v_row participants%ROWTYPE;
+  v_antes participants%ROWTYPE;
 BEGIN
   IF calling_organizer() IS NULL THEN
+    PERFORM audit(p_action => 'participant.set_flags', p_outcome => 'refused',
+                  p_actor_kind => audit_actor(), p_actor_id => audit_actor_id(),
+                  p_reason => 'No autorizado');
     RETURN jsonb_build_object('error', 'No autorizado');
   END IF;
+
+  SELECT * INTO v_antes FROM participants WHERE id = p_participant_id;
 
   UPDATE participants
   SET claims_barred = COALESCE(p_claims_barred, claims_barred),
@@ -193,8 +256,24 @@ BEGIN
   RETURNING * INTO v_row;
 
   IF NOT FOUND THEN
+    PERFORM audit(p_action => 'participant.set_flags', p_outcome => 'refused',
+                  p_actor_kind => 'organizer', p_actor_id => calling_organizer(),
+                  p_subject_kind => 'participant', p_subject_id => p_participant_id,
+                  p_reason => 'Estudiante no encontrado');
     RETURN jsonb_build_object('error', 'Estudiante no encontrado');
   END IF;
+
+  -- Solo las dos banderas, no la fila: v_antes trae tambien el fingerprint, y
+  -- copiarla entera lo publicaria en el registro. El disparador lo rechazaria,
+  -- pero la forma correcta es no llevarlo (R9).
+  PERFORM audit(p_action => 'participant.set_flags', p_outcome => 'ok',
+                p_actor_kind => 'organizer', p_actor_id => calling_organizer(),
+                p_subject_kind => 'participant', p_subject_id => v_row.id,
+                p_subject_label => v_row.name,
+                p_before => jsonb_build_object('claims_barred', v_antes.claims_barred,
+                                               'is_removed', v_antes.is_removed),
+                p_detail => jsonb_build_object('claims_barred', v_row.claims_barred,
+                                               'is_removed', v_row.is_removed));
   RETURN jsonb_build_object('participant', to_jsonb(v_row) - 'fingerprint');
 END;
 $fn$;
@@ -214,16 +293,31 @@ CREATE OR REPLACE FUNCTION organizer_adjust_points(
 ) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
 DECLARE
   v_row participants%ROWTYPE;
+  v_antes INT;
+  v_fallo TEXT;
 BEGIN
   IF calling_organizer() IS NULL THEN
+    PERFORM audit(p_action => 'participant.adjust_points', p_outcome => 'refused',
+                  p_actor_kind => audit_actor(), p_actor_id => audit_actor_id(),
+                  p_reason => 'No autorizado');
     RETURN jsonb_build_object('error', 'No autorizado');
   END IF;
   IF p_amount IS NULL OR p_amount = 0 THEN
+    PERFORM audit(p_action => 'participant.adjust_points', p_outcome => 'refused',
+                  p_actor_kind => 'organizer', p_actor_id => calling_organizer(),
+                  p_subject_kind => 'participant', p_subject_id => p_participant_id,
+                  p_reason => 'El ajuste no puede ser cero.');
     RETURN jsonb_build_object('error', 'El ajuste no puede ser cero.');
   END IF;
   IF char_length(btrim(COALESCE(p_reason, ''))) < 3 THEN
+    PERFORM audit(p_action => 'participant.adjust_points', p_outcome => 'refused',
+                  p_actor_kind => 'organizer', p_actor_id => calling_organizer(),
+                  p_subject_kind => 'participant', p_subject_id => p_participant_id,
+                  p_reason => 'Indica el motivo del ajuste.');
     RETURN jsonb_build_object('error', 'Indica el motivo del ajuste.');
   END IF;
+
+  SELECT points INTO v_antes FROM participants WHERE id = p_participant_id;
 
   BEGIN
     -- La condicion vive en el WHERE: el CHECK de saldo no negativo ata a todos
@@ -232,19 +326,42 @@ BEGIN
     WHERE id = p_participant_id AND points + p_amount >= 0
     RETURNING * INTO v_row;
   EXCEPTION WHEN check_violation THEN
-    RETURN jsonb_build_object('error', 'El ajuste dejaría el saldo en negativo.');
+    v_fallo := 'El ajuste dejaría el saldo en negativo.';
   END;
 
-  IF NOT FOUND THEN
+  -- Fuera del bloque: el CHECK del registro tambien levanta check_violation, y
+  -- ese manejador lo haria pasar por un saldo negativo (R21).
+  IF v_fallo IS NULL AND NOT FOUND THEN
     IF EXISTS (SELECT 1 FROM participants WHERE id = p_participant_id) THEN
-      RETURN jsonb_build_object('error', 'El ajuste dejaría el saldo en negativo.');
+      v_fallo := 'El ajuste dejaría el saldo en negativo.';
+    ELSE
+      v_fallo := 'Estudiante no encontrado';
     END IF;
-    RETURN jsonb_build_object('error', 'Estudiante no encontrado');
+  END IF;
+
+  IF v_fallo IS NOT NULL THEN
+    PERFORM audit(p_action => 'participant.adjust_points', p_outcome => 'refused',
+                  p_actor_kind => 'organizer', p_actor_id => calling_organizer(),
+                  p_subject_kind => 'participant', p_subject_id => p_participant_id,
+                  p_detail => jsonb_build_object('amount', p_amount),
+                  p_reason => v_fallo);
+    RETURN jsonb_build_object('error', v_fallo);
   END IF;
 
   INSERT INTO point_adjustments (participant_id, amount, reason)
   VALUES (p_participant_id, p_amount, btrim(p_reason));
 
+  -- El motivo del ajuste va tambien en el asiento: es lo que se le pregunta a
+  -- un ajuste, y tenerlo solo en point_adjustments obliga a cruzar dos lugares
+  -- para leer una sola decision.
+  PERFORM audit(p_action => 'participant.adjust_points', p_outcome => 'ok',
+                p_actor_kind => 'organizer', p_actor_id => calling_organizer(),
+                p_subject_kind => 'participant', p_subject_id => v_row.id,
+                p_subject_label => v_row.name,
+                p_before => jsonb_build_object('points', v_antes),
+                p_detail => jsonb_build_object('amount', p_amount,
+                                               'reason', btrim(p_reason),
+                                               'points', v_row.points));
   RETURN jsonb_build_object('participant', to_jsonb(v_row) - 'fingerprint');
 END;
 $fn$;

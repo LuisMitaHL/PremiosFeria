@@ -142,6 +142,30 @@ $fn$;
 --
 -- Toda la decisión ocurre acá. El cliente es público: lo que llega es entrada
 -- no confiable, y el monto se recalcula siempre (hallazgo F3 del audit).
+-- Un escaneo rechazado es lo que mas se reclama en el mostrador: "el stand me
+-- escaneo y no paso nada". Sin asiento, eso y "no escaneo nunca" se ven igual.
+--
+-- Los doce rechazos de validate_and_scan pasan por aca en vez de llevar cada
+-- uno su llamada a audit(): el motivo que se registra es literalmente el que se
+-- devuelve, sin margen para que uno se quede viejo respecto del otro. El nombre
+-- del stand se pasa en vez de buscarse, porque quien llama ya lo tiene y este
+-- es el camino de escritura mas transitado del sistema.
+CREATE OR REPLACE FUNCTION scan_refused(
+  p_participant UUID, p_community UUID, p_community_name TEXT, p_reason TEXT
+) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
+BEGIN
+  PERFORM audit(
+    p_action => 'scan.award', p_outcome => 'refused',
+    p_actor_kind => CASE WHEN p_participant IS NULL THEN audit_actor() ELSE 'participant' END,
+    p_actor_id => p_participant,
+    p_subject_kind => CASE WHEN p_community IS NULL THEN NULL ELSE 'community' END,
+    p_subject_id => p_community,
+    p_subject_label => p_community_name,
+    p_reason => p_reason);
+  RETURN jsonb_build_object('valid', false, 'reason', p_reason);
+END;
+$fn$;
+
 CREATE OR REPLACE FUNCTION validate_and_scan(
   p_encoded_payload TEXT
 ) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
@@ -167,11 +191,11 @@ BEGIN
   FOR UPDATE; -- serializa los escaneos del mismo participante: el cooldown de
               -- visitas re-evalúa contra lo ya confirmado (hallazgo F8)
   IF NOT FOUND THEN
-    RETURN jsonb_build_object('valid', false, 'reason', 'Regístrate para participar.');
+    RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Regístrate para participar.');
   END IF;
 
   IF (SELECT is_removed FROM participants WHERE id = v_participant_id) THEN
-    RETURN jsonb_build_object('valid', false, 'reason', 'Tu perfil ya no está activo.');
+    RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Tu perfil ya no está activo.');
   END IF;
 
   v_json := p_encoded_payload::JSONB;
@@ -218,8 +242,7 @@ BEGIN
       END LOOP;
 
       IF NOT v_found THEN
-        RETURN jsonb_build_object('valid', false,
-          'reason', 'Código manual inválido o caducado.');
+        RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Código manual inválido o caducado.');
       END IF;
     END;
 
@@ -235,31 +258,29 @@ BEGIN
     --    adelante, porque solo puede venir de un reloj mal puesto o de un
     --    payload construido.
     IF (v_current_ts - v_qr_ts) > 1 OR (v_qr_ts > v_current_ts) THEN
-      RETURN jsonb_build_object('valid', false,
-        'reason', 'Código QR caducado, escanea el código actual del stand.');
+      RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Código QR caducado, escanea el código actual del stand.');
     END IF;
 
     SELECT * INTO v_community FROM communities WHERE id = (v_json->>'sid')::UUID;
     IF NOT FOUND THEN
-      RETURN jsonb_build_object('valid', false, 'reason', 'Comunidad no encontrada');
+      RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Comunidad no encontrada');
     END IF;
 
     -- B) Integridad criptográfica.
     IF scan_signature(v_community.id, v_activity_id, v_qr_ts, v_type, v_secret)
        IS DISTINCT FROM (v_json->>'tok') THEN
-      RETURN jsonb_build_object('valid', false,
-        'reason', 'Código QR inválido o falsificado.');
+      RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Código QR inválido o falsificado.');
     END IF;
   END IF;
 
   IF v_type NOT IN ('visit', 'activity') THEN
-    RETURN jsonb_build_object('valid', false, 'reason', 'Tipo de código inválido.');
+    RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Tipo de código inválido.');
   END IF;
 
   -- Un stand retirado deja de otorgar puntos, incluso con un código que ya
   -- estaba dando vueltas (spec 023, R16).
   IF v_community.is_withdrawn THEN
-    RETURN jsonb_build_object('valid', false, 'reason', 'Este stand ya no está participando.');
+    RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Este stand ya no está participando.');
   END IF;
 
   -- =========================================================================
@@ -272,14 +293,13 @@ BEGIN
     SELECT * INTO v_activity FROM activities
     WHERE id = v_activity_id AND community_id = v_community.id;
     IF NOT FOUND THEN
-      RETURN jsonb_build_object('valid', false, 'reason', 'Actividad no encontrada');
+      RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Actividad no encontrada');
     END IF;
     IF activity_state(v_activity) = 'scheduled' THEN
-      RETURN jsonb_build_object('valid', false,
-        'reason', 'Esta actividad todavía no ha iniciado.');
+      RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Esta actividad todavía no ha iniciado.');
     END IF;
     IF activity_state(v_activity) = 'finished' THEN
-      RETURN jsonb_build_object('valid', false, 'reason', 'Esta actividad ya terminó.');
+      RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Esta actividad ya terminó.');
     END IF;
   END IF;
 
@@ -316,8 +336,7 @@ BEGIN
       LIMIT 1;
 
     IF FOUND THEN
-      RETURN jsonb_build_object('valid', false,
-        'reason', 'Ya participaste en esta actividad.');
+      RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Ya participaste en esta actividad.');
     END IF;
   END IF;
 
@@ -337,12 +356,18 @@ BEGIN
     VALUES (v_participant_id, v_community.id, v_activity_id, v_final_pts, v_type);
   EXCEPTION
     WHEN unique_violation THEN
-      RETURN jsonb_build_object('valid', false,
-        'reason', 'Ya participaste en esta actividad.');
+      RETURN scan_refused(v_participant_id, v_community.id, v_community.name, 'Ya participaste en esta actividad.');
   END;
 
   UPDATE participants SET points = points + v_final_pts
   WHERE id = v_participant_id;
+
+  PERFORM audit(p_action => 'scan.award', p_outcome => 'ok',
+                p_actor_kind => 'participant', p_actor_id => v_participant_id,
+                p_subject_kind => 'community', p_subject_id => v_community.id,
+                p_subject_label => v_community.name,
+                p_detail => jsonb_build_object('type', v_type, 'points', v_final_pts,
+                                               'activity', v_activity.name));
 
   RETURN jsonb_build_object(
     'valid', true,
@@ -357,3 +382,17 @@ $fn$;
 
 -- El canje vive en 54_fulfilment.sql desde el spec 018: lo confirma el stand al
 -- entregar el premio, no el estudiante desde el catálogo.
+
+-- Igual que audit(): es un ayudante interno, no un endpoint. Sin esto,
+-- PostgREST lo publica y cualquiera fabrica rechazos de escaneo en el registro.
+REVOKE ALL ON FUNCTION scan_refused(UUID, UUID, TEXT, TEXT) FROM PUBLIC;
+DO $revoke$
+DECLARE v_roles TEXT;
+BEGIN
+  SELECT string_agg(quote_ident(rolname), ', ' ORDER BY rolname) INTO v_roles
+  FROM pg_roles WHERE rolname IN ('anon', 'authenticated');
+  IF v_roles IS NOT NULL THEN
+    EXECUTE format('REVOKE ALL ON FUNCTION public.scan_refused(UUID, UUID, TEXT, TEXT) FROM %s', v_roles);
+  END IF;
+END;
+$revoke$;

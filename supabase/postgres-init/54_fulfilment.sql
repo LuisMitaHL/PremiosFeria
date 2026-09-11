@@ -57,6 +57,9 @@ BEGIN
   SELECT * INTO v_participant FROM participants WHERE auth_user_id = auth.uid()
   FOR UPDATE;
   IF NOT FOUND THEN
+    PERFORM audit(p_action => 'claim.issue_code', p_outcome => 'refused',
+                  p_actor_kind => audit_actor(),
+                  p_reason => 'Regístrate para participar.');
     RETURN jsonb_build_object('error', 'Regístrate para participar.');
   END IF;
 
@@ -93,6 +96,18 @@ BEGIN
       -- y unos pocos vivos a la vez, esto no ocurre en la práctica.
     END;
   END LOOP;
+
+  -- El asiento dice que se emitio un codigo, nunca cual: un codigo de canje en
+  -- el registro es la capacidad de gastar los puntos de otro, y el registro lo
+  -- lee el organizador en una pantalla abierta todo el dia (R9).
+  --
+  -- Devolver un codigo que ya estaba vivo no pasa por aca a proposito: no se
+  -- emitio nada, y una pantalla que se vuelve a montar llenaria el registro de
+  -- emisiones que no ocurrieron.
+  PERFORM audit(p_action => 'claim.issue_code', p_outcome => 'ok',
+                p_actor_kind => 'participant', p_actor_id => v_participant.id,
+                p_subject_kind => 'participant', p_subject_id => v_participant.id,
+                p_subject_label => v_participant.name);
 
   RETURN jsonb_build_object('code', v_code, 'points', v_participant.points);
 END;
@@ -155,6 +170,25 @@ $fn$;
 -- La puerta real son los UPDATE condicionales, igual que antes: la condición
 -- vive en el WHERE, así que dos confirmaciones simultáneas se serializan en el
 -- lock de la fila y la perdedora ve 0 filas.
+-- Los rechazos de la entrega pasan todos por aca para que el motivo registrado
+-- sea literalmente el devuelto. El sujeto es el premio: es lo que el
+-- organizador busca cuando alguien reclama que no se lo entregaron.
+CREATE OR REPLACE FUNCTION handover_refused(
+  p_community UUID, p_reward UUID, p_reward_name TEXT, p_reason TEXT
+) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
+BEGIN
+  PERFORM audit(
+    p_action => 'claim.handover', p_outcome => 'refused',
+    p_actor_kind => CASE WHEN p_community IS NULL THEN audit_actor() ELSE 'stand' END,
+    p_actor_id => p_community,
+    p_subject_kind => CASE WHEN p_reward IS NULL THEN NULL ELSE 'reward' END,
+    p_subject_id => p_reward,
+    p_subject_label => p_reward_name,
+    p_reason => p_reason);
+  RETURN jsonb_build_object('success', false, 'reason', p_reason);
+END;
+$fn$;
+
 CREATE OR REPLACE FUNCTION confirm_handover(p_code TEXT, p_reward_id UUID)
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
 DECLARE
@@ -163,9 +197,10 @@ DECLARE
   v_participant participants%ROWTYPE;
   v_reward rewards%ROWTYPE;
   v_new_points INT;
+  v_fallo TEXT;
 BEGIN
   IF v_community IS NULL THEN
-    RETURN jsonb_build_object('success', false, 'reason', 'No autorizado');
+    RETURN handover_refused(v_community, p_reward_id, v_reward.name, 'No autorizado');
   END IF;
 
   -- Un stand solo entrega lo que tiene en su mesa. Se comprueba antes que el
@@ -174,20 +209,17 @@ BEGIN
   SELECT * INTO v_reward FROM rewards
   WHERE id = p_reward_id AND community_id = v_community;
   IF NOT FOUND THEN
-    RETURN jsonb_build_object('success', false,
-      'reason', 'Solo puedes entregar premios de tu stand.');
+    RETURN handover_refused(v_community, p_reward_id, v_reward.name, 'Solo puedes entregar premios de tu stand.');
   END IF;
   IF v_reward.is_withdrawn THEN
-    RETURN jsonb_build_object('success', false,
-      'reason', 'Este premio ya no está disponible.');
+    RETURN handover_refused(v_community, p_reward_id, v_reward.name, 'Este premio ya no está disponible.');
   END IF;
 
   SELECT * INTO v_row FROM claim_codes
   WHERE code = upper(btrim(p_code)) AND closed_at IS NULL
   FOR UPDATE;
   IF NOT FOUND OR NOT claim_code_is_live(v_row) THEN
-    RETURN jsonb_build_object('success', false,
-      'reason', 'Código inválido o vencido. Pide al estudiante que lo genere de nuevo.');
+    RETURN handover_refused(v_community, p_reward_id, v_reward.name, 'Código inválido o vencido. Pide al estudiante que lo genere de nuevo.');
   END IF;
 
   SELECT * INTO v_participant FROM participants WHERE id = v_row.participant_id FOR UPDATE;
@@ -197,29 +229,24 @@ BEGIN
   -- stand que faltan puntos cuando en realidad esta bloqueado lo manda a
   -- discutir con la persona equivocada.
   IF v_participant.is_removed THEN
-    RETURN jsonb_build_object('success', false,
-      'reason', 'Este estudiante ya no participa en el evento.');
+    RETURN handover_refused(v_community, p_reward_id, v_reward.name, 'Este estudiante ya no participa en el evento.');
   END IF;
   IF v_participant.claims_barred THEN
-    RETURN jsonb_build_object('success', false,
-      'reason', 'Este estudiante no puede canjear premios.');
+    RETURN handover_refused(v_community, p_reward_id, v_reward.name, 'Este estudiante no puede canjear premios.');
   END IF;
 
   IF EXISTS (SELECT 1 FROM claimed_rewards
              WHERE participant_id = v_participant.id AND reward_id = p_reward_id) THEN
-    RETURN jsonb_build_object('success', false,
-      'reason', 'Este estudiante ya canjeó este premio.');
+    RETURN handover_refused(v_community, p_reward_id, v_reward.name, 'Este estudiante ya canjeó este premio.');
   END IF;
 
   IF v_participant.points < v_reward.cost THEN
-    RETURN jsonb_build_object('success', false,
-      'reason', 'Le faltan ' || (v_reward.cost - v_participant.points)::TEXT ||
+    RETURN handover_refused(v_community, p_reward_id, v_reward.name, 'Le faltan ' || (v_reward.cost - v_participant.points)::TEXT ||
                 ' puntos para este premio.');
   END IF;
 
   IF v_reward.stock <= 0 THEN
-    RETURN jsonb_build_object('success', false,
-      'reason', 'Ya no quedan unidades de este premio.');
+    RETURN handover_refused(v_community, p_reward_id, v_reward.name, 'Ya no quedan unidades de este premio.');
   END IF;
 
   BEGIN
@@ -247,13 +274,33 @@ BEGIN
     END IF;
   EXCEPTION
     WHEN unique_violation THEN
-      RETURN jsonb_build_object('success', false,
-        'reason', 'Este estudiante ya canjeó este premio.');
+      v_fallo := 'Este estudiante ya canjeó este premio.';
     WHEN OTHERS THEN
-      RETURN jsonb_build_object('success', false, 'reason', SQLERRM);
+      v_fallo := SQLERRM;
   END;
 
+  -- Fuera del bloque a proposito. Ese WHEN OTHERS atrapa cualquier cosa, asi
+  -- que un audit() ahi dentro convertiria un fallo al registrar en un rechazo
+  -- corriente y el stand leeria un motivo inventado: justo lo que R21 prohibe.
+  IF v_fallo IS NOT NULL THEN
+    RETURN handover_refused(v_community, p_reward_id, v_reward.name, v_fallo);
+  END IF;
+
   SELECT points INTO v_new_points FROM participants WHERE id = v_participant.id;
+
+  -- Lo que valian los puntos y el stock ANTES de pagarlos: sin eso el asiento
+  -- dice que hubo una entrega, pero no a costa de que (R7).
+  PERFORM audit(p_action => 'claim.handover', p_outcome => 'ok',
+                p_actor_kind => 'stand', p_actor_id => v_community,
+                p_subject_kind => 'reward', p_subject_id => p_reward_id,
+                p_subject_label => v_reward.name,
+                p_before => jsonb_build_object('points', v_participant.points,
+                                               'stock', v_reward.stock),
+                p_detail => jsonb_build_object('participant', v_participant.name,
+                                               'participantId', v_participant.id,
+                                               'cost', v_reward.cost,
+                                               'newPoints', v_new_points));
+
   RETURN jsonb_build_object(
     'success', true,
     'participant', v_participant.name,
@@ -268,3 +315,16 @@ $fn$;
 -- catálogo, sino el stand al entregar el premio (spec 018). Dejarla sería dejar
 -- un segundo camino para gastar puntos, sin stand y sin entrega.
 DROP FUNCTION IF EXISTS claim_reward(UUID);
+
+-- Ayudante interno, no endpoint: ver la nota en 45_audit.sql.
+REVOKE ALL ON FUNCTION handover_refused(UUID, UUID, TEXT, TEXT) FROM PUBLIC;
+DO $revoke$
+DECLARE v_roles TEXT;
+BEGIN
+  SELECT string_agg(quote_ident(rolname), ', ' ORDER BY rolname) INTO v_roles
+  FROM pg_roles WHERE rolname IN ('anon', 'authenticated');
+  IF v_roles IS NOT NULL THEN
+    EXECUTE format('REVOKE ALL ON FUNCTION public.handover_refused(UUID, UUID, TEXT, TEXT) FROM %s', v_roles);
+  END IF;
+END;
+$revoke$;

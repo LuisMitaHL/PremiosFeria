@@ -23,13 +23,25 @@ DROP POLICY IF EXISTS "organizers_read" ON organizers;
 -- Espejo de stand_login, contra la tabla propia. Que sean dos funciones
 -- separadas es lo que impide que un stand se autentique como organizador o al
 -- revés: cada una mira una sola tabla.
+-- Igual que stand_login: deja de ser STABLE para poder registrar el intento
+-- fallido, y registra que fallo sin registrar que se probo (spec 024, R4).
 CREATE OR REPLACE FUNCTION organizer_login(p_username TEXT, p_password TEXT)
 RETURNS TABLE (id UUID, username TEXT)
-LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $fn$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
+BEGIN
+  RETURN QUERY
   SELECT o.id, o.username
   FROM organizers o
   WHERE lower(o.username) = lower(btrim(p_username))
-    AND o.password_hash = crypt(p_password, o.password_hash)
+    AND o.password_hash = crypt(p_password, o.password_hash);
+
+  IF NOT FOUND THEN
+    PERFORM audit(p_action => 'auth.sign_in_failed', p_outcome => 'refused',
+                  p_actor_kind => 'anonymous',
+                  p_detail => jsonb_build_object('scope', 'organizer'),
+                  p_reason => 'Credenciales incorrectas.');
+  END IF;
+END;
 $fn$;
 
 GRANT EXECUTE ON FUNCTION organizer_login(TEXT, TEXT) TO anon;

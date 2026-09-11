@@ -2036,3 +2036,209 @@ textarea {
 .student-history strong {
     color: var(--text-primary);
 }
+
+/* ============================================
+   Inicio del estudiante (spec 013)
+   ============================================
+   Lo primero que se mira al volver de un stand: cuánto tengo, qué alcanzo con
+   eso y qué está pasando ahora mismo. Construido con los tokens de arriba.
+   ============================================ */
+
+/* Cuántos premios alcanza es lo más motivador que el sistema sabe de alguien,
+   así que no es una baldosa más de la cuadrícula: ocupa su propia fila. */
+.reach-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.reach-card:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.reach-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    background: var(--bg-glass);
+    color: var(--accent-purple);
+}
+
+.reach-body {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Sin la tipografía de títulos a propósito: no trae cifras, y un número con
+   ella sale como un cuadro negro. Es la misma que usan las baldosas. */
+.reach-count {
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1.1;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.reach-unit {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* Cuando no hay número que dar, la frase ocupa su lugar: un cero sin
+   explicación se lee como un dato y no lo es (spec 013, R7 y R12). */
+.reach-message {
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.reach-note {
+    margin-top: var(--space-xs);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-md);
+}
+
+.section-head .section-title {
+    margin-bottom: var(--space-md);
+}
+
+.link-more {
+    flex: none;
+    color: var(--accent-purple);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.running-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+/* Un resumen, no la pantalla de actividades: una fila por actividad, sin
+   descripción ni horarios, y nada aquí es tocable (spec 013, R6 y R13). */
+.running-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+}
+
+.running-row:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.running-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    color: var(--accent-purple);
+}
+
+.running-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.running-name {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    font-weight: 600;
+    font-size: 0.92rem;
+}
+
+.running-row .activity-stand {
+    margin-top: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Registro de actividad (spec 024)
+
+   Una lista larga que se lee de arriba abajo buscando un momento concreto, asi
+   que la hora va primero y fija: es la columna contra la que el ojo recorre.
+   Un rechazo se distingue por el borde y no solo por la etiqueta, porque la
+   pregunta que trae alguien al mostrador casi siempre es por algo que NO paso.
+--------------------------------------------------------------------------- */
+.audit-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.audit-row {
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--accent-mint, #4ade80);
+}
+
+.audit-row.is-refused {
+    border-left-color: var(--accent-rose, #fb7185);
+}
+
+.audit-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.audit-time {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.audit-action {
+    font-weight: 700;
+    margin-right: auto;
+}
+
+.audit-reason,
+.audit-change {
+    font-size: 0.85rem;
+    margin-top: 6px;
+    color: var(--text-secondary);
+}
+
+.audit-change {
+    font-variant-numeric: tabular-nums;
+}
+
+.audit-more {
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    margin-top: 8px;
+}
+
+.audit-raw {
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    font-size: 0.72rem;
+    line-height: 1.45;
+    overflow-x: auto;
+}
