@@ -30,15 +30,25 @@ export function AuthProvider({ children }) {
     // Supabase Auth; localStorage solo es caché de visualización.
     useEffect(() => {
         const load = async () => {
+            // "No hay perfil para esta sesion" y "no se pudo preguntar" se
+            // parecen en el codigo y no se parecen en nada para el estudiante:
+            // lo primero significa que le recuperaron el perfil en otro
+            // telefono, lo segundo que el wifi del salon se cayo dos segundos.
+            // Antes ambos borraban la sesion del dispositivo, asi que un bache
+            // de red dejaba a alguien en la pantalla de bienvenida con sus
+            // puntos intactos y sin forma evidente de volver.
+            let respondio = false;
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 let p = null;
                 if (user) {
-                    const { data } = await supabase
+                    const { data, error } = await supabase
                         .from('participants')
                         .select(PARTICIPANT_COLUMNS)
                         .eq('auth_user_id', user.id)
                         .maybeSingle();
+                    if (error) throw error;
+                    respondio = true;
                     p = data;
                 }
                 // El localStorage es cache de visualizacion, y solo vale cuando
@@ -52,12 +62,20 @@ export function AuthProvider({ children }) {
                 }
                 if (p) {
                     saveCurrentParticipantId(p.id);
-                } else {
+                } else if (respondio) {
                     clearCurrentParticipant();
                 }
                 setParticipant(p);
             } catch {
-                clearCurrentParticipant();
+                // No se pudo comprobar. Se conserva lo que el dispositivo
+                // recuerda y se intenta mostrarlo; si tampoco se puede, la
+                // sesion guardada sigue ahi para la proxima vez que abra.
+                try {
+                    const id = getCurrentParticipantId();
+                    setParticipant(id ? await getParticipantById(id) : null);
+                } catch {
+                    setParticipant(null);
+                }
             } finally {
                 setParticipantLoading(false);
             }
