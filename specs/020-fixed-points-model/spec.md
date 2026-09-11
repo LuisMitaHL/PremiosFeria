@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `020-fixed-points-model` |
 | **Actors** | Participant, Stand admin |
 | **Created** | 2026-09-10 |

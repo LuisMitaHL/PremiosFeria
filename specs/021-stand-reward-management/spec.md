@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `021-stand-reward-management` |
 | **Actors** | Stand admin, Participant, Event operator |
 | **Created** | 2026-09-10 |

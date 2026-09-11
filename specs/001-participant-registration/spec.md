@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `001-participant-registration` |
 | **Actors** | Participant, Event operator |
 | **Created** | 2026-09-10 |

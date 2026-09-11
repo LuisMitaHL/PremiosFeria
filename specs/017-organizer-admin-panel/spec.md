@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `017-organizer-admin-panel` |
 | **Actors** | Event operator |
 | **Created** | 2026-09-10 |

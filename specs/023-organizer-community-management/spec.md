@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `023-organizer-community-management` |
 | **Actors** | Event operator, Stand admin |
 | **Created** | 2026-09-10 |

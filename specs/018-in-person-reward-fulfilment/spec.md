@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `018-in-person-reward-fulfilment` |
 | **Actors** | Participant, Stand admin |
 | **Created** | 2026-09-10 |

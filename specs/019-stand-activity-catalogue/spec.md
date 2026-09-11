@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `019-stand-activity-catalogue` |
 | **Actors** | Stand admin, Participant |
 | **Created** | 2026-09-10 |

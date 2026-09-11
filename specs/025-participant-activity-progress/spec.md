@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `025-participant-activity-progress` |
 | **Actors** | Participant |
 | **Created** | 2026-09-10 |
