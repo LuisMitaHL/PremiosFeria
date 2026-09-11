@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/authContext.js';
+import GuidedTour from '../components/GuidedTour.jsx';
+import { TOUR_ESTUDIANTE, PASOS_ESTUDIANTE } from '../lib/tours.js';
 import {
     getCommunities,
     getScansForParticipant,
@@ -166,7 +168,7 @@ export default function Dashboard() {
         <div className="page">
             <div className="container">
                 {/* Points Hero */}
-                <div className="points-hero">
+                <div className="points-hero" data-tour="puntos">
                     <div className="points-label">Tus Puntos</div>
                     <div className="points-value">{figures ? figures.points : participant.points}</div>
                     <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.85rem', marginTop: 8 }}>
@@ -305,6 +307,10 @@ export default function Dashboard() {
                     )}
                 </div>
             </div>
+
+            {/* Solo cuando las cifras llegaron: un paso que senala un elemento
+                todavia no dibujado apuntaria al vacio (spec 030, R4). */}
+            {figures && <GuidedTour nombre={TOUR_ESTUDIANTE} pasos={PASOS_ESTUDIANTE} />}
         </div>
     );
 }

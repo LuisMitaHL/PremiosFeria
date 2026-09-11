@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Zap, Star, X } from 'lucide-react';
 import { getAllActivities, getScansForParticipant, startPolling } from '../lib/api.js';
 import { avisoYaVisto, marcarAvisoVisto } from '../lib/devicePrefs.js';
+import { hayCapa } from '../lib/overlay.js';
 
 // Cuanto queda un aviso en pantalla antes de irse solo. Suficiente para leer
 // dos renglones sin apuro, corto para no quedarse encima de lo que el
@@ -22,6 +23,8 @@ export default function ActivityNotice({ participantId }) {
     const navigate = useNavigate();
     const [cola, setCola] = useState([]);
     const [actual, setActual] = useState(null);
+    // Solo para volver a intentar mostrar un aviso que tuvo que esperar.
+    const [reintento, setReintento] = useState(0);
 
     // Lo que ya esta en la cola o en pantalla, para no encolarlo dos veces
     // entre una lectura y la siguiente.
@@ -70,13 +73,22 @@ export default function ActivityNotice({ participantId }) {
     // nadie (spec 029, R7).
     useEffect(() => {
         if (actual || cola.length === 0) return;
+
+        // Mientras el recorrido guiado esta en pantalla, un aviso saldria
+        // detras de su capa oscura: ilegible, y dado por visto igual, con lo
+        // que el estudiante lo pierde para siempre. Espera a que termine.
+        if (hayCapa()) {
+            const t = setTimeout(() => setReintento((n) => n + 1), 1000);
+            return () => clearTimeout(t);
+        }
+
         const siguiente = cola[0];
         setCola((previa) => previa.slice(1));
         setActual(siguiente);
         // Se marca visto al mostrarlo, no al cerrarlo: si el estudiante cierra
         // la aplicacion con el aviso en pantalla, ya lo vio.
         marcarAvisoVisto(siguiente.id);
-    }, [actual, cola]);
+    }, [actual, cola, reintento]);
 
     useEffect(() => {
         if (!actual) return;

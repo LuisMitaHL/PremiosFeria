@@ -69,23 +69,23 @@ function AppLayout({ children }) {
             {/* Bottom Navigation */}
             <nav className="bottom-nav">
                 <div className="nav-items">
-                    <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/dashboard" data-tour="nav-inicio" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <span className="nav-icon"><Home size={20} /></span>
                         <span className="nav-label">Inicio</span>
                     </NavLink>
-                    <NavLink to="/activities" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/activities" data-tour="nav-actividades" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <span className="nav-icon"><CalendarClock size={20} /></span>
                         <span className="nav-label">Actividades</span>
                     </NavLink>
-                    <NavLink to="/scan" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/scan" data-tour="nav-scan" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <span className="nav-icon"><ScanLine size={22} /></span>
                         <span className="nav-label">Scan</span>
                     </NavLink>
-                    <NavLink to="/leaderboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/leaderboard" data-tour="nav-ranking" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <span className="nav-icon"><Trophy size={20} /></span>
                         <span className="nav-label">Ranking</span>
                     </NavLink>
-                    <NavLink to="/rewards" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/rewards" data-tour="nav-premios" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <span className="nav-icon"><Gift size={20} /></span>
                         <span className="nav-label">Premios</span>
                     </NavLink>

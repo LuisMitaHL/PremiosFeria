@@ -2329,3 +2329,84 @@ textarea {
 .activity-notice-close:hover {
   opacity: 1;
 }
+
+/* ---------------------------------------------------------------------------
+   Recorrido guiado (spec 030)
+
+   El oscurecido es un box-shadow enorme sobre el recuadro del foco, no un
+   clip-path ni un mask: es lo que funciona en Chromium 83 (ADR 0005), que es
+   el piso de la aplicacion.
+
+   La capa deja pasar los eventos (pointer-events: none) salvo en el cuadro de
+   texto, para que el recorrido nunca pueda pulsar nada por su cuenta.
+--------------------------------------------------------------------------- */
+.tour-capa {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+}
+
+.tour-foco {
+  position: fixed;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(12, 12, 18, 0.72);
+  transition: top 180ms ease, left 180ms ease, width 180ms ease, height 180ms ease;
+}
+
+.tour-cuadro {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 360px;
+  padding: 16px 18px 14px;
+  border-radius: 16px;
+  background: #fff;
+  color: var(--text-primary, #1c1c20);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+}
+
+.tour-salir {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  padding: 6px;
+  background: none;
+  border: none;
+  color: var(--text-secondary, #6b6b76);
+  cursor: pointer;
+}
+
+.tour-titulo {
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0 24px 6px 0;
+}
+
+.tour-texto {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-secondary, #6b6b76);
+  margin: 0 0 14px;
+}
+
+.tour-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tour-progreso {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #6b6b76);
+  font-variant-numeric: tabular-nums;
+}
+
+.tour-siguiente {
+  padding: 8px 18px;
+  width: auto;
+}

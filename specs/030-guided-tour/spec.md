@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `030-guided-tour` |
 | **Actors** | Participant, Stand admin |
 | **Created** | 2026-09-11 |
@@ -154,20 +154,20 @@ their prizes and confirming a handover.
 
 ## 8. Acceptance criteria
 
-- [ ] An attendee reaching their home screen for the first time is walked through it.
-- [ ] A community reaching its console for the first time is walked through it.
-- [ ] Neither tour runs a second time on the same device.
-- [ ] Seeing one tour does not suppress the other.
-- [ ] Every step points at an element that is on the screen and visibly marks it.
-- [ ] Every step can be left in one action.
-- [ ] The last step ends the tour.
-- [ ] Nothing is changed, submitted or navigated by the tour.
-- [ ] The attendee's tour covers points, scanning, activities and prizes.
-- [ ] The stand's tour covers the projected code, activities, prizes and confirming a handover.
-- [ ] At the narrowest supported width, no step covers what it points at or runs off the screen.
-- [ ] A step whose element is off screen scrolls it into view first.
-- [ ] A step whose element is missing is skipped rather than pointing at nothing.
-- [ ] With device storage unavailable, the tour still runs and can still be finished.
+- [x] An attendee reaching their home screen for the first time is walked through it.
+- [x] A community reaching its console for the first time is walked through it.
+- [x] Neither tour runs a second time on the same device.
+- [x] Seeing one tour does not suppress the other.
+- [x] Every step points at an element that is on the screen and visibly marks it.
+- [x] Every step can be left in one action.
+- [x] The last step ends the tour.
+- [x] Nothing is changed, submitted or navigated by the tour.
+- [x] The attendee's tour covers points, scanning, activities and prizes.
+- [x] The stand's tour covers the projected code, activities, prizes and confirming a handover.
+- [x] At the narrowest supported width, no step covers what it points at or runs off the screen.
+- [x] A step whose element is off screen scrolls it into view first.
+- [x] A step whose element is missing is skipped rather than pointing at nothing.
+- [x] With device storage unavailable, the tour still runs and can still be finished.
 
 ## 9. Open questions
 
@@ -196,6 +196,45 @@ Nothing in this spec exists.
 - The attendee's tour points at the bottom navigation, which lives in the application shell rather
   than in any screen.
 - Spec 029 puts notices on the same screens. The two have to agree about what sits on top.
+
+## 10b. As built
+
+`src/components/GuidedTour.jsx` is one component driven by a list of steps;
+`src/lib/tours.js` holds the two lists. The attendee's runs from the home screen, the stand's from
+its console, and each is mounted only once its screen has what the steps point at (R4).
+
+**Written by hand rather than pulled in.** Two screens and nine steps against a dependency loaded
+on every visit to be used for one minute of the first one — and one that would have to respect the
+Chromium 83 floor. Nothing here is newer than that: `getBoundingClientRect`, `scrollIntoView` with
+options, and a very large `box-shadow` to dim everything except the element being pointed at.
+
+**Steps point at `data-tour` attributes, not at styling classes.** A class gets renamed the next
+time somebody restyles a screen, and the step goes on pointing at nothing with no test failing. The
+attribute exists for this and nothing else, so anybody editing it can see what it is for.
+
+**The tour never acts (R12).** The overlay does not take pointer events except on its own box, and
+no step clicks, navigates or submits anything. This is not stylistic on the stand console, where
+the elements being pointed at start activities and confirm handovers. Verified: after walking all
+four stand steps, the console was still on the section it started on and the address had not
+changed.
+
+**The ordering problem between this and spec 029 was real, and the obvious fix was wrong.** A
+notice arriving during a tour appeared *behind* the dim layer — unreadable, and marked as shown
+anyway, so the attendee lost it permanently, since a notice is shown once per device. The first fix
+asked the DOM whether a tour was on screen, which failed: the tour measures its first element for a
+few hundred milliseconds before painting anything, and a notice slipped through that window.
+`src/lib/overlay.js` replaces it with a counter that a tour increments as soon as it knows it will
+run, before it paints. Verified both halves: the notice waits and is *not* marked seen while the
+tour is up, then appears once it closes.
+
+**There is no way to replay a tour**, as decided. Somebody who dismisses it by accident finds their
+way around the screens instead, which they were going to have to do anyway before this spec
+existed.
+
+**Verified in the browser at 390px wide**, which is the narrowest the application supports: all five
+attendee steps and all four stand steps, checking on each that the box stayed inside the screen and
+did not cover the element it was pointing at, that the counter was right, and that the last step
+closed the tour. Reloading did not run it again, and the two tours are recorded separately.
 
 ## 11. References
 

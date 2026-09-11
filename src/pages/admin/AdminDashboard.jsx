@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext.js';
+import GuidedTour from '../../components/GuidedTour.jsx';
+import { TOUR_STAND, PASOS_STAND } from '../../lib/tours.js';
 import {
     getMyCommunity,
     updateCommunity,
@@ -185,6 +187,7 @@ export default function AdminDashboard() {
                     <div className="group-actions">
                         <button
                             className="btn btn-primary"
+                            data-tour="qr"
                             onClick={() => navigate(`/admin/qr/${community.id}`)}
                             style={{ fontSize: '0.8rem', padding: '8px 16px' }}
                         >
@@ -218,6 +221,7 @@ export default function AdminDashboard() {
                         ].map(([key, label]) => (
                             <button
                                 key={key}
+                                data-tour={`tab-${key}`}
                                 className={`section-tab ${section === key ? 'is-active' : ''}`}
                                 onClick={() => setSection(key)}
                             >
@@ -345,6 +349,10 @@ export default function AdminDashboard() {
                 </div >
             )
             }
+
+            {/* Solo con la comunidad cargada: los pasos senalan sus botones, y
+                sin comunidad la consola muestra un aviso en su lugar. */}
+            {community && <GuidedTour nombre={TOUR_STAND} pasos={PASOS_STAND} />}
         </div >
     );
 }

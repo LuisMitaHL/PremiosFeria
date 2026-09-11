@@ -231,6 +231,12 @@ the attendee's home within one polling cycle, reloading did not repeat it, and s
 event produced a notice that said so. Screenshotted at phone width to confirm it clears the
 navigation.
 
+**El orden con el recorrido guiado.** Un aviso que llegaba durante el tour del spec 030 salia
+detras de su capa oscura: ilegible, y marcado como visto igual, con lo que el estudiante lo perdia
+para siempre. Ahora espera. Se resolvio con una bandera explicita y no preguntandole al DOM,
+porque el recorrido tarda unos cientos de milisegundos en medir su primer elemento antes de pintar
+nada, y en esa ventana un aviso se colaba.
+
 **A defect this uncovered, fixed separately.** Verifying that a failed refresh keeps its content
 (spec 028, R6) meant stopping the API for nine seconds, and what that revealed was worse than what
 was being tested: `AuthContext` treated "the profile query failed" and "no profile belongs to this
