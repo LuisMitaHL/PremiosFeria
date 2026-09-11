@@ -5,8 +5,7 @@
 /* --- Geomanist Font --- */
 @font-face {
   font-family: 'Geomanist';
-  src: url('/fonts/Geomanist-Medium.woff2') format('woff2'),
-    url('/fonts/Geomanist-Medium.ttf') format('truetype');
+  src: url('/fonts/Geomanist-Medium.ttf') format('truetype');
   font-weight: 500;
   font-style: normal;
   font-display: swap;

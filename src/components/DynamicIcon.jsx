@@ -1,4 +1,3 @@
-import React from 'react';
 import * as LucideIcons from 'lucide-react';
 
 export default function DynamicIcon({ name, size = 24, className = '', ...props }) {

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../lib/AuthContext.jsx';
+import { useAuth } from '../../lib/authContext.js';
 import { ShieldCheck, AlertTriangle, Loader, ArrowRight } from 'lucide-react';
 
 export default function AdminLogin() {

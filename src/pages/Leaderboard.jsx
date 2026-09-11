@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../lib/AuthContext.jsx';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../lib/authContext.js';
 import { getLeaderboard, startLeaderboardPolling } from '../lib/api.js';
 import { Trophy, Loader, Star, Medal } from 'lucide-react';
 
@@ -31,8 +31,7 @@ export default function Leaderboard() {
         return () => stop();
     }, []);
 
-    const top3 = leaderboard.slice(0, 3);
-    const rest = leaderboard.slice(3, 20);
+    const top3 = leaderboard.slice(0, 3);
 
     // Reorder top3 for podium display: [2nd, 1st, 3rd]
     const podiumOrder = top3.length >= 3
@@ -61,7 +60,7 @@ export default function Leaderboard() {
         <div className="page">
             <div className="container">
                 <div className="page-header" style={{ textAlign: 'center' }}>
-                    <h1><Trophy size={24} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} />Leaderboard</h1>
+                    <h1><Trophy size={24} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} />Ranking</h1>
                     <p>Los participantes con más puntos</p>
                 </div>
 

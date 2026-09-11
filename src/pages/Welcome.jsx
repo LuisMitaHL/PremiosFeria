@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../lib/AuthContext.jsx';
-import { Compass, ScanLine, Star, Gift, ArrowRight } from 'lucide-react';
+import { useAuth } from '../lib/authContext.js';
+import { ScanLine, Star, Gift, ArrowRight } from 'lucide-react';
 
 export default function Welcome() {
     const navigate = useNavigate();

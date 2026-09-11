@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../lib/AuthContext.jsx';
+import { useAuth } from '../../lib/authContext.js';
 import { getEventOverview } from '../../lib/api.js';
 import { LogOut, Loader, AlertTriangle, Activity, TrendingUp } from 'lucide-react';
 import CommunitiesArea from './CommunitiesArea.jsx';

@@ -1,5 +1,5 @@
 # =============================================================================
-# PremiosFeria — PROD stack (ephemeral fair backend: runs for hours, then off)
+# Community Quest — PROD stack (ephemeral fair backend: runs for hours, then off)
 # 4 services: web (static) + Postgres + PostgREST + username auth service.
 # No gateway here: a CDN/proxy on ANOTHER system routes to the published
 # ports below (see nginx-cdn.conf.example). TLS terminates there as well.
@@ -98,7 +98,7 @@ services:
       args:
         VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:?set VITE_SUPABASE_URL in .env.prod}
         VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${ANON_KEY}
-    container_name: feriapoints
+    container_name: community-quest
     ports:
       - "${WEB_PORT:-8080}:80"
     restart: unless-stopped

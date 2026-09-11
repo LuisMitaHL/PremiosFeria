@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Implemented |
 | **Branch** | `016-naming-and-hygiene-cleanup` |
 | **Actors** | Participant, Stand admin |
 | **Created** | 2026-09-10 |
@@ -220,6 +220,60 @@ messages in `claim_reward` carry them too.
   so the loose ends land early and the consistency work lands after the new screens.
 - The token issuer must be checked before it is touched. Nothing appears to verify it, but that has
   to be established rather than assumed.
+
+## 10b. As built
+
+Behaviour is unchanged, which is the point of this spec; the three gates pass identically before
+and after.
+
+**One name (R1, R2).** `comunity-quest` in the package manifest — a typo in the one place the name
+is an identifier — `feriapoints` as the production container, and `premiosferia` as the token
+issuer and the auth service's own name. The repository stays `PremiosFeria` (R3). The README still
+carries the oldest of the names; it is rewritten wholesale by spec 026 rather than half-corrected
+here.
+
+**R4 was checked before the issuer was touched.** Nothing verifies `iss`: the auth service's own
+`verify()` checks the signature and expiry, and PostgREST is configured with `PGRST_JWT_SECRET`
+alone. The change still invalidates every token in flight, so it lands with the deployment work of
+spec 027 and a fresh database, not on a fair already running.
+
+**No emoji was found (R5, R7).** A sweep of `src/`, `supabase/postgres-init/` and `auth/` for the
+emoji ranges came back empty. The rule was already being followed; what this spec adds is having
+checked.
+
+**The lint gate now fails on warnings.** It reported eighteen and failed on none, which is a gate
+that has stopped being one. Fixing them first and then setting `--max-warnings 0` is what keeps the
+count at zero; the alternative is a number that only grows.
+
+**Two of those eighteen were real, not cosmetic.**
+
+The scanner's camera effect called `handleScan` without listing it as a dependency, so the callback
+kept the closure from the first render — the one where the session had not loaded yet. The first
+scan on a freshly opened page could answer "regístrate para participar" to an attendee who was
+registered. It now calls through a ref, which keeps one camera and always the current function.
+
+`AuthContext.jsx` exported a component alongside a hook and a helper, which disables fast refresh
+for the file that holds the session: every change to it reloaded the whole page during development.
+The context, `useAuth` and `getDeviceFingerprint` moved to `authContext.js`, leaving the provider
+alone in the `.jsx`.
+
+**Assets that were never there (R15, R16).** The installable manifest asked for `icon-192.png` and
+`icon-512.png`; `public/` has only SVGs, so the manifest has claimed two files that do not exist
+since it was written. The stylesheet asked for `Geomanist-Medium.woff2` the same way. Both now name
+what is actually served.
+
+**The environment file is out of version control (R12, R13).** It held the URL and publishable key
+of an abandoned hosted project. Neither is a serious exposure — a publishable key grants nothing
+that RLS does not already allow — but it is the shape of the mistake that later is one, which is
+why `.env.example` takes its place. R14, shutting that hosted project down, is the operator's to do
+and is not something this repository can carry out.
+
+**Dead code deleted rather than commented (R17).** `getAllScans`, which nothing imported; a
+`leaderboard.slice(3, 20)` computed and never rendered; and ten `import React` lines left from
+before the new JSX transform.
+
+**One inconsistency found while checking R11:** the ranking screen's heading read "Leaderboard" in
+an otherwise Spanish interface, while its own navigation item said "Ranking".
 
 ## 11. References
 

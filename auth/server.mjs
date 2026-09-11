@@ -38,7 +38,7 @@ const sign = (d) => crypto.createHmac("sha256", JWT_SECRET).update(d).digest("ba
 function mint({ sub, role = "authenticated", ttl, extra = {} }) {
   const now = Math.floor(Date.now() / 1000);
   const header = b64(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const payload = b64(JSON.stringify({ iss: "premiosferia", sub, role, iat: now, exp: now + ttl, ...extra }));
+  const payload = b64(JSON.stringify({ iss: "community-quest", sub, role, iat: now, exp: now + ttl, ...extra }));
   return { token: `${header}.${payload}.${sign(header + "." + payload)}`, iat: now, exp: now + ttl };
 }
 
@@ -314,7 +314,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 401, { error: "invalid_token", msg: "Session no longer valid" });
     }
     if (req.method === "GET" && path === "/health") {
-      return send(res, 200, { version: "1.0.0", name: "premiosferia-auth", description: "Username auth for PremiosFeria" });
+      return send(res, 200, { version: "1.0.0", name: "community-quest-auth", description: "Username auth for Community Quest" });
     }
     return send(res, 404, { error: "not_found", msg: `No route: ${req.method} ${path}` });
   } catch {
@@ -322,4 +322,4 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => console.log(`premiosferia-auth listening on :${PORT}`));
+server.listen(PORT, () => console.log(`community-quest-auth listening on :${PORT}`));

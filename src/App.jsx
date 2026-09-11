@@ -1,6 +1,6 @@
-import React from 'react';
 import { Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
+import { AuthProvider } from './lib/AuthContext.jsx';
+import { useAuth } from './lib/authContext.js';
 import { CalendarClock, Home, Trophy, ScanLine, Gift, Star } from 'lucide-react';
 
 // Pages

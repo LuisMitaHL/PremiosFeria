@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { useAuth } from '../../lib/AuthContext.jsx';
+import { useAuth } from '../../lib/authContext.js';
 import { getMyCommunity, getSignedScanCode } from '../../lib/api.js';
 import { encodeQRPayload, getTimeUntilRotation } from '../../lib/qrSecurity.js';
 import { Loader, XCircle, MapPin, Target, RefreshCw, Lock } from 'lucide-react';

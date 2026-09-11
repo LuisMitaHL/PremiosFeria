@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../lib/AuthContext.jsx';
+import { useAuth } from '../../lib/authContext.js';
 import {
     getMyCommunity,
     updateCommunity,
@@ -246,7 +246,7 @@ export default function AdminDashboard() {
                     <div className="section-title" style={{ marginTop: 24 }}><ClipboardList size={16} style={{ display: 'inline', verticalAlign: 'middle' }} /> Escaneos recientes ({scans.length})</div>
                     <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
                         <ul className="activity-list">
-                            {scans.slice(0, 15).map((scan, i) => (
+                            {scans.slice(0, 15).map((scan) => (
                                 <li key={scan.id} className="activity-item">
                                     <div className={`activity-icon ${scan.type}`}>
                                         {scan.type === 'visit' ? <MapPin size={18} /> : <Target size={18} />}

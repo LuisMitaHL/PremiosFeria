@@ -2,8 +2,9 @@
    Auth Context — Participant + Admin sessions
    ============================================ */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient.js';
+import { AuthContext, getDeviceFingerprint } from './authContext.js';
 import {
     getCurrentParticipantId,
     saveCurrentParticipantId,
@@ -14,8 +15,6 @@ import {
     registerParticipant as apiRegister,
     PARTICIPANT_COLUMNS,
 } from './api.js';
-
-const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
     // --- Participant (anonymous, localStorage-based) ---
@@ -177,32 +176,4 @@ export function AuthProvider({ children }) {
     return (
         <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
     );
-}
-
-export function useAuth() {
-    const ctx = useContext(AuthContext);
-    if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
-    return ctx;
-}
-
-// --- Device Fingerprint (moved from old storage.js) ---
-export function getDeviceFingerprint() {
-    const nav = navigator;
-    const screen = window.screen;
-    const raw = [
-        nav.userAgent,
-        nav.language,
-        screen.width + 'x' + screen.height,
-        screen.colorDepth,
-        Intl.DateTimeFormat().resolvedOptions().timeZone,
-        nav.hardwareConcurrency || '',
-    ].join('|');
-
-    let hash = 0;
-    for (let i = 0; i < raw.length; i++) {
-        const char = raw.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return Math.abs(hash).toString(36);
 }

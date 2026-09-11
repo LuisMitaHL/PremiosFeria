@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../lib/AuthContext.jsx';
+import { useAuth } from '../lib/authContext.js';
 import { scanQR } from '../lib/api.js';
 import { decodeQRPayload } from '../lib/qrSecurity.js';
 import { ScanLine, Loader, PartyPopper, Frown, Clock, Home, CheckCircle, Lock, Camera, Keyboard } from 'lucide-react';
@@ -30,6 +30,16 @@ export default function Scanner() {
     const scannerRef = useRef(null);
     const html5QrRef = useRef(null);
 
+    // La camara se monta una vez y vive mientras dure el escaneo, pero
+    // handleScan cambia en cada render porque cierra sobre participant y
+    // processing. Pasarla como dependencia reiniciaria la camara a cada rato;
+    // omitirla dejaba al callback con la version del primer render, que es la
+    // que todavia no tenia participante: el primer escaneo de una pantalla
+    // recien abierta contestaba "registrate para participar" con la sesion ya
+    // cargada. La referencia mantiene una sola camara y siempre la funcion de
+    // ahora.
+    const handleScanRef = useRef(null);
+
     useEffect(() => {
         if (!participant) { navigate('/', { replace: true }); return; }
     }, [participant, navigate]);
@@ -54,7 +64,7 @@ export default function Scanner() {
                         aspectRatio: 1.0,
                     },
                     (decodedText) => {
-                        handleScan(decodedText);
+                        handleScanRef.current(decodedText);
                         if (scanner && scanner.isScanning) {
                             scanner.stop().catch(() => { });
                         }
@@ -75,6 +85,8 @@ export default function Scanner() {
             }
         };
     }, [scanning, showManual]);
+
+    handleScanRef.current = handleScan;
 
     async function handleScan(data) {
         if (!participant || processing) return;

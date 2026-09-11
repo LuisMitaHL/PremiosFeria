@@ -152,16 +152,6 @@ export async function getScansForParticipant(participantId) {
     return data;
 }
 
-export async function getAllScans() {
-    const { data, error } = await supabase
-        .from('scans')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-    if (error) throw new Error(`Error al obtener escaneos: ${error.message}`);
-    return data;
-}
-
 export async function getScansByCommunity(communityId) {
     const { data, error } = await supabase
         .from('scans')

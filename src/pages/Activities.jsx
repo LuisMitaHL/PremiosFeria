@@ -10,7 +10,7 @@ import {
     Star,
     Timer,
 } from 'lucide-react';
-import { useAuth } from '../lib/AuthContext.jsx';
+import { useAuth } from '../lib/authContext.js';
 import { getAllActivities, getScansForParticipant } from '../lib/api.js';
 import DynamicIcon from '../components/DynamicIcon.jsx';
 

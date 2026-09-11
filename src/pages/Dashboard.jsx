@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../lib/AuthContext.jsx';
+import { useAuth } from '../lib/authContext.js';
 import {
     getCommunities,
     getScansForParticipant,

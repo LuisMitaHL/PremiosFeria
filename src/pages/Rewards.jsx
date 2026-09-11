@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../lib/AuthContext.jsx';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../lib/authContext.js';
 import { getRewards, getClaimedRewards } from '../lib/api.js';
 import ClaimCodeModal from '../components/ClaimCodeModal.jsx';
 import { Gift, Star, Lock, Loader, QrCode } from 'lucide-react';
