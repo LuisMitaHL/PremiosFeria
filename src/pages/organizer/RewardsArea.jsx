@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Loader, AlertTriangle, Ban, RotateCcw, Coins, Boxes } from 'lucide-react';
 import {
     getRewards,
+    startPolling,
     organizerSetRewardCost,
     organizerSetRewardStock,
     organizerSetRewardWithdrawn,
@@ -18,6 +19,7 @@ export default function RewardsArea() {
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState('');
     const [edicion, setEdicion] = useState({});
+    const hubo = useRef(false);
 
     const cargar = useCallback(async () => {
         try {
@@ -28,15 +30,23 @@ export default function RewardsArea() {
                     a.name.localeCompare(b.name)
                 )
             );
+            hubo.current = true;
+            setError('');
         } catch (err) {
-            setError(err.message);
+            // Ver spec 028, R6: el error solo aparece si no hay nada cargado.
+            if (!hubo.current) setError(err.message);
         } finally {
             setCargando(false);
         }
     }, []);
 
+    // Lo que se lee aca lo cambia otra gente, asi que la pantalla se relee sola
+    // y tambien al volver a ella (spec 028, R1 y R2). El navegador estrangula
+    // los temporizadores en segundo plano, asi que un intervalo por si solo
+    // deja vieja justamente la pestana que alguien retoma.
     useEffect(() => {
         cargar();
+        return startPolling(cargar);
     }, [cargar]);
 
     async function aplicar(fn) {

@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Search, KeyRound, Pencil, Ban, RotateCcw, Loader, AlertTriangle, Copy, Plus, Minus,
 } from 'lucide-react';
 import {
     organizerListParticipants,
+    startPolling,
     organizerIssueRecoveryCode,
     organizerParticipantDetail,
     organizerRenameParticipant,
@@ -22,18 +23,29 @@ export default function StudentsArea() {
     const [newName, setNewName] = useState('');
     const [adjust, setAdjust] = useState({ amount: '', reason: '' });
 
+    // Un refresco que falla no tapa la lista ya cargada (spec 028, R6).
+    const hubo = useRef(false);
+
     const load = useCallback(async () => {
         try {
             setStudents(await organizerListParticipants());
+            hubo.current = true;
         } catch (err) {
-            setError(err.message);
+            if (!hubo.current) setError(err.message);
         } finally {
             setLoading(false);
         }
     }, []);
 
+    // Lo que se lee aca lo cambia otra gente, asi que la pantalla se relee sola
+    // y tambien al volver a ella (spec 028, R1 y R2). El navegador estrangula
+    // los temporizadores en segundo plano, asi que un intervalo por si solo
+    // deja vieja justamente la pestana que alguien retoma.
+    // El panel de un estudiante abierto se identifica por su id, asi que releer
+    // la lista por debajo no lo cierra ni pierde lo escrito (R7).
     useEffect(() => {
         load();
+        return startPolling(load);
     }, [load]);
 
     async function open(student) {

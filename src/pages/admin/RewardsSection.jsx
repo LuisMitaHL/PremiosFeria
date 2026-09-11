@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, PackagePlus, Loader, AlertTriangle } from 'lucide-react';
 import {
     getRewardsForCommunity,
     createReward,
+    startPolling,
     increaseRewardStock,
 } from '../../lib/api.js';
 import DynamicIcon from '../../components/DynamicIcon.jsx';
@@ -24,18 +25,31 @@ export default function RewardsSection({ communityId }) {
     const [addingTo, setAddingTo] = useState(null);
     const [addAmount, setAddAmount] = useState(1);
 
+    // Un refresco que falla no tapa la lista que el stand ya esta leyendo: el
+    // error solo se muestra si todavia no hay nada que mostrar (spec 028, R6).
+    const hubo = useRef(false);
+
     const load = useCallback(async () => {
         try {
             setRewards(await getRewardsForCommunity(communityId));
+            hubo.current = true;
+            setError('');
         } catch (err) {
-            setError(err.message);
+            if (!hubo.current) setError(err.message);
         } finally {
             setLoading(false);
         }
     }, [communityId]);
 
+    // Lo que se lee aca lo cambia otra gente, asi que la pantalla se relee sola
+    // y tambien al volver a ella (spec 028, R1 y R2). El navegador estrangula
+    // los temporizadores en segundo plano, asi que un intervalo por si solo
+    // deja vieja justamente la pestana que alguien retoma.
+    // Aca importa por el organizador: si corrige un costo, el stand tiene que
+    // dejar de cotizar el viejo sin que nadie le avise.
     useEffect(() => {
         load();
+        return startPolling(load);
     }, [load]);
 
     async function handleCreate(e) {

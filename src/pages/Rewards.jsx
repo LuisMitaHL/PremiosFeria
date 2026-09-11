@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/authContext.js';
-import { getRewards, getClaimedRewards } from '../lib/api.js';
+import { getRewards, getClaimedRewards, startPolling } from '../lib/api.js';
 import ClaimCodeModal from '../components/ClaimCodeModal.jsx';
 import { Gift, Star, Lock, Loader, QrCode } from 'lucide-react';
 import DynamicIcon from '../components/DynamicIcon.jsx';
@@ -12,25 +12,39 @@ export default function Rewards() {
     const [showCode, setShowCode] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (!participant) return;
+    const participantId = participant?.id;
 
-        const load = async () => {
-            try {
-                const [rewardsData, claimed] = await Promise.all([
-                    getRewards(),
-                    getClaimedRewards(participant.id),
-                ]);
-                setRewards(rewardsData);
-                setClaimedIds(claimed);
-            } catch (err) {
-                console.error('Rewards load error:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
+    const load = useCallback(async () => {
+        if (!participantId) return;
+        try {
+            const [rewardsData, claimed] = await Promise.all([
+                getRewards(),
+                getClaimedRewards(participantId),
+            ]);
+            setRewards(rewardsData);
+            setClaimedIds(claimed);
+        } catch (err) {
+            // Una lectura que falla no borra el catalogo que ya se esta
+            // mirando: el estudiante esta parado frente a una mesa, y dejarlo
+            // sin pantalla por un paquete perdido es peor que mostrarle algo de
+            // hace cinco segundos (spec 028, R6).
+            console.error('Rewards load error:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [participantId]);
+
+    // El catalogo es de la feria, no de quien lo mira: una comunidad registra un
+    // premio en su mesa mientras trescientas personas lo tienen abierto. Antes
+    // se leia una sola vez, asi que ese premio no existia hasta recargar
+    // (spec 028, R1). Vuelve a leer tambien al volver a la pantalla, que es el
+    // caso del telefono que estuvo en el bolsillo: el navegador estrangula los
+    // temporizadores en segundo plano.
+    useEffect(() => {
+        if (!participantId) return;
         load();
-    }, [participant]);
+        return startPolling(load);
+    }, [participantId, load]);
 
     async function handleClaimed() {
         await refreshParticipant();

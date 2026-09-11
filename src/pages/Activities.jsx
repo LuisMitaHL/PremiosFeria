@@ -11,13 +11,12 @@ import {
     Timer,
 } from 'lucide-react';
 import { useAuth } from '../lib/authContext.js';
-import { getAllActivities, getScansForParticipant } from '../lib/api.js';
+import { getAllActivities, getScansForParticipant, startPolling } from '../lib/api.js';
 import DynamicIcon from '../components/DynamicIcon.jsx';
 
 // An activity starts and finishes without anything telling this screen, and the
 // system has no realtime (ADR 0003), so it asks again while it is open -- the
 // same interval the leaderboard uses (spec 025, R11).
-const REFRESH_MS = 5000;
 
 // The order of this array is the order of the screen: what can be done now,
 // then what is coming, then what is over (spec 025, R3). Nothing here is
@@ -166,11 +165,14 @@ export default function Activities() {
         }
     }, [participantId]);
 
+    // Pasa al mecanismo comun (spec 028, R4). Tenia su propio intervalo, y esa
+    // es exactamente la diferencia que se notaba: un temporizador propio no se
+    // entera de que la pestana volvio, y el navegador lo estrangula mientras
+    // esta en segundo plano, asi que el telefono que estuvo en el bolsillo
+    // mostraba actividades de hace rato.
     useEffect(() => {
         load();
-        const timer = setInterval(load, REFRESH_MS);
-        // Deja de preguntar en cuanto la pantalla se cierra.
-        return () => clearInterval(timer);
+        return startPolling(load);
     }, [load]);
 
     if (!participant) return null;

@@ -46,6 +46,7 @@ Part retro-spec, part change. Each opens with what exists today and why it is be
 | 013 | [`participant-dashboard`](013-participant-dashboard/spec.md) | Participant | Implemented |
 | 016 | [`naming-and-hygiene-cleanup`](016-naming-and-hygiene-cleanup/spec.md) | — | Implemented |
 | 027 | [`deployment-seed-hardening`](027-deployment-seed-hardening/spec.md) | Event operator | Implemented |
+| 028 | [`screens-reflect-shared-state`](028-screens-reflect-shared-state/spec.md) | Participant, Stand admin, Event operator | Implemented |
 
 ## New capabilities
 

@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, KeyRound, Pencil, Ban, RotateCcw, Loader, AlertTriangle, Copy } from 'lucide-react';
 import {
     getCommunities,
+    startPolling,
     organizerCreateCommunity,
     organizerUpdateCommunity,
     organizerResetPassword,
@@ -27,18 +28,29 @@ export default function CommunitiesArea() {
     // it: the database keeps only a hash (spec 023, R5).
     const [credentials, setCredentials] = useState(null);
 
+    // Un refresco que falla no tapa la lista ya cargada (spec 028, R6).
+    const hubo = useRef(false);
+
     const load = useCallback(async () => {
         try {
             setCommunities(await getCommunities());
+            hubo.current = true;
         } catch (err) {
-            setError(err.message);
+            if (!hubo.current) setError(err.message);
         } finally {
             setLoading(false);
         }
     }, []);
 
+    // Lo que se lee aca lo cambia otra gente, asi que la pantalla se relee sola
+    // y tambien al volver a ella (spec 028, R1 y R2). El navegador estrangula
+    // los temporizadores en segundo plano, asi que un intervalo por si solo
+    // deja vieja justamente la pestana que alguien retoma.
+    // El formulario a medio llenar y las credenciales recien mostradas viven en
+    // su propio estado, asi que releer la lista no los toca (R7).
     useEffect(() => {
         load();
+        return startPolling(load);
     }, [load]);
 
     function openCreate() {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ScrollText, Loader, AlertTriangle, Filter, ChevronDown } from 'lucide-react';
-import { auditRead } from '../../lib/api.js';
+import { auditRead, onReturnToScreen } from '../../lib/api.js';
 
 // Los ambitos que el registro usa, traducidos. La lista es fija y completa a
 // proposito: sacarla de la base parecia mas honesto, pero significaba que el
@@ -115,6 +115,12 @@ export default function AuditArea() {
     useEffect(() => {
         cargar(filtros);
     }, [cargar, filtros]);
+
+    // El registro no se relee cada cinco segundos, a diferencia del resto de
+    // las pantallas: se lee renglon por renglon buscando un momento concreto, y
+    // reordenarlo bajo los ojos de quien lo lee cuesta mas que lo que cuesta
+    // que este algo viejo. Volver a el si es cuando importa (spec 028, R9).
+    useEffect(() => onReturnToScreen(() => cargar(filtros)), [cargar, filtros]);
 
     async function verMas() {
         if (!cursor || cargandoMas) return;

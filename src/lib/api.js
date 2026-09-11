@@ -598,19 +598,35 @@ export const POLL_MS = 5000;
 
 export function startPolling(callback, ms = POLL_MS) {
     const timer = setInterval(callback, ms);
-    const onFocus = () => callback();
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onFocus);
+    const stop = onReturnToScreen(callback);
     return () => {
         clearInterval(timer);
-        window.removeEventListener('focus', onFocus);
-        document.removeEventListener('visibilitychange', onFocus);
+        stop();
     };
 }
 
 // El ranking fue el primero en necesitarlo y conserva el nombre con el que lo
 // llama su pantalla.
 export const startLeaderboardPolling = startPolling;
+
+// La mitad de startPolling que no lleva temporizador: releer solo al volver a
+// la pantalla. Es para listas que se recorren con la vista buscando algo
+// concreto -- el registro de actividad (spec 028, R9) -- donde reordenar bajo
+// los ojos de quien lee cuesta mas que la demora. El mismo contrato de
+// limpieza: llama a lo que devuelve al desmontar.
+export function onReturnToScreen(callback) {
+    // visibilitychange tambien salta al OCULTAR la pestana, y releer justo
+    // cuando alguien se va es una peticion que nadie va a mirar.
+    const alVolver = () => {
+        if (document.visibilityState === 'visible') callback();
+    };
+    window.addEventListener('focus', alVolver);
+    document.addEventListener('visibilitychange', alVolver);
+    return () => {
+        window.removeEventListener('focus', alVolver);
+        document.removeEventListener('visibilitychange', alVolver);
+    };
+}
 
 // ---------------------------------------------------------------------------
 // Registro de actividad (spec 024)
