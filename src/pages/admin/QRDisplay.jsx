@@ -84,18 +84,29 @@ export default function QRDisplay() {
         refreshQR();
     }, [refreshQR]);
 
-    // Countdown timer
+    // La cuenta atras, y la firma de un codigo nuevo cuando cambia la ventana.
+    //
+    // Antes esto llamaba a refreshQR() DENTRO del actualizador de setTimeLeft.
+    // React puede ejecutar un actualizador mas de una vez, asi que una sola
+    // rotacion podia pedir dos firmas, y la respuesta que llegara segunda
+    // dejaba en pantalla un codigo de la ventana anterior.
+    //
+    // Ademas el contador ya no resta de a uno sino que se lee del reloj: un
+    // intervalo acumula error, y el navegador lo estrangula si la pantalla del
+    // stand queda en segundo plano. Un stand proyectando un codigo con la
+    // cuenta atras equivocada es un stand que no da puntos.
     useEffect(() => {
         if (!community) return;
 
+        let ventana = Math.floor(Date.now() / 15000);
+
         const interval = setInterval(() => {
-            setTimeLeft(prev => {
-                if (prev <= 1) {
-                    refreshQR();
-                    return 15;
-                }
-                return prev - 1;
-            });
+            const ahora = Math.floor(Date.now() / 15000);
+            setTimeLeft(getTimeUntilRotation());
+            if (ahora !== ventana) {
+                ventana = ahora;
+                refreshQR();
+            }
         }, 1000);
 
         return () => clearInterval(interval);

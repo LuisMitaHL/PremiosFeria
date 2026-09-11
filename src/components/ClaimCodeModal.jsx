@@ -20,7 +20,9 @@ export default function ClaimCodeModal({ onClose, onClaimed }) {
     // re-renders would otherwise re-run it, and re-running means issuing a
     // second code -- which invalidates the one the attendee is showing.
     const onClaimedRef = useRef(onClaimed);
-    onClaimedRef.current = onClaimed;
+    useEffect(() => {
+        onClaimedRef.current = onClaimed;
+    });
 
     useEffect(() => {
         let timer = null;

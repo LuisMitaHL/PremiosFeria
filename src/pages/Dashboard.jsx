@@ -53,7 +53,9 @@ export default function Dashboard() {
     // cambia de identidad en cada render, y como dependencia reiniciaría el
     // sondeo cada vez.
     const refresh = useRef(refreshParticipant);
-    refresh.current = refreshParticipant;
+    useEffect(() => {
+        refresh.current = refreshParticipant;
+    });
 
     const [communities, setCommunities] = useState([]);
     const [scanLog, setScanLog] = useState([]);

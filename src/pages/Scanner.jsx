@@ -86,7 +86,9 @@ export default function Scanner() {
         };
     }, [scanning, showManual]);
 
-    handleScanRef.current = handleScan;
+    useEffect(() => {
+        handleScanRef.current = handleScan;
+    });
 
     async function handleScan(data) {
         if (!participant || processing) return;
