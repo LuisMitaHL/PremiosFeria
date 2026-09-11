@@ -7,6 +7,37 @@ import { supabase } from '../supabaseClient.js';
 // The columns a client is allowed to read. 31_column_grants.sql revokes the
 // rest at the database, so asking for '*' here is not merely untidy: it fails.
 // Kept in one place so the two cannot drift apart.
+// Lo que se le puede enseñar a una persona.
+//
+// PostgREST contesta en JSON, pero cuando el que falla es el proxy -- o el
+// servidor no esta levantado -- lo que llega es su pagina de error HTML
+// ENTERA. Eso terminaba pintado en rojo en la pantalla de un stand:
+// "<html><head><title>502 Bad Gateway</title>..." seguido de seis comentarios
+// de relleno. Y cuando se cae la red, el mensaje del navegador es
+// "Failed to fetch", que no esta ni en español.
+//
+// Ninguno de los dos le dice nada a quien lo lee, y los dos significan lo
+// mismo: no se pudo hablar con el servidor. El detalle tecnico va a la consola,
+// que es donde sirve, y la pantalla recibe una frase accionable.
+//
+// Los mensajes propios de PostgREST si se dejan pasar: "duplicate key value
+// violates unique constraint" no es bonito, pero dice que fallo.
+function errorLegible(error, contexto) {
+    const crudo = String(error?.message ?? '');
+
+    if (/<html|<!doctype/i.test(crudo)) {
+        console.error(`${contexto}: respuesta no-JSON del proxy`, crudo.slice(0, 300));
+        return `${contexto}: el servidor no responde. Revisa la conexión e inténtalo de nuevo.`;
+    }
+
+    if (/failed to fetch|networkerror|load failed|network request failed/i.test(crudo)) {
+        console.error(`${contexto}: fallo de red`, error);
+        return `${contexto}: no hay conexión. Revisa la red e inténtalo de nuevo.`;
+    }
+
+    return `${contexto}: ${crudo}`;
+}
+
 export const PARTICIPANT_COLUMNS = 'id, name, points, registered_at';
 export const COMMUNITY_COLUMNS =
     'id, username, name, emoji, stand_number, description, is_withdrawn, auth_user_id, created_at';
@@ -43,7 +74,7 @@ export async function registerParticipant(name, fingerprint) {
         p_fingerprint: fingerprint || null,
     });
 
-    if (error) throw new Error(`Error al registrar: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al registrar'));
     if (data?.error) {
         // La sesión anónima recién creada no sirve para nada si el registro se
         // rechazó; dejarla abierta acumula identidades huérfanas.
@@ -77,7 +108,7 @@ export async function getLeaderboard() {
         .eq('is_removed', false)
         .order('points', { ascending: false });
 
-    if (error) throw new Error(`Error al obtener leaderboard: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener leaderboard'));
     return data;
 }
 
@@ -92,7 +123,7 @@ export async function getLeaderboard() {
 // auth.uid() (constitución IV).
 export async function getParticipantDashboard() {
     const { data, error } = await supabase.rpc('participant_dashboard');
-    if (error) throw new Error(`Error al obtener tu resumen: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener tu resumen'));
     return data;
 }
 
@@ -103,7 +134,7 @@ export async function getCommunities() {
         .from('communities')
         .select(COMMUNITY_COLUMNS);
 
-    if (error) throw new Error(`Error al obtener comunidades: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener comunidades'));
     return data;
 }
 
@@ -126,7 +157,7 @@ export async function updateCommunity(communityId, updates) {
         .select()
         .single();
 
-    if (error) throw new Error(`Error al actualizar comunidad: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al actualizar comunidad'));
     return data;
 }
 
@@ -137,7 +168,7 @@ export async function scanQR(encodedPayload) {
         p_encoded_payload: encodedPayload,
     });
 
-    if (error) throw new Error(`Error al validar QR: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al validar QR'));
     return data; // { valid, points, type, groupName, groupEmoji } or { valid: false, reason }
 }
 
@@ -148,7 +179,7 @@ export async function getScansForParticipant(participantId) {
         .eq('participant_id', participantId)
         .order('created_at', { ascending: false });
 
-    if (error) throw new Error(`Error al obtener escaneos: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener escaneos'));
     return data;
 }
 
@@ -159,7 +190,7 @@ export async function getScansByCommunity(communityId) {
         .eq('community_id', communityId)
         .order('created_at', { ascending: false });
 
-    if (error) throw new Error(`Error al obtener escaneos: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener escaneos'));
     return data;
 }
 
@@ -170,7 +201,7 @@ export async function getRewards() {
         .from('rewards')
         .select('*, communities(name)');
 
-    if (error) throw new Error(`Error al obtener premios: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener premios'));
     return data;
 }
 
@@ -180,7 +211,7 @@ export async function getClaimedRewards(participantId) {
         .select('reward_id')
         .eq('participant_id', participantId);
 
-    if (error) throw new Error(`Error al obtener premios canjeados: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener premios canjeados'));
     return data.map(r => r.reward_id);
 }
 
@@ -188,7 +219,7 @@ export async function getClaimedRewards(participantId) {
 // pide un código, lo muestra, y su pantalla pregunta hasta que se confirme.
 export async function issueClaimCode() {
     const { data, error } = await supabase.rpc('issue_claim_code');
-    if (error) throw new Error(`Error al generar el código: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al generar el código'));
     return data;
 }
 
@@ -196,7 +227,7 @@ export async function issueClaimCode() {
 // identificador. Cada consulta renueva la tolerancia que lo mantiene vivo.
 export async function pollMyClaimCode() {
     const { data, error } = await supabase.rpc('poll_my_claim_code');
-    if (error) throw new Error(`Error al consultar el código: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al consultar el código'));
     return data;
 }
 
@@ -205,7 +236,7 @@ export async function confirmHandover(code, rewardId) {
         p_code: code,
         p_reward_id: rewardId,
     });
-    if (error) throw new Error(`Error al confirmar la entrega: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al confirmar la entrega'));
     return data;
 }
 
@@ -285,7 +316,7 @@ export async function organizerIssueRecoveryCode(participantId) {
     const { data, error } = await supabase.rpc('issue_recovery_code', {
         p_participant_id: participantId,
     });
-    if (error) throw new Error(`Error al generar el código: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al generar el código'));
     return data;
 }
 
@@ -293,7 +324,7 @@ export async function organizerParticipantDetail(participantId) {
     const { data, error } = await supabase.rpc('participant_detail', {
         p_participant_id: participantId,
     });
-    if (error) throw new Error(`Error al obtener el detalle: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener el detalle'));
     return data;
 }
 
@@ -302,7 +333,7 @@ export async function organizerRenameParticipant(participantId, name) {
         p_participant_id: participantId,
         p_name: name,
     });
-    if (error) throw new Error(`Error al renombrar: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al renombrar'));
     return data;
 }
 
@@ -312,7 +343,7 @@ export async function organizerSetParticipantFlags(participantId, { claimsBarred
         p_claims_barred: claimsBarred ?? null,
         p_removed: removed ?? null,
     });
-    if (error) throw new Error(`Error al cambiar el estado: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al cambiar el estado'));
     return data;
 }
 
@@ -322,7 +353,7 @@ export async function organizerAdjustPoints(participantId, amount, reason) {
         p_amount: Number(amount),
         p_reason: reason,
     });
-    if (error) throw new Error(`Error al ajustar los puntos: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al ajustar los puntos'));
     return data;
 }
 
@@ -333,7 +364,7 @@ export async function organizerListParticipants() {
         .from('participants')
         .select('id, name, points, is_removed, claims_barred, registered_at')
         .order('name', { ascending: true });
-    if (error) throw new Error(`Error al obtener estudiantes: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener estudiantes'));
     return data;
 }
 
@@ -348,7 +379,7 @@ export async function redeemRecoveryCode(code, fingerprint) {
         p_code: code,
         p_fingerprint: fingerprint || null,
     });
-    if (error) throw new Error(`Error al recuperar: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al recuperar'));
     if (data?.error) {
         await supabase.auth.signOut();
         throw new Error(data.error);
@@ -366,7 +397,7 @@ export async function organizerCreateCommunity(fields) {
         p_emoji: fields.emoji,
         p_description: fields.description || null,
     });
-    if (error) throw new Error(`Error al crear la comunidad: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al crear la comunidad'));
     return data;
 }
 
@@ -378,14 +409,14 @@ export async function organizerUpdateCommunity(id, fields) {
         p_emoji: fields.emoji,
         p_description: fields.description || null,
     });
-    if (error) throw new Error(`Error al actualizar la comunidad: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al actualizar la comunidad'));
     return data;
 }
 
 // Devuelve la contraseña UNA sola vez. Después solo queda el hash.
 export async function organizerResetPassword(id) {
     const { data, error } = await supabase.rpc('reset_community_password', { p_id: id });
-    if (error) throw new Error(`Error al restablecer la contraseña: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al restablecer la contraseña'));
     return data;
 }
 
@@ -394,7 +425,7 @@ export async function organizerSetCommunityWithdrawn(id, withdrawn) {
         p_id: id,
         p_withdrawn: withdrawn,
     });
-    if (error) throw new Error(`Error al cambiar el estado: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al cambiar el estado'));
     return data;
 }
 
@@ -403,7 +434,7 @@ export async function organizerSetRewardCost(rewardId, cost) {
         p_reward_id: rewardId,
         p_cost: Number(cost),
     });
-    if (error) throw new Error(`Error al cambiar el costo: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al cambiar el costo'));
     return data;
 }
 
@@ -412,7 +443,7 @@ export async function organizerSetRewardStock(rewardId, stock) {
         p_reward_id: rewardId,
         p_stock: Number(stock),
     });
-    if (error) throw new Error(`Error al cambiar el stock: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al cambiar el stock'));
     return data;
 }
 
@@ -421,13 +452,13 @@ export async function organizerSetRewardWithdrawn(rewardId, withdrawn) {
         p_reward_id: rewardId,
         p_withdrawn: withdrawn,
     });
-    if (error) throw new Error(`Error al cambiar el estado del premio: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al cambiar el estado del premio'));
     return data;
 }
 
 export async function getEventOverview() {
     const { data, error } = await supabase.rpc('event_overview');
-    if (error) throw new Error(`Error al obtener el resumen: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener el resumen'));
     return data;
 }
 
@@ -479,7 +510,7 @@ export async function getActivitiesForCommunity(communityId) {
         .eq('community_id', communityId)
         .order('created_at', { ascending: true });
 
-    if (error) throw new Error(`Error al obtener actividades: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener actividades'));
     return data;
 }
 
@@ -492,7 +523,7 @@ export async function getAllActivities() {
         .select(`${ACTIVITY_COLUMNS}, communities(name, emoji, stand_number, is_withdrawn)`)
         .order('estimated_start', { ascending: true });
 
-    if (error) throw new Error(`Error al obtener actividades: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener actividades'));
     return data;
 }
 
@@ -506,7 +537,7 @@ export async function createActivity(fields) {
         p_duration_min: fields.duration_min,
         p_is_main_event: fields.is_main_event,
     });
-    if (error) throw new Error(`Error al crear actividad: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al crear actividad'));
     return data;
 }
 
@@ -519,19 +550,19 @@ export async function updateActivity(id, fields) {
         p_duration_min: fields.duration_min,
         p_is_main_event: fields.is_main_event,
     });
-    if (error) throw new Error(`Error al actualizar actividad: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al actualizar actividad'));
     return data;
 }
 
 export async function startActivity(id) {
     const { data, error } = await supabase.rpc('start_activity', { p_id: id });
-    if (error) throw new Error(`Error al iniciar actividad: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al iniciar actividad'));
     return data;
 }
 
 export async function finishActivity(id) {
     const { data, error } = await supabase.rpc('finish_activity', { p_id: id });
-    if (error) throw new Error(`Error al terminar actividad: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al terminar actividad'));
     return data;
 }
 
@@ -542,7 +573,7 @@ export async function getRewardsForCommunity(communityId) {
         .eq('community_id', communityId)
         .order('cost', { ascending: true });
 
-    if (error) throw new Error(`Error al obtener premios: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al obtener premios'));
     return data;
 }
 
@@ -557,7 +588,7 @@ export async function createReward(fields) {
         p_emoji: fields.emoji,
         p_description: fields.description || null,
     });
-    if (error) throw new Error(`Error al crear premio: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al crear premio'));
     return data;
 }
 
@@ -566,7 +597,7 @@ export async function increaseRewardStock(rewardId, by) {
         p_reward_id: rewardId,
         p_by: Number(by),
     });
-    if (error) throw new Error(`Error al agregar stock: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al agregar stock'));
     return data;
 }
 
@@ -580,7 +611,7 @@ export async function getSignedScanCode(communityId, type, activityId = null) {
         p_activity_id: activityId,
     });
 
-    if (error) throw new Error(`Error al firmar código: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al firmar código'));
     return data; // { payload, shortCode, ts } or { error }
 }
 
@@ -644,6 +675,6 @@ export async function auditRead({ kind, actorKind, outcome, minutos, cursor } = 
         p_cursor: cursor ?? null,
     });
 
-    if (error) throw new Error(`Error al leer el registro: ${error.message}`);
+    if (error) throw new Error(errorLegible(error, 'Error al leer el registro'));
     return data;
 }

@@ -11,13 +11,21 @@
   font-display: swap;
 }
 
-/* --- Thole Font (Titles) --- */
+/* --- Thole Font (Titles) ---
+   unicode-range excluye los digitos (U+30-39) a proposito.
+   Thole los declara en su cmap pero los dibuja como el glifo vacio, asi que el
+   navegador cree que los tiene y NO cae a la fuente de respaldo: cualquier
+   titulo con un numero salia como un cuadro negro -- "Escaneos recientes (1)"
+   se veia "Escaneos recientes (□)". Medido: diez digitos ocupan 231px en Thole
+   contra 107px en Geomanist, que es el ancho uniforme del .notdef.
+   Diciendole que no cubre ese rango, los numeros los dibuja Geomanist. */
 @font-face {
   font-family: 'Thole';
   src: url('/fonts/Thole-Thinpersonal.otf') format('opentype');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0-2F, U+3A-10FFFF;
 }
 
 @font-face {
@@ -26,6 +34,7 @@
   font-weight: 400;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0-2F, U+3A-10FFFF;
 }
 
 @font-face {
@@ -34,6 +43,7 @@
   font-weight: 700;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0-2F, U+3A-10FFFF;
 }
 
 /* --- CSS Custom Properties --- */
